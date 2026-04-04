@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart } from "recharts";
 
 const ALL_VERBS = [
   // ── IRREGULAR ──
@@ -178,8 +178,10 @@ function defaultConfig(){const c={};ALL_VERBS.forEach(v=>{c[v.id]={presente:true
 
 export default function App(){
   const [screen,setScreen]=useState("menu");
-  const [quickFilter,setQuickFilter]=useState("all");
-  const [quickTense,setQuickTense]=useState("both");
+  const [filterIrregular,setFilterIrregular]=useState(true);
+  const [filterRegular,setFilterRegular]=useState(true);
+  const [tensePresente,setTensePresente]=useState(true);
+  const [tensePassado,setTensePassado]=useState(true);
   const [cards,setCards]=useState([]);
   const [idx,setIdx]=useState(0);
   const [input,setInput]=useState("");
@@ -187,7 +189,6 @@ export default function App(){
   const [accentNote,setAccentNote]=useState(null);
   const [score,setScore]=useState({correct:0,wrong:0,accentMisses:0});
   const [wrongOnes,setWrongOnes]=useState([]);
-  const [showAllForms,setShowAllForms]=useState(false);
   const [history,setHistory]=useState([]);
   const [config,setConfig]=useState(defaultConfig);
   const [settingsTab,setSettingsTab]=useState("irregular");
@@ -205,47 +206,62 @@ export default function App(){
     const gen=[];
     for(const v of ALL_VERBS){
       const conf=config[v.id];if(!conf)continue;
-      if(quickFilter==="irregular"&&v.type!=="irregular")continue;
-      if(quickFilter==="regular"&&v.type==="irregular")continue;
+      if(!filterIrregular&&v.type==="irregular")continue;
+      if(!filterRegular&&v.type!=="irregular")continue;
       const tenses=[];
-      if(conf.presente&&(quickTense==="both"||quickTense==="presente"))tenses.push("presente");
-      if(conf.passado&&(quickTense==="both"||quickTense==="passado"))tenses.push("passado");
+      if(conf.presente&&tensePresente)tenses.push("presente");
+      if(conf.passado&&tensePassado)tenses.push("passado");
       if(tenses.length===0)continue;
       for(const t of tenses){const pr=PRONOUNS[Math.floor(Math.random()*PRONOUNS.length)];gen.push({...v,tense:t,pronoun:pr,answer:v[t][pr]});}
     }
     if(gen.length===0){alert("No verbs match your filters!");return;}
     setCards(shuffle(gen).slice(0,10));setIdx(0);setInput("");setResult(null);setAccentNote(null);
-    setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setShowAllForms(false);setScreen("play");
+    setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");
   };
 
   const check=()=>{if(!input.trim())return;const c=cards[idx],r=cmpAns(input,c.answer);if(r==="exact"){setResult("correct");setAccentNote(null);setScore(s=>({...s,correct:s.correct+1}));}else if(r==="accent"){setResult("correct");setAccentNote(c.answer);setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+1}));}else{setResult("wrong");setAccentNote(null);setScore(s=>({...s,wrong:s.wrong+1}));setWrongOnes(w=>[...w,c]);}};
 
-  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);setShowAllForms(false);setTimeout(()=>inputRef.current?.focus(),50);}};
+  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);setTimeout(()=>inputRef.current?.focus(),50);}};
   const onKey=(e)=>{if(e.key==="Enter"){result===null?check():next();}};
 
   const card=cards[idx];const total=score.correct+score.wrong;const pct=total>0?Math.round((score.correct/total)*100):0;
   const chartData=history.map((h,i)=>{const d=new Date(h.date);return{label:`${d.getDate()}/${d.getMonth()+1}`,score:h.pct,session:i+1};});
   const trendText=()=>{if(history.length<2)return null;const l5=history.slice(-5),f5=history.slice(0,Math.min(5,history.length));const ar=l5.reduce((a,b)=>a+b.pct,0)/l5.length;const af=f5.reduce((a,b)=>a+b.pct,0)/f5.length;const d=Math.round(ar-af);if(d>5)return <span style={{color:"#1e7a3a"}}> · Up +{d}%</span>;if(d<-5)return <span style={{color:"#c0392b"}}> · Down {d}%</span>;return <span style={{color:"#888"}}> · Steady</span>;};
 
-  const Chart=({id})=>(<div style={{width:"100%",height:140}}><ResponsiveContainer><AreaChart data={chartData} margin={{top:5,right:5,bottom:5,left:-20}}><defs><linearGradient id={id} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#1a3a5c" stopOpacity={0.15}/><stop offset="95%" stopColor="#1a3a5c" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="#eee"/><XAxis dataKey="label" tick={{fontSize:10,fill:"#999"}}/><YAxis domain={[0,100]} tick={{fontSize:10,fill:"#999"}}/><Tooltip contentStyle={{fontSize:12,borderRadius:8,border:"1px solid #eee"}} formatter={v=>[`${v}%`,"Score"]}/><Area type="monotone" dataKey="score" stroke="#1a3a5c" strokeWidth={2} fill={`url(#${id})`} dot={{r:3,fill:"#1a3a5c"}}/></AreaChart></ResponsiveContainer></div>);
+  const Chart=()=>(<div style={{width:"100%",height:140}}><ResponsiveContainer><BarChart data={chartData} margin={{top:5,right:5,bottom:5,left:-20}} barSize={14}><CartesianGrid strokeDasharray="3 3" stroke="#eee" vertical={false}/><XAxis dataKey="label" tick={{fontSize:10,fill:"#999"}} axisLine={false} tickLine={false}/><YAxis domain={[0,100]} tick={{fontSize:10,fill:"#999"}} axisLine={false} tickLine={false}/><Tooltip contentStyle={{fontSize:12,borderRadius:8,border:"1px solid #eee"}} cursor={{fill:"#f5f5f5"}} formatter={v=>[`${v}%`,"Score"]}/><Bar dataKey="score" fill="#1a3a5c" radius={[4,4,0,0]} isAnimationActive={true} animationDuration={600}/></BarChart></ResponsiveContainer></div>);
 
   const toggleVerb=(id,tense)=>{const nc={...config,[id]:{...config[id],[tense]:!config[id][tense]}};saveConfig(nc);};
   const bulkToggle=(type,tense,val)=>{const nc={...config};ALL_VERBS.filter(v=>type==="all"||v.type===type||(type==="regular"&&v.type!=="irregular")).forEach(v=>{nc[v.id]={...nc[v.id],[tense]:val};});saveConfig(nc);};
-  const enabledCount=ALL_VERBS.filter(v=>config[v.id]?.presente||config[v.id]?.passado).length;
+  const NavBar=()=>(
+    <nav style={S.nav}>
+      <button onClick={()=>setScreen("menu")} style={{...S.navBtn,...(screen==="menu"?S.navActive:{})}} title="Play">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      </button>
+      <button onClick={()=>setScreen("history")} style={{...S.navBtn,...(screen==="history"?S.navActive:{})}} title="History">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>
+      </button>
+      <button onClick={()=>setScreen("settings")} style={{...S.navBtn,...(screen==="settings"?S.navActive:{})}} title="Settings">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </nav>
+  );
 
-  const NavBar=()=>(<div style={S.nav}>{[["menu","Play"],["settings","Settings"],["history","History"]].map(([s,l])=>(<button key={s} onClick={()=>setScreen(s)} style={{...S.navBtn,...(screen===s?S.navActive:{})}}>{l}</button>))}</div>);
-
-  if(screen==="menu"){return(<div style={S.container}><div style={S.card}>
+  if(screen==="menu"){return(<div style={S.container}><div style={S.page}>
     <div style={S.flag}><div style={{flex:1,background:"#006600"}}/><div style={{flex:1,background:"#FF0000"}}/><div style={S.shield}/></div>
     <h1 style={S.title}>Verbos Portugueses</h1><p style={S.sub}>European Portuguese · Flashcards</p>
-    <div style={S.og}><label style={S.ol}>Verbs</label><div style={S.row}>{[["all","All"],["irregular","Irregular"],["regular","Regular"]].map(([v,l])=>(<button key={v} onClick={()=>setQuickFilter(v)} style={{...S.ob,...(quickFilter===v?S.oba:{})}}>{l}</button>))}</div></div>
-    <div style={S.og}><label style={S.ol}>Tense</label><div style={S.row}>{[["both","Both"],["presente","Presente"],["passado","Passado"]].map(([v,l])=>(<button key={v} onClick={()=>setQuickTense(v)} style={{...S.ob,...(quickTense===v?S.oba:{})}}>{l}</button>))}</div></div>
-    <p style={{fontSize:11,color:"#999",fontFamily:"system-ui,sans-serif",margin:0}}>{enabledCount} verbs active · fine-tune in Settings</p>
-    <button onClick={startGame} style={S.start}>Começar</button><NavBar/>
-  </div></div>);}
+    <div style={S.og}><label style={S.ol}>Verbs</label><div style={S.row}>
+      <button onClick={()=>setFilterIrregular(f=>!f)} style={{...S.qToggle,...(filterIrregular?S.toggleOn:S.toggleOff)}}>Irregular</button>
+      <button onClick={()=>setFilterRegular(f=>!f)} style={{...S.qToggle,...(filterRegular?S.toggleOn:S.toggleOff)}}>Regular</button>
+    </div></div>
+    <div style={S.og}><label style={S.ol}>Tense</label><div style={S.row}>
+      <button onClick={()=>setTensePresente(f=>!f)} style={{...S.qToggle,...(tensePresente?S.toggleOn:S.toggleOff)}}>Presente</button>
+      <button onClick={()=>setTensePassado(f=>!f)} style={{...S.qToggle,...(tensePassado?S.toggleOn:S.toggleOff)}}>Passado</button>
+    </div></div>
+    <button onClick={startGame} style={S.start}>Começar</button>
+  </div><NavBar/></div>);}
 
   if(screen==="settings"){const irregulars=ALL_VERBS.filter(v=>v.type==="irregular");const regulars=ALL_VERBS.filter(v=>v.type!=="irregular");const list=settingsTab==="irregular"?irregulars:regulars;const typeKey=settingsTab==="irregular"?"irregular":"regular";
-    return(<div style={S.container}><div style={{...S.card,maxWidth:500}}>
+    return(<div style={S.container}><div style={S.page}>
       <h1 style={{...S.title,fontSize:20}}>Settings</h1><p style={{fontSize:12,color:"#888",fontFamily:"system-ui,sans-serif",margin:0}}>Toggle verbs and tenses individually</p>
       <div style={S.row}>{[["irregular","Irregular ("+irregulars.length+")"],["regular","Regular ("+regulars.length+")"]].map(([v,l])=>(<button key={v} onClick={()=>setSettingsTab(v)} style={{...S.ob,...(settingsTab===v?S.oba:{})}}>{l}</button>))}</div>
       <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center"}}><button onClick={()=>bulkToggle(typeKey,"presente",true)} style={S.bulkBtn}>All Presente On</button><button onClick={()=>bulkToggle(typeKey,"passado",true)} style={S.bulkBtn}>All Passado On</button><button onClick={()=>{bulkToggle(typeKey,"presente",false);bulkToggle(typeKey,"passado",false);}} style={{...S.bulkBtn,color:"#c0392b",borderColor:"#e0c0c0"}}>All Off</button></div>
@@ -253,18 +269,18 @@ export default function App(){
         {list.map((v,i)=>(<div key={v.id} style={{...S.verbRow,background:i%2===0?"#fff":"#fafafa"}}><div style={{flex:1}}><span style={{fontSize:13,fontWeight:600,color:"#1a3a5c"}}>{v.verb}</span>{v.prep!=="—"&&<span style={{fontSize:10,color:"#aaa"}}> [{v.prep}]</span>}<br/><span style={{fontSize:11,color:"#888",fontStyle:"italic"}}>{v.transl}</span></div>
           <div style={{width:55,display:"flex",justifyContent:"center"}}><button onClick={()=>toggleVerb(v.id,"presente")} style={{...S.toggle,...(config[v.id]?.presente?S.toggleOn:S.toggleOff)}}>{config[v.id]?.presente?"ON":"OFF"}</button></div>
           <div style={{width:55,display:"flex",justifyContent:"center"}}><button onClick={()=>toggleVerb(v.id,"passado")} style={{...S.toggle,...(config[v.id]?.passado?S.toggleOn:S.toggleOff)}}>{config[v.id]?.passado?"ON":"OFF"}</button></div></div>))}</div>
-      <NavBar/></div></div>);}
+      </div><NavBar/></div>);}
 
-  if(screen==="history"){return(<div style={S.container}><div style={S.card}>
+  if(screen==="history"){return(<div style={S.container}><div style={S.page}>
     <h1 style={{...S.title,fontSize:20}}>History</h1>
     {history.length===0?(<p style={{fontSize:14,color:"#888",textAlign:"center"}}>No sessions yet. Play a round first!</p>):(<>
-      <p style={S.chartS}>{history.length} session{history.length!==1?"s":""}{trendText()}</p><Chart id="g3"/>
-      <div style={{width:"100%",maxHeight:300,overflowY:"auto",display:"flex",flexDirection:"column",gap:4}}>
+      <p style={S.chartS}>{history.length} session{history.length!==1?"s":""}{trendText()}</p><Chart/>
+      <div style={{width:"100%",display:"flex",flexDirection:"column",gap:4}}>
         {[...history].reverse().map((h,i)=>{const d=new Date(h.date);const ds=`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
           return(<div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:i%2===0?"#fff":"#f7f7f7",borderRadius:6,fontFamily:"system-ui,sans-serif",fontSize:12}}>
             <span style={{color:"#888"}}>{ds}</span><span style={{fontWeight:600,color:h.pct>=70?"#1e7a3a":h.pct>=40?"#d4850a":"#c0392b"}}>{h.pct}%</span><span style={{color:"#aaa"}}>{h.correct}/{h.total}</span></div>);})}</div>
       <button onClick={()=>{sDel(SK_HIST);setHistory([]);}} style={S.clr}>Reset history</button></>)}
-    <NavBar/></div></div>);}
+    </div><NavBar/></div>);}
 
   if(screen==="results"){return(<div style={S.container}><div style={S.card}>
     <h1 style={S.title}>Resultados</h1><div style={S.big}>{pct}%</div>
@@ -276,28 +292,31 @@ export default function App(){
   // ── PLAY ──
   const tl=card.tense==="presente"?"Presente":"Passado";const tc=card.tense==="presente"?"#1e7a3a":"#8e2b1d";
   return(<div style={S.container}>
-    <div style={S.top}><span>{idx+1}/{cards.length}</span><span style={{fontWeight:"600"}}><span style={{color:"#1e7a3a"}}>{score.correct}</span>{" · "}<span style={{color:"#c0392b"}}>{score.wrong}</span></span></div>
+    <div style={S.top}>
+      <button onClick={()=>setScreen("menu")} style={S.closeBtn}>✕</button>
+      <span>{idx+1}/{cards.length}</span>
+      <span style={{fontWeight:"600"}}><span style={{color:"#1e7a3a"}}>{score.correct}</span>{" · "}<span style={{color:"#c0392b"}}>{score.wrong}</span></span>
+    </div>
     <div style={S.play}>
       <div style={{...S.badge,background:tc}}>{tl}</div>
-      <div style={S.prompt}><div style={S.pv}>{card.transl}</div>{result!==null&&(<div style={S.reveal}>{card.verb}{card.prep!=="—"&&<span style={S.pp}> [{card.prep}]</span>} <AudioBtn text={card.verb}/></div>)}</div>
+      <div style={S.prompt}><div style={S.pv}>{card.transl}</div></div>
       <div style={S.pLine}><span style={S.pText}>{card.pronoun}</span><span style={S.pDots}>· · ·</span></div>
       <input ref={inputRef} style={{...S.inp,borderColor:result==="correct"?(accentNote?"#d4850a":"#1e7a3a"):result==="wrong"?"#c0392b":"#ccc",background:result==="correct"?(accentNote?"#fef9ee":"#eef7f0"):result==="wrong"?"#fdf0ee":"#fff"}} value={input} onChange={e=>setInput(e.target.value)} onKeyDown={onKey} placeholder="Type conjugation..." disabled={result!==null} autoFocus/>
       {result===null&&<button onClick={check} style={S.chk}>Check</button>}
       {result==="correct"&&(<div style={S.fb}><span style={S.fbOk}>Correto! <AudioBtn text={card.answer}/></span>{accentNote&&<div style={S.aw}>Watch the accent: <strong>{accentNote}</strong> <AudioBtn text={accentNote}/></div>}
-        {!showAllForms&&<button onClick={()=>setShowAllForms(true)} style={S.saBtn}>Show all forms</button>}
-        {showAllForms&&(<div style={S.af}>{PRONOUNS.map(p=>(<div key={p} style={S.afR}><span style={S.afP}>{p}</span><span style={p===card.pronoun?{fontWeight:700}:{}}>{card[card.tense][p]}</span><AudioBtn text={`${p}, ${card[card.tense][p]}`}/></div>))}</div>)}
+        <div style={S.af}><div style={S.afVerb}>{card.verb}{card.prep!=="—"&&<span style={S.afPrep}> [{card.prep}]</span>}</div>{PRONOUNS.map(p=>(<div key={p} style={S.afR}><span style={S.afP}>{p}</span><span style={p===card.pronoun?{fontWeight:700}:{}}>{card[card.tense][p]}</span><AudioBtn text={`${p}, ${card[card.tense][p]}`}/></div>))}</div>
         <button onClick={next} style={S.nxt}>Next →</button></div>)}
       {result==="wrong"&&(<div style={S.fb}><div style={S.fbNo}>✗ The answer is: <strong>{card.answer}</strong> <AudioBtn text={card.answer}/></div>
-        {!showAllForms&&<button onClick={()=>setShowAllForms(true)} style={S.saBtn}>Show all forms</button>}
-        {showAllForms&&(<div style={S.af}>{PRONOUNS.map(p=>(<div key={p} style={S.afR}><span style={S.afP}>{p}</span><span style={p===card.pronoun?{fontWeight:700}:{}}>{card[card.tense][p]}</span><AudioBtn text={`${p}, ${card[card.tense][p]}`}/></div>))}</div>)}
+        <div style={S.af}><div style={S.afVerb}>{card.verb}{card.prep!=="—"&&<span style={S.afPrep}> [{card.prep}]</span>}</div>{PRONOUNS.map(p=>(<div key={p} style={S.afR}><span style={S.afP}>{p}</span><span style={p===card.pronoun?{fontWeight:700}:{}}>{card[card.tense][p]}</span><AudioBtn text={`${p}, ${card[card.tense][p]}`}/></div>))}</div>
         <button onClick={next} style={S.nxt}>Next →</button></div>)}
     </div>
   </div>);
 }
 
 const S={
-  container:{minHeight:"100vh",background:"linear-gradient(135deg,#faf8f5,#f0ece6)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"'Georgia','Times New Roman',serif",padding:20},
-  card:{background:"#fff",borderRadius:16,padding:"32px 28px",maxWidth:440,width:"100%",boxShadow:"0 4px 24px rgba(0,0,0,.08)",display:"flex",flexDirection:"column",alignItems:"center",gap:14},
+  container:{minHeight:"100vh",background:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"'Georgia','Times New Roman',serif",paddingBottom:80},
+  page:{width:"100%",maxWidth:480,padding:"32px 24px",display:"flex",flexDirection:"column",gap:20,alignItems:"center"},
+  card:{background:"#fff",borderRadius:16,padding:"28px 28px 24px",maxWidth:440,width:"100%",boxShadow:"0 4px 24px rgba(0,0,0,.08)",display:"flex",flexDirection:"column",alignItems:"center",gap:14},
   flag:{width:60,height:40,borderRadius:4,overflow:"hidden",display:"flex",position:"relative",border:"1px solid #ddd"},
   shield:{position:"absolute",left:"50%",top:"50%",transform:"translate(-50%,-50%)",width:14,height:14,borderRadius:"50%",background:"#FFD700",border:"2px solid #c0392b"},
   title:{fontSize:24,fontWeight:700,color:"#1a3a5c",margin:0,letterSpacing:"-0.5px"},
@@ -309,9 +328,9 @@ const S={
   oba:{borderColor:"#1a3a5c",background:"#1a3a5c",color:"#fff"},
   start:{marginTop:4,padding:"12px 48px",background:"#1a3a5c",color:"#fff",border:"none",borderRadius:10,fontSize:16,fontFamily:"'Georgia',serif",cursor:"pointer"},
   back:{padding:"12px 32px",background:"transparent",color:"#1a3a5c",border:"1.5px solid #1a3a5c",borderRadius:10,fontSize:14,fontFamily:"'Georgia',serif",cursor:"pointer"},
-  nav:{display:"flex",gap:0,width:"100%",marginTop:8,borderTop:"1px solid #eee",paddingTop:12},
-  navBtn:{flex:1,padding:"8px 0",border:"none",background:"transparent",fontSize:13,fontFamily:"system-ui,sans-serif",color:"#aaa",cursor:"pointer",borderRadius:6,transition:"all .15s"},
-  navActive:{color:"#1a3a5c",fontWeight:700,background:"#f0ece6"},
+  nav:{position:"fixed",bottom:0,left:0,right:0,background:"#fff",borderTop:"1px solid #eee",display:"flex",justifyContent:"space-around",alignItems:"center",padding:"10px 0 max(10px,env(safe-area-inset-bottom))",zIndex:100,boxShadow:"0 -2px 12px rgba(0,0,0,.06)"},
+  navBtn:{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"6px 0",border:"none",background:"transparent",color:"#ccc",cursor:"pointer",transition:"color .15s"},
+  navActive:{color:"#1a3a5c"},
   chartWrap:{width:"100%",display:"flex",flexDirection:"column",alignItems:"center",gap:4},
   chartT:{fontSize:13,textTransform:"uppercase",letterSpacing:1,color:"#1a3a5c",fontFamily:"system-ui,sans-serif",margin:0},
   chartS:{fontSize:12,color:"#888",fontFamily:"system-ui,sans-serif",margin:0},
@@ -320,10 +339,12 @@ const S={
   verbHeaderRow:{display:"flex",alignItems:"center",padding:"4px 8px",borderBottom:"1px solid #eee"},
   verbRow:{display:"flex",alignItems:"center",padding:"8px",borderBottom:"1px solid #f5f5f5"},
   toggle:{padding:"3px 10px",borderRadius:4,border:"1px solid #ddd",fontSize:10,fontFamily:"system-ui,sans-serif",fontWeight:600,cursor:"pointer",transition:"all .15s",minWidth:36,textAlign:"center"},
+  qToggle:{flex:1,padding:"9px 16px",borderRadius:8,border:"1.5px solid #ddd",fontSize:14,fontFamily:"system-ui,sans-serif",fontWeight:600,cursor:"pointer",transition:"all .15s",textAlign:"center"},
   toggleOn:{background:"#1e7a3a",color:"#fff",borderColor:"#1e7a3a"},
   toggleOff:{background:"#f5f5f5",color:"#bbb",borderColor:"#ddd"},
   bulkBtn:{padding:"5px 10px",border:"1px solid #ddd",borderRadius:6,fontSize:11,fontFamily:"system-ui,sans-serif",color:"#666",cursor:"pointer",background:"#fafafa"},
-  top:{width:"100%",maxWidth:440,display:"flex",justifyContent:"space-between",marginBottom:12,fontFamily:"system-ui,sans-serif",fontSize:13,color:"#999"},
+  top:{width:"100%",maxWidth:440,display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,fontFamily:"system-ui,sans-serif",fontSize:13,color:"#999"},
+  closeBtn:{background:"none",border:"none",fontSize:16,color:"#bbb",cursor:"pointer",padding:"4px 8px",lineHeight:1},
   play:{background:"#fff",borderRadius:16,padding:"28px 28px 24px",maxWidth:440,width:"100%",boxShadow:"0 4px 24px rgba(0,0,0,.08)",display:"flex",flexDirection:"column",gap:14},
   badge:{alignSelf:"flex-start",color:"#fff",fontSize:11,fontFamily:"system-ui,sans-serif",fontWeight:600,textTransform:"uppercase",letterSpacing:1,padding:"3px 10px",borderRadius:4},
   prompt:{textAlign:"center",padding:"8px 0"},
