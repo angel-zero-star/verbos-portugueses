@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart } from "recharts";
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine } from "recharts";
 import packageInfo from "../package.json";
 
 const ALL_VERBS = [
@@ -265,7 +265,7 @@ export default function App(){
   const chartData=history.map((h,i)=>{const d=new Date(h.date);return{label:`${d.getDate()}/${d.getMonth()+1}`,score:h.pct,session:i+1};});
   const trendText=()=>{if(history.length<2)return null;const l5=history.slice(-5),f5=history.slice(0,Math.min(5,history.length));const ar=l5.reduce((a,b)=>a+b.pct,0)/l5.length;const af=f5.reduce((a,b)=>a+b.pct,0)/f5.length;const d=Math.round(ar-af);if(d>5)return <span style={{color:"#1e7a3a"}}> · Up +{d}%</span>;if(d<-5)return <span style={{color:"#c0392b"}}> · Down {d}%</span>;return <span style={{color:"#888"}}> · Steady</span>;};
 
-  const Chart=()=>(<div style={{width:"100%",height:140}}><ResponsiveContainer><BarChart data={chartData} margin={{top:5,right:5,bottom:5,left:-20}} barSize={14}><CartesianGrid strokeDasharray="3 3" stroke="#eee" vertical={false}/><XAxis dataKey="label" tick={{fontSize:10,fill:"#999"}} axisLine={false} tickLine={false}/><YAxis domain={[0,100]} tick={{fontSize:10,fill:"#999"}} axisLine={false} tickLine={false}/><Tooltip contentStyle={{fontSize:12,borderRadius:8,border:"1px solid #eee"}} cursor={{fill:"#f5f5f5"}} formatter={v=>[`${v}%`,"Score"]}/><Bar dataKey="score" fill="#1a3a5c" radius={[4,4,0,0]} isAnimationActive={true} animationDuration={600}/></BarChart></ResponsiveContainer></div>);
+  const Chart=()=>(<div style={{width:"100%",height:140}}><ResponsiveContainer><BarChart data={chartData} margin={{top:5,right:5,bottom:5,left:-20}} barSize={14}><CartesianGrid strokeDasharray="3 3" stroke="#eee" vertical={false}/><XAxis dataKey="label" tick={{fontSize:10,fill:"#999"}} axisLine={false} tickLine={false}/><YAxis domain={[0,100]} tick={{fontSize:10,fill:"#999"}} axisLine={false} tickLine={false}/><Tooltip contentStyle={{fontSize:12,borderRadius:8,border:"1px solid #eee"}} cursor={{fill:"#f5f5f5"}} formatter={v=>[`${v}%`,"Score"]}/><Bar dataKey="score" fill="#1a3a5c" radius={[4,4,0,0]} isAnimationActive={true} animationDuration={600}/><ReferenceLine y={75} stroke="#d4850a" strokeDasharray="4 3" strokeWidth={1.5} label={{value:"75%",position:"insideTopRight",fontSize:9,fill:"#d4850a",dy:-4}}/></BarChart></ResponsiveContainer></div>);
 
   const toggleVerb=(id,tense)=>{const nc={...config,[id]:{...config[id],[tense]:!config[id][tense]}};saveConfig(nc);};
   const bulkToggle=(type,tense,val)=>{const nc={...config};ALL_VERBS.filter(v=>type==="all"||v.type===type||(type==="regular"&&v.type!=="irregular")).forEach(v=>{nc[v.id]={...nc[v.id],[tense]:val};});saveConfig(nc);};
@@ -276,7 +276,7 @@ export default function App(){
       <button onClick={()=>setScreen("menu")} style={{...S.navBtn,...(screen==="menu"?S.navActive:{})}} title="Play">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
       </button>
-      <button onClick={()=>setScreen("history")} style={{...S.navBtn,...(screen==="history"?S.navActive:{})}} title="History">
+      <button onClick={()=>setScreen("history")} style={{...S.navBtn,...(screen==="history"?S.navActive:{})}} title="Score">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>
       </button>
       <button onClick={()=>setScreen("settings")} style={{...S.navBtn,...(screen==="settings"?S.navActive:{})}} title="Settings">
@@ -311,14 +311,14 @@ export default function App(){
       </div><NavBar/></div>);}
 
   if(screen==="history"){return(<div style={S.container}><div style={S.page}>
-    <h1 style={{...S.title,fontSize:20}}>History</h1>
+    <h1 style={{...S.title,fontSize:20}}>Score</h1>
     {history.length===0?(<p style={{fontSize:14,color:"#888",textAlign:"center"}}>No sessions yet. Play a round first!</p>):(<>
       <p style={S.chartS}>{history.length} session{history.length!==1?"s":""}{trendText()}</p><Chart/>
       <div style={{width:"100%",display:"flex",flexDirection:"column",gap:4}}>
         {[...history].reverse().map((h,i)=>{const d=new Date(h.date);const ds=`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
           return(<div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:i%2===0?"#fff":"#f7f7f7",borderRadius:6,fontFamily:"system-ui,sans-serif",fontSize:12}}>
             <span style={{color:"#888"}}>{ds}</span><span style={{fontWeight:600,color:h.pct>=70?"#1e7a3a":h.pct>=40?"#d4850a":"#c0392b"}}>{h.pct}%</span><span style={{color:"#aaa"}}>{h.correct}/{h.total}</span></div>);})}</div>
-      <button onClick={()=>{sDel(SK_HIST);setHistory([]);}} style={S.clr}>Reset history</button></>)}
+      <button onClick={()=>{sDel(SK_HIST);setHistory([]);}} style={S.clr}>Reset scores</button></>)}
     </div><NavBar/></div>);}
 
   if(screen==="results"){
@@ -360,7 +360,7 @@ export default function App(){
 }
 
 const S={
-  container:{minHeight:"100vh",background:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"'Georgia','Times New Roman',serif",paddingBottom:80},
+  container:{minHeight:"100vh",background:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"'Georgia','Times New Roman',serif",padding:"20px 20px 80px"},
   page:{width:"100%",maxWidth:480,padding:"32px 24px",display:"flex",flexDirection:"column",gap:20,alignItems:"center"},
   card:{background:"#fff",borderRadius:16,padding:"28px 28px 24px",maxWidth:440,width:"100%",boxShadow:"0 4px 24px rgba(0,0,0,.08)",display:"flex",flexDirection:"column",alignItems:"center",gap:14},
   flag:{width:60,height:40,borderRadius:4,overflow:"hidden",display:"flex",position:"relative",border:"1px solid #ddd"},
