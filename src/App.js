@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart } from "recharts";
+import packageInfo from "../package.json";
 
 const ALL_VERBS = [
   // ── IRREGULAR ──
@@ -232,6 +233,8 @@ export default function App(){
 
   const toggleVerb=(id,tense)=>{const nc={...config,[id]:{...config[id],[tense]:!config[id][tense]}};saveConfig(nc);};
   const bulkToggle=(type,tense,val)=>{const nc={...config};ALL_VERBS.filter(v=>type==="all"||v.type===type||(type==="regular"&&v.type!=="irregular")).forEach(v=>{nc[v.id]={...nc[v.id],[tense]:val};});saveConfig(nc);};
+  const Version=()=>(<div style={S.version}>v{packageInfo.version}</div>);
+
   const NavBar=()=>(
     <nav style={S.nav}>
       <button onClick={()=>setScreen("menu")} style={{...S.navBtn,...(screen==="menu"?S.navActive:{})}} title="Play">
@@ -258,7 +261,7 @@ export default function App(){
       <button onClick={()=>setTensePassado(f=>!f)} style={{...S.qToggle,...(tensePassado?S.toggleOn:S.toggleOff)}}>Passado</button>
     </div></div>
     <button onClick={startGame} style={S.start}>Começar</button>
-  </div><NavBar/></div>);}
+  </div><NavBar/><Version/></div>);}
 
   if(screen==="settings"){const irregulars=ALL_VERBS.filter(v=>v.type==="irregular");const regulars=ALL_VERBS.filter(v=>v.type!=="irregular");const list=settingsTab==="irregular"?irregulars:regulars;const typeKey=settingsTab==="irregular"?"irregular":"regular";
     return(<div style={S.container}><div style={S.page}>
@@ -373,4 +376,5 @@ const S={
   wi:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 10px",background:"#fdf0ee",borderRadius:6,fontSize:13,fontFamily:"system-ui,sans-serif"},
   wv:{fontWeight:600,color:"#1a3a5c"},
   wd:{color:"#666",textAlign:"right"},
+  version:{position:"fixed",bottom:76,left:"50%",transform:"translateX(-50%)",fontSize:10,color:"#999",fontFamily:"monospace",opacity:0.8,zIndex:50},
 };

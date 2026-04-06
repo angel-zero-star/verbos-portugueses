@@ -1,0 +1,3 @@
+node scripts/bump-version.js
+node scripts/sync-version.js
+git add package.json public/sw.js
