@@ -362,8 +362,6 @@ const S={
   aw:{textAlign:"center",fontSize:13,color:"#d4850a",fontFamily:"system-ui,sans-serif",background:"#fef9ee",padding:"6px 12px",borderRadius:6,border:"1px solid #f0ddb0"},
   saBtn:{padding:"6px 12px",background:"transparent",border:"1px solid #ddd",borderRadius:6,fontSize:12,fontFamily:"system-ui,sans-serif",color:"#888",cursor:"pointer",alignSelf:"center"},
   af:{background:"#faf8f5",borderRadius:8,padding:"10px 14px",display:"flex",flexDirection:"column",gap:3,fontSize:13,fontFamily:"system-ui,sans-serif"},
-  afVerb:{fontSize:15,fontWeight:700,color:"#1a3a5c",fontFamily:"'Georgia',serif",paddingBottom:6,marginBottom:4,borderBottom:"1px solid #e8e4e0"},
-  afPrep:{fontSize:12,fontWeight:400,color:"#aaa"},
   afR:{display:"flex",gap:8,alignItems:"center"},
   afP:{color:"#999",fontStyle:"italic",minWidth:110},
   nxt:{padding:10,background:"#1a3a5c",color:"#fff",border:"none",borderRadius:10,fontSize:15,fontFamily:"'Georgia',serif",cursor:"pointer"},
