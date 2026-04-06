@@ -161,6 +161,7 @@ const PRONOUNS=["eu","tu","ele/ela","nós","eles(as)/vocês"];
 const TENSES=["presente","passado"];
 const SK_HIST="verbos-history";
 const SK_CONF="verbos-config";
+const SK_FILTERS="verbos-filters";
 
 function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
 function stripAccents(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"");}
@@ -169,6 +170,38 @@ function cmpAns(i,c){const ni=norm(i),nc=norm(c);if(ni===nc)return"exact";if(str
 
 function speak(text){if(!window.speechSynthesis)return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="pt-PT";u.rate=0.85;const v=window.speechSynthesis.getVoices();const pt=v.find(x=>x.lang==="pt-PT")||v.find(x=>x.lang.startsWith("pt"));if(pt)u.voice=pt;window.speechSynthesis.speak(u);}
 function AudioBtn({text}){return(<button onClick={()=>speak(text)} style={S.audio} title="Listen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>);}
+
+function Confetti(){
+  const ref=useRef(null);
+  useEffect(()=>{
+    const canvas=ref.current;const ctx=canvas.getContext("2d");
+    canvas.width=window.innerWidth;canvas.height=window.innerHeight;
+    const colors=["#1a3a5c","#1e7a3a","#FFD700","#c0392b","#3498db","#e67e22"];
+    const pts=Array.from({length:100},()=>({
+      x:Math.random()*canvas.width,y:Math.random()*-canvas.height*1.2,
+      w:Math.random()*10+5,h:Math.random()*6+3,
+      color:colors[Math.floor(Math.random()*colors.length)],
+      vx:(Math.random()-0.5)*3,vy:Math.random()*3+2,
+      angle:Math.random()*360,spin:(Math.random()-0.5)*5,
+    }));
+    let frame;const start=Date.now();
+    function draw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      const elapsed=Date.now()-start;
+      const opacity=elapsed>2500?Math.max(0,1-(elapsed-2500)/1200):1;
+      pts.forEach(p=>{
+        p.x+=p.vx;p.y+=p.vy;p.angle+=p.spin;
+        if(p.y>canvas.height){p.y=-10;p.x=Math.random()*canvas.width;}
+        ctx.save();ctx.globalAlpha=opacity;ctx.translate(p.x,p.y);
+        ctx.rotate(p.angle*Math.PI/180);ctx.fillStyle=p.color;
+        ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();
+      });
+      if(elapsed<3700)frame=requestAnimationFrame(draw);
+    }
+    draw();return()=>cancelAnimationFrame(frame);
+  },[]);
+  return <canvas ref={ref} style={{position:"fixed",top:0,left:0,pointerEvents:"none",zIndex:999}}/>;
+}
 
 // Storage — uses localStorage for persistence
 function sGet(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch{return null;}}
@@ -182,7 +215,7 @@ export default function App(){
   const [filterIrregular,setFilterIrregular]=useState(true);
   const [filterRegular,setFilterRegular]=useState(true);
   const [tensePresente,setTensePresente]=useState(true);
-  const [tensePassado,setTensePassado]=useState(true);
+  const [tensePassado,setTensePassado]=useState(false);
   const [cards,setCards]=useState([]);
   const [idx,setIdx]=useState(0);
   const [input,setInput]=useState("");
@@ -199,7 +232,10 @@ export default function App(){
     window.speechSynthesis?.getVoices();
     const h=sGet(SK_HIST);if(h&&Array.isArray(h))setHistory(h);
     const c=sGet(SK_CONF);if(c&&typeof c==="object"){const def=defaultConfig();Object.keys(def).forEach(k=>{if(!c[k])c[k]=def[k];});setConfig(c);}
+    const f=sGet(SK_FILTERS);if(f){setFilterIrregular(f.filterIrregular??true);setFilterRegular(f.filterRegular??true);setTensePresente(f.tensePresente??true);setTensePassado(f.tensePassado??false);}
   },[]);
+
+  useEffect(()=>{sSet(SK_FILTERS,{filterIrregular,filterRegular,tensePresente,tensePassado});},[filterIrregular,filterRegular,tensePresente,tensePassado]);
 
   const saveConfig=(nc)=>{setConfig(nc);sSet(SK_CONF,nc);};
 
@@ -285,12 +321,19 @@ export default function App(){
       <button onClick={()=>{sDel(SK_HIST);setHistory([]);}} style={S.clr}>Reset history</button></>)}
     </div><NavBar/></div>);}
 
-  if(screen==="results"){return(<div style={S.container}><div style={S.card}>
-    <h1 style={S.title}>Resultados</h1><div style={S.big}>{pct}%</div>
-    <p style={S.det}>{score.correct} correct / {score.wrong} wrong{score.accentMisses>0&&<span style={{color:"#d4850a"}}> · {score.accentMisses} accent{score.accentMisses>1?"s":""} missed</span>}</p>
-    {wrongOnes.length>0&&(<div style={S.wl}><h3 style={S.wt}>Review these:</h3>{wrongOnes.map((w,i)=>(<div key={i} style={S.wi}><span style={S.wv}>{w.verb}</span><span style={S.wd}>{w.pronoun} · {w.tense} → <strong>{w.answer}</strong> <AudioBtn text={w.answer}/></span></div>))}</div>)}
-    <div style={S.row}><button onClick={startGame} style={S.start}>Play Again</button><button onClick={()=>setScreen("menu")} style={S.back}>Menu</button></div>
-  </div></div>);}
+  if(screen==="results"){
+    const rating=score.correct===10?{stars:"⭐⭐⭐",label:"Alegria!",confetti:true}:score.correct===9?{stars:"⭐⭐",label:"Óptimo!"}:score.correct===8?{stars:"⭐",label:"Fixe!"}:null;
+    return(<div style={S.container}>
+      {rating?.confetti&&<Confetti/>}
+      <div style={S.card}>
+        <h1 style={S.title}>Resultados</h1>
+        {rating&&<div style={S.rating}><span style={S.ratingStars}>{rating.stars}</span><span style={S.ratingLabel}>{rating.label}</span></div>}
+        <div style={S.big}>{pct}%</div>
+        <p style={S.det}>{score.correct} correct / {score.wrong} wrong{score.accentMisses>0&&<span style={{color:"#d4850a"}}> · {score.accentMisses} accent{score.accentMisses>1?"s":""} missed</span>}</p>
+        {wrongOnes.length>0&&(<div style={S.wl}><h3 style={S.wt}>Review these:</h3>{wrongOnes.map((w,i)=>(<div key={i} style={S.wi}><span style={S.wv}>{w.verb}</span><span style={S.wd}>{w.pronoun} · {w.tense} → <strong>{w.answer}</strong> <AudioBtn text={w.answer}/></span></div>))}</div>)}
+        <div style={S.row}><button onClick={startGame} style={S.start}>Play Again</button><button onClick={()=>setScreen("menu")} style={S.back}>Menu</button></div>
+      </div>
+    </div>);}
 
   // ── PLAY ──
   const tl=card.tense==="presente"?"Presente":"Passado";const tc=card.tense==="presente"?"#1e7a3a":"#8e2b1d";
@@ -331,8 +374,8 @@ const S={
   oba:{borderColor:"#1a3a5c",background:"#1a3a5c",color:"#fff"},
   start:{marginTop:4,padding:"12px 48px",background:"#1a3a5c",color:"#fff",border:"none",borderRadius:10,fontSize:16,fontFamily:"'Georgia',serif",cursor:"pointer"},
   back:{padding:"12px 32px",background:"transparent",color:"#1a3a5c",border:"1.5px solid #1a3a5c",borderRadius:10,fontSize:14,fontFamily:"'Georgia',serif",cursor:"pointer"},
-  nav:{position:"fixed",bottom:0,left:0,right:0,background:"#fff",borderTop:"1px solid #eee",display:"flex",justifyContent:"space-around",alignItems:"center",padding:"10px 0 max(10px,env(safe-area-inset-bottom))",zIndex:100,boxShadow:"0 -2px 12px rgba(0,0,0,.06)"},
-  navBtn:{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"6px 0",border:"none",background:"transparent",color:"#ccc",cursor:"pointer",transition:"color .15s"},
+  nav:{position:"fixed",bottom:0,left:0,right:0,background:"#fff",borderTop:"1px solid #eee",display:"flex",justifyContent:"space-around",alignItems:"center",padding:"14px 0 max(16px,env(safe-area-inset-bottom))",zIndex:100,boxShadow:"0 -2px 12px rgba(0,0,0,.06)"},
+  navBtn:{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"10px 0",border:"none",background:"transparent",color:"#ccc",cursor:"pointer",transition:"color .15s"},
   navActive:{color:"#1a3a5c"},
   chartWrap:{width:"100%",display:"flex",flexDirection:"column",alignItems:"center",gap:4},
   chartT:{fontSize:13,textTransform:"uppercase",letterSpacing:1,color:"#1a3a5c",fontFamily:"system-ui,sans-serif",margin:0},
@@ -369,6 +412,9 @@ const S={
   afP:{color:"#999",fontStyle:"italic",minWidth:110},
   nxt:{padding:10,background:"#1a3a5c",color:"#fff",border:"none",borderRadius:10,fontSize:15,fontFamily:"'Georgia',serif",cursor:"pointer"},
   audio:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:26,height:26,borderRadius:"50%",border:"1px solid #ddd",background:"#fafafa",cursor:"pointer",color:"#1a3a5c",verticalAlign:"middle",marginLeft:4,padding:0,transition:"all .15s"},
+  rating:{display:"flex",flexDirection:"column",alignItems:"center",gap:2},
+  ratingStars:{fontSize:28,letterSpacing:2},
+  ratingLabel:{fontSize:20,fontWeight:700,color:"#1a3a5c",fontFamily:"'Georgia',serif"},
   big:{fontSize:64,fontWeight:700,color:"#1a3a5c",margin:"8px 0 0"},
   det:{fontSize:14,color:"#888",fontFamily:"system-ui,sans-serif",margin:"0 0 8px"},
   wl:{width:"100%",maxHeight:240,overflowY:"auto",display:"flex",flexDirection:"column",gap:6},
@@ -376,5 +422,5 @@ const S={
   wi:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 10px",background:"#fdf0ee",borderRadius:6,fontSize:13,fontFamily:"system-ui,sans-serif"},
   wv:{fontWeight:600,color:"#1a3a5c"},
   wd:{color:"#666",textAlign:"right"},
-  version:{position:"fixed",bottom:76,left:"50%",transform:"translateX(-50%)",fontSize:10,color:"#999",fontFamily:"monospace",opacity:0.8,zIndex:50},
+  version:{position:"fixed",bottom:88,left:"50%",transform:"translateX(-50%)",fontSize:10,color:"#999",fontFamily:"monospace",opacity:0.8,zIndex:50},
 };
