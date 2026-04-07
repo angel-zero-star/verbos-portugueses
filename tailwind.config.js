@@ -9,6 +9,7 @@ module.exports = {
         surface: 'hsl(var(--surface) / <alpha-value>)',
         border: 'hsl(var(--border) / <alpha-value>)',
         primary: 'hsl(var(--primary) / <alpha-value>)',
+        secondary: 'hsl(var(--secondary) / <alpha-value>)',
         accent: 'hsl(var(--accent) / <alpha-value>)',
         danger: 'hsl(var(--danger) / <alpha-value>)',
         warn: 'hsl(var(--warn) / <alpha-value>)',

@@ -6,27 +6,28 @@
 
 @layer base {
   :root {
-    /* light mode — inverted from CLAUDE.md palette */
+    /* light mode */
     --bg: 0 0% 98%;
     --surface: 0 0% 100%;
     --border: 240 10% 90%;
-    --primary: 343 100% 59%;       /* #FF2D6B */
-    --accent: 54 91% 59%;          /* #F5E03A */
-    --danger: 16 100% 60%;         /* #FF6B35 */
-    --warn: 38 92% 50%;            /* #F59E0B */
+    --primary: 217 91% 60%;        /* #3B82F6 blue */
+    --secondary: 240 10% 10%;      /* near-black, use with /10 /20 for Linear-like transparency */
+    --accent: 142 71% 45%;         /* #22C55E green — correct */
+    --danger: 0 84% 60%;           /* #EF4444 red — wrong */
+    --warn: 38 92% 50%;            /* #F59E0B amber — accent miss */
     --muted: 240 10% 70%;
     --text: 240 10% 10%;
     --text-sub: 240 7% 45%;
   }
 
   .dark {
-    /* dark mode from CLAUDE.md */
     --bg: 240 6% 4%;               /* #0A0A0B */
     --surface: 240 9% 7%;          /* #111114 */
     --border: 240 11% 14%;         /* #1F1F26 */
-    --primary: 343 100% 59%;       /* #FF2D6B */
-    --accent: 54 91% 59%;          /* #F5E03A */
-    --danger: 16 100% 60%;         /* #FF6B35 */
+    --primary: 217 91% 60%;        /* #3B82F6 blue */
+    --secondary: 240 20% 95%;      /* near-white, use with /10 /20 for transparency */
+    --accent: 142 71% 45%;         /* green */
+    --danger: 0 84% 60%;           /* red */
     --warn: 38 92% 50%;
     --muted: 240 12% 26%;
     --text: 240 20% 95%;           /* #F0F0F5 */

@@ -166,6 +166,8 @@ const ALL_VERBS = [
 ];
 
 const PRONOUNS=["eu","tu","ele/ela","nós","eles(as)/vocês"];
+const PRONOUN_LABELS={"eu":"eu","tu":"tu","ele/ela":"ele(a)/você","nós":"nós","eles(as)/vocês":"eles(as)/vocês"};
+const pLabel=(p)=>PRONOUN_LABELS[p]||p;
 const TENSES=["presente","passado"];
 const SK_HIST="verbos-history";
 const SK_CONF="verbos-config";
@@ -199,7 +201,7 @@ function Confetti(){
   useEffect(()=>{
     const canvas=ref.current;const ctx=canvas.getContext("2d");
     canvas.width=window.innerWidth;canvas.height=window.innerHeight;
-    const colors=["#FF2D6B","#F5E03A","#FF6B35","#F59E0B","#F0F0F5"];
+    const colors=["#3B82F6","#22C55E","#EF4444","#F59E0B","#F0F0F5"];
     const pts=Array.from({length:120},()=>({
       x:Math.random()*canvas.width,y:Math.random()*-canvas.height*1.2,
       w:Math.random()*10+5,h:Math.random()*6+3,
@@ -246,7 +248,7 @@ function AnimatedNumber({value,duration=1.2}){
   return <>{display}</>;
 }
 
-// ── Toggle pill (used on menu + settings filter buttons) ──
+// ── Toggle pill — monotone secondary look (Linear-like transparency) ──
 function TogglePill({active,onClick,children}){
   return (
     <button
@@ -254,12 +256,51 @@ function TogglePill({active,onClick,children}){
       className={cn(
         "relative px-5 h-11 rounded-md text-sm font-medium border transition-all duration-200 flex-1 min-w-[88px]",
         active
-          ? "bg-primary text-white border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_4px_20px_-6px_hsl(var(--primary)/0.6)]"
-          : "bg-surface text-text-sub border-border hover:text-text hover:border-muted"
+          ? "bg-secondary/10 text-text border-secondary/25"
+          : "bg-transparent text-text-sub border-border hover:text-text hover:border-muted"
       )}
     >
       {children}
     </button>
+  );
+}
+
+// ── Segmented group toggle (two options, sliding indicator) ──
+function SegmentedToggle({options,value,onChange}){
+  return (
+    <div className="relative flex p-1 bg-secondary/5 border border-border rounded-md">
+      {options.map(opt=>{
+        const active=value===opt.value;
+        return (
+          <button
+            key={opt.value}
+            onClick={()=>onChange(opt.value)}
+            className="relative flex-1 h-9 rounded-sm text-sm font-medium transition-colors z-10"
+          >
+            {active && (
+              <motion.div
+                layoutId="seg-toggle-pill"
+                className="absolute inset-0 bg-secondary/15 border border-secondary/25 rounded-sm"
+                transition={{type:"spring",stiffness:400,damping:32}}
+              />
+            )}
+            <span className={cn("relative z-10",active?"text-text":"text-text-sub")}>{opt.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Portuguese flag (simple SVG)
+function FlagPT({className}){
+  return (
+    <svg viewBox="0 0 60 40" className={className} aria-label="Portugal">
+      <rect width="24" height="40" fill="#046A38"/>
+      <rect x="24" width="36" height="40" fill="#DA291C"/>
+      <circle cx="24" cy="20" r="8" fill="#FFE900" stroke="#000" strokeWidth="0.5"/>
+      <circle cx="24" cy="20" r="5" fill="#DA291C" stroke="#000" strokeWidth="0.5"/>
+    </svg>
   );
 }
 
@@ -376,21 +417,8 @@ export default function App(){
   const toggleVerb=(id,tense)=>{const nc={...config,[id]:{...config[id],[tense]:!config[id][tense]}};saveConfig(nc);};
   const bulkToggle=(type,tense,val)=>{const nc={...config};ALL_VERBS.filter(v=>type==="all"||v.type===type||(type==="regular"&&v.type!=="irregular")).forEach(v=>{nc[v.id]={...nc[v.id],[tense]:val};});saveConfig(nc);};
 
-  // ── Top utility bar (theme toggle + version) ──
-  const TopBar=()=>(
-    <div className="fixed top-0 left-0 right-0 z-40 px-4 pt-4 flex justify-between items-center pointer-events-none">
-      <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.15em] pointer-events-auto">
-        verbos · v{packageInfo.version}
-      </span>
-      <button
-        onClick={toggleTheme}
-        className="pointer-events-auto h-9 w-9 rounded-md border border-border bg-surface text-text-sub hover:text-primary hover:border-primary/60 transition-colors flex items-center justify-center"
-        title="Toggle theme"
-      >
-        {theme==="dark"?<Sun size={15}/>:<Moon size={15}/>}
-      </button>
-    </div>
-  );
+  // (TopBar removed — theme toggle now lives in Settings, version shown on menu footer)
+  const TopBar=()=>null;
 
   // ── Bottom navigation with sliding pill ──
   const NavBar=()=>{
@@ -414,16 +442,16 @@ export default function App(){
                 {active && (
                   <motion.div
                     layoutId="nav-pill"
-                    className="absolute inset-0 bg-primary/15 border border-primary/30 rounded-md"
+                    className="absolute inset-0 bg-secondary/10 border border-secondary/25 rounded-md"
                     transition={{type:"spring",stiffness:400,damping:32}}
                   />
                 )}
                 <Icon
                   size={20}
                   strokeWidth={2.25}
-                  className={cn("relative z-10 transition-colors",active?"text-primary":"text-muted")}
+                  className={cn("relative z-10 transition-colors",active?"text-text":"text-muted")}
                 />
-                <span className={cn("relative z-10 text-[9px] font-mono-ui uppercase tracking-[0.1em]",active?"text-primary":"text-muted")}>
+                <span className={cn("relative z-10 text-[9px] font-mono-ui uppercase tracking-[0.1em]",active?"text-text":"text-muted")}>
                   {it.label}
                 </span>
               </button>
@@ -442,12 +470,12 @@ export default function App(){
         <AnimatePresence mode="wait">
           <Screen key="menu">
             <div className="flex flex-col items-center text-center gap-3 mt-6">
-              <Badge variant="presente" className="mb-2">European Portuguese</Badge>
+              <FlagPT className="w-14 h-auto rounded-sm shadow-[0_0_0_1px_hsl(var(--border))] mb-2"/>
               <h1 className="font-display text-[44px] leading-[1.05] tracking-tightest text-text">
                 Verbos
               </h1>
               <p className="text-text-sub text-sm max-w-[280px]">
-                A focused flashcard tool for mastering Portuguese verb conjugation.
+                A focused flashcard tool for mastering European Portuguese verb conjugation.
               </p>
             </div>
 
@@ -475,6 +503,10 @@ export default function App(){
             <Button size="xl" onClick={startGame} className="w-full">
               <Play size={16} fill="currentColor" strokeWidth={0}/> Começar
             </Button>
+
+            <div className="mt-auto pt-8 text-center text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.15em]">
+              verbos · v{packageInfo.version}
+            </div>
           </Screen>
         </AnimatePresence>
         <NavBar/>
@@ -498,11 +530,27 @@ export default function App(){
               <p className="text-sm text-text-sub mt-1">Toggle verbs and tenses individually.</p>
             </div>
 
-            <div className="flex gap-2">
-              {[["irregular","Irregular ("+irregulars.length+")"],["regular","Regular ("+regulars.length+")"]].map(([v,l])=>(
-                <TogglePill key={v} active={settingsTab===v} onClick={()=>setSettingsTab(v)}>{l}</TogglePill>
-              ))}
+            <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-md bg-secondary/5 border border-border">
+              <div className="flex items-center gap-2 text-sm text-text">
+                {theme==="dark"?<Moon size={15}/>:<Sun size={15}/>}
+                <span>Theme</span>
+              </div>
+              <button
+                onClick={toggleTheme}
+                className="text-[11px] font-mono-ui uppercase tracking-[0.12em] text-text-sub hover:text-text transition-colors px-3 py-1.5 rounded-sm border border-border bg-surface"
+              >
+                {theme==="dark"?"Dark":"Light"}
+              </button>
             </div>
+
+            <SegmentedToggle
+              value={settingsTab}
+              onChange={setSettingsTab}
+              options={[
+                {value:"irregular",label:`Irregular (${irregulars.length})`},
+                {value:"regular",label:`Regular (${regulars.length})`},
+              ]}
+            />
 
             <div className="flex gap-2 flex-wrap">
               <Button variant="ghost" size="sm" onClick={()=>bulkToggle(typeKey,"presente",true)}>All Presente On</Button>
@@ -657,7 +705,7 @@ export default function App(){
                     <div key={i} className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-md bg-danger/5 border border-danger/20">
                       <div className="min-w-0">
                         <div className="text-sm font-semibold text-text">{w.verb}</div>
-                        <div className="text-[11px] text-text-sub font-mono-ui">{w.pronoun} · {w.tense}</div>
+                        <div className="text-[11px] text-text-sub font-mono-ui">{pLabel(w.pronoun)} · {w.tense}</div>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-accent font-semibold">{w.answer}</span>
@@ -739,7 +787,7 @@ export default function App(){
               <div className="flex items-center justify-between">
                 <Badge variant={tenseVariant}>{tenseLabel}</Badge>
                 <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">
-                  {card.type.replace("regular-","-")}
+                  {card.type==="irregular"?"Irregular":"Regular"}
                 </span>
               </div>
 
@@ -751,7 +799,7 @@ export default function App(){
 
               <div className="flex items-center justify-center gap-2">
                 <span className="text-base font-mono-ui text-primary italic">
-                  {card.pronoun}
+                  {pLabel(card.pronoun)}
                 </span>
                 {result===null && (
                   <span className="text-text-sub text-base tracking-[4px]">· · ·</span>
@@ -840,9 +888,13 @@ function ConjugationTable({card}){
     <div className="rounded-md border border-border overflow-hidden">
       {/* Header row: verb + audio */}
       <div className="flex items-center justify-between px-4 py-3 bg-bg/60 border-b border-border">
-        <div className="flex items-baseline gap-2">
+        <div className="flex items-baseline gap-2 flex-wrap">
           <span className="font-display text-base text-text">{card.verb}</span>
-          {card.prep!=="—" && <span className="text-xs text-text-sub font-mono-ui">[{card.prep}]</span>}
+          {card.prep!=="—" && (
+            <span className="text-sm font-mono-ui font-semibold text-text">
+              [{card.prep}]
+            </span>
+          )}
         </div>
         <AudioBtn text={card.verb}/>
       </div>
@@ -856,7 +908,7 @@ function ConjugationTable({card}){
                 "text-xs font-mono-ui",
                 active ? "text-text" : "text-text-sub italic"
               )}>
-                {p}
+                {pLabel(p)}
               </span>
               <span className={cn(
                 "text-sm",
@@ -864,7 +916,7 @@ function ConjugationTable({card}){
               )}>
                 {card[card.tense][p]}
               </span>
-              <AudioBtn text={`${p}, ${card[card.tense][p]}`}/>
+              <AudioBtn text={`${pLabel(p)}, ${card[card.tense][p]}`}/>
             </div>
           );
         })}
