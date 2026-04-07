@@ -462,6 +462,19 @@ export default function App(){
     return()=>vv.removeEventListener("resize",onResize);
   },[]);
 
+  // Lock body scroll while playing so keyboard opening can't move the page
+  useEffect(()=>{
+    if(screen!=="play")return;
+    const prevBody=document.body.style.overflow;
+    const prevHtml=document.documentElement.style.overflow;
+    document.body.style.overflow="hidden";
+    document.documentElement.style.overflow="hidden";
+    return()=>{
+      document.body.style.overflow=prevBody;
+      document.documentElement.style.overflow=prevHtml;
+    };
+  },[screen]);
+
 
   const card=cards[idx];
   const total=score.correct+score.wrong;
@@ -925,7 +938,7 @@ export default function App(){
   const tenseVariant=card.tense==="presente"?"presente":"passado";
 
   return (
-    <div className="h-screen overflow-hidden bg-bg text-text relative">
+    <div className="fixed inset-0 overflow-hidden bg-bg text-text">
       <TopBar/>
       <Screen>
         {/* Progress + score + close */}
@@ -1015,6 +1028,7 @@ export default function App(){
                   onChange={e=>setInput(e.target.value)}
                   placeholder={card.mode==="sentences"?"Type translation...":"Type conjugation..."}
                   disabled={result!==null}
+                  autoFocus={idx>0}
                   autoComplete="off"
                   autoCorrect="off"
                   autoCapitalize="off"
