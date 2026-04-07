@@ -437,7 +437,7 @@ export default function App(){
     else{setResult("wrong");setAccentNote(null);setScore(s=>({...s,wrong:s.wrong+1}));setWrongOnes(w=>[...w,c]);}
   };
 
-  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),mode:gameMode,correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);setTimeout(()=>inputRef.current?.focus(),50);}};
+  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),mode:gameMode,correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);}};
   // Single Enter handler — debounced to avoid double-fire (key repeat / fast double-press)
   useEffect(()=>{
     if(screen!=="play")return;
@@ -462,14 +462,12 @@ export default function App(){
     return()=>vv.removeEventListener("resize",onResize);
   },[]);
 
-  // When keyboard opens on play screen, scroll the input into view
+  // Focus input on every new card
   useEffect(()=>{
-    if(!keyboardOpen||screen!=="play")return;
-    const t=setTimeout(()=>{
-      inputRef.current?.scrollIntoView({block:"center",behavior:"smooth"});
-    },200);
+    if(screen!=="play"||result!==null)return;
+    const t=setTimeout(()=>inputRef.current?.focus(),80);
     return()=>clearTimeout(t);
-  },[keyboardOpen,screen,idx]);
+  },[screen,idx,result]);
 
   const card=cards[idx];
   const total=score.correct+score.wrong;
@@ -1023,7 +1021,6 @@ export default function App(){
                   onChange={e=>setInput(e.target.value)}
                   placeholder={card.mode==="sentences"?"Type translation...":"Type conjugation..."}
                   disabled={result!==null}
-                  autoFocus
                   autoComplete="off"
                   autoCorrect="off"
                   autoCapitalize="off"
