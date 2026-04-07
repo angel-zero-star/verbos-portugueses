@@ -462,13 +462,11 @@ export default function App(){
     return()=>vv.removeEventListener("resize",onResize);
   },[]);
 
-  // Focus input on every new card.
-  // Works automatically on desktop. On mobile, the first card requires a tap
-  // (browsers block programmatic keyboard open). Subsequent cards keep the
-  // keyboard open because the input is never disabled/blurred between cards.
+  // Focus input on every new card
   useEffect(()=>{
     if(screen!=="play"||result!==null)return;
-    inputRef.current?.focus({preventScroll:true});
+    const t=setTimeout(()=>inputRef.current?.focus(),80);
+    return()=>clearTimeout(t);
   },[screen,idx,result]);
 
   const card=cards[idx];
@@ -933,7 +931,7 @@ export default function App(){
   const tenseVariant=card.tense==="presente"?"presente":"passado";
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-bg text-text">
+    <div className="min-h-[100dvh] bg-bg text-text relative">
       <TopBar/>
       <Screen>
         {/* Progress + score + close */}
@@ -959,130 +957,123 @@ export default function App(){
           </button>
         </div>
 
-        {/* Card — Input lives outside the keyed swipe container so it never
-            remounts between cards (keeps mobile keyboard open). */}
-        <Card className="p-7 flex flex-col gap-5 overflow-hidden">
-          {/* Question — swipes on card change */}
-          <div className="relative min-h-[140px]">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={idx}
-                initial={{opacity:0,x:120,rotate:4}}
-                animate={{opacity:1,x:0,rotate:0}}
-                exit={{opacity:0,x:-120,rotate:-4}}
-                transition={{
-                  opacity:{duration:0.3,ease:"easeOut"},
-                  rotate:{duration:0.4,ease:[0.25,0.1,0.25,1]},
-                  x:{duration:0.4,ease:[0.25,0.1,0.25,1]},
-                }}
-                className="flex flex-col gap-5"
-              >
-                <div className="flex items-center justify-between">
-                  <Badge variant={tenseVariant}>{tenseLabel}</Badge>
-                  <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">
-                    {card.mode==="sentences"
-                      ? card.verb
-                      : (card.type==="irregular"?"Irregular":"Regular")}
-                  </span>
-                </div>
-
-                {card.mode==="sentences" ? (
-                  <div className="text-center py-2">
-                    <div className="font-display text-[26px] leading-[1.15] tracking-tighter text-text">
-                      {card.en}
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-center py-2">
-                      <div className="font-display text-[44px] leading-[1] tracking-tightest text-text">
-                        {card.transl}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-base font-mono-ui text-primary italic">
-                        {card.pronoun}
-                      </span>
-                      {result===null && (
-                        <span className="text-text-sub text-base tracking-[4px]">· · ·</span>
-                      )}
-                    </div>
-                  </>
-                )}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          {/* Persistent Input — stays mounted across cards */}
+        {/* Card */}
+        <AnimatePresence mode="wait">
           <motion.div
-            animate={
-              result==="wrong" ? {x:[0,8,-8,6,-6,0]} :
-              result==="correct" && !accentNote ? {scale:[1,1.04,1]} : {}
-            }
-            transition={{duration:0.4}}
+            key={idx}
+            initial={{opacity:0,x:120,rotate:4}}
+            animate={{
+              opacity:1,
+              rotate:0,
+              x: result==="wrong" ? [0,8,-8,6,-6,0] : 0,
+            }}
+            exit={{opacity:0,x:-120,rotate:-4}}
+            transition={{
+              opacity:{duration:0.3,ease:"easeOut"},
+              rotate:{duration:0.4,ease:[0.25,0.1,0.25,1]},
+              x: result==="wrong"
+                ? {duration:0.4,ease:"easeOut"}
+                : {duration:0.4,ease:[0.25,0.1,0.25,1]},
+            }}
           >
-            <Input
-              ref={inputRef}
-              value={input}
-              onChange={e=>{if(result===null)setInput(e.target.value);}}
-              placeholder={card.mode==="sentences"?"Type translation...":"Type conjugation..."}
-              readOnly={result!==null}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              className={cn(
-                "text-base font-mono-ui",
-                result==="correct" && !accentNote && "border-accent bg-accent/5 focus:border-accent focus:ring-accent/30",
-                result==="correct" && accentNote && "border-warn bg-warn/5 focus:border-warn focus:ring-warn/30",
-                result==="wrong" && "border-danger bg-danger/5 focus:border-danger focus:ring-danger/30",
-              )}
-            />
-          </motion.div>
+            <Card className="p-7 flex flex-col gap-5">
+              <div className="flex items-center justify-between">
+                <Badge variant={tenseVariant}>{tenseLabel}</Badge>
+                <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">
+                  {card.mode==="sentences"
+                    ? card.verb
+                    : (card.type==="irregular"?"Irregular":"Regular")}
+                </span>
+              </div>
 
-          {/* Feedback — outside the keyed swipe, below persistent Input */}
-          <AnimatePresence mode="wait">
-            {result==="correct" && (
-              <motion.div
-                key={`correct-${idx}`}
-                initial={{opacity:0,y:6}}
-                animate={{opacity:1,y:0}}
-                exit={{opacity:0}}
-                transition={{duration:0.2}}
-                className="flex flex-col gap-3"
-              >
-                <div className="flex items-center justify-center gap-2 text-accent">
-                  <Check size={18} strokeWidth={3}/>
-                  <span className="text-base font-semibold">Correto!</span>
-                </div>
-                {accentNote && (
-                  <div className="text-center text-xs text-warn bg-warn/10 border border-warn/30 rounded-md py-2 px-3">
-                    Watch the accent: <strong className="font-mono-ui">{accentNote}</strong>
+              {card.mode==="sentences" ? (
+                <div className="text-center py-2">
+                  <div className="font-display text-[26px] leading-[1.15] tracking-tighter text-text">
+                    {card.en}
                   </div>
-                )}
-                {card.mode!=="sentences" && <ConjugationTable card={card}/>}
-              </motion.div>
-            )}
-
-            {result==="wrong" && (
-              <motion.div
-                key={`wrong-${idx}`}
-                initial={{opacity:0,y:6}}
-                animate={{opacity:1,y:0}}
-                exit={{opacity:0}}
-                transition={{duration:0.2}}
-                className="flex flex-col gap-3"
-              >
-                <div className="flex items-center justify-center gap-2 text-danger">
-                  <X size={16} strokeWidth={3}/>
-                  <strong className="font-mono-ui">{card.answer}</strong>
                 </div>
-                {card.mode!=="sentences" && <ConjugationTable card={card}/>}
+              ) : (
+                <>
+                  <div className="text-center py-2">
+                    <div className="font-display text-[44px] leading-[1] tracking-tightest text-text">
+                      {card.transl}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-base font-mono-ui text-primary italic">
+                      {card.pronoun}
+                    </span>
+                    {result===null && (
+                      <span className="text-text-sub text-base tracking-[4px]">· · ·</span>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <motion.div
+                animate={result==="correct" && !accentNote ? {scale:[1,1.04,1]} : {}}
+                transition={{duration:0.35}}
+              >
+                <Input
+                  ref={inputRef}
+                  value={input}
+                  onChange={e=>setInput(e.target.value)}
+                  placeholder={card.mode==="sentences"?"Type translation...":"Type conjugation..."}
+                  disabled={result!==null}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  className={cn(
+                    "text-base font-mono-ui",
+                    result==="correct" && !accentNote && "border-accent bg-accent/5 focus:border-accent focus:ring-accent/30",
+                    result==="correct" && accentNote && "border-warn bg-warn/5 focus:border-warn focus:ring-warn/30",
+                    result==="wrong" && "border-danger bg-danger/5 focus:border-danger focus:ring-danger/30",
+                  )}
+                />
               </motion.div>
-            )}
-          </AnimatePresence>
-        </Card>
+
+              {/* Feedback */}
+              <AnimatePresence>
+                {result==="correct" && (
+                  <motion.div
+                    initial={{opacity:0,y:6}}
+                    animate={{opacity:1,y:0}}
+                    transition={{duration:0.2}}
+                    className="flex flex-col gap-3"
+                  >
+                    <div className="flex items-center justify-center gap-2 text-accent">
+                      <Check size={18} strokeWidth={3}/>
+                      <span className="text-base font-semibold">Correto!</span>
+                    </div>
+                    {accentNote && (
+                      <div className="text-center text-xs text-warn bg-warn/10 border border-warn/30 rounded-md py-2 px-3">
+                        Watch the accent: <strong className="font-mono-ui">{accentNote}</strong>
+                      </div>
+                    )}
+                    {card.mode!=="sentences" && <ConjugationTable card={card}/>}
+                  </motion.div>
+                )}
+
+                {result==="wrong" && (
+                  <motion.div
+                    initial={{opacity:0,y:6}}
+                    animate={{opacity:1,y:0}}
+                    transition={{duration:0.2}}
+                    className="flex flex-col gap-3"
+                  >
+                    <div className="flex items-center justify-center gap-2 text-danger">
+                      <X size={16} strokeWidth={3}/>
+                      <strong className="font-mono-ui">{card.answer}</strong>
+                    </div>
+                    {card.mode!=="sentences" && <ConjugationTable card={card}/>}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Card>
+          </motion.div>
+        </AnimatePresence>
       </Screen>
 
       {/* Sticky action button — bottom of screen, hidden when mobile keyboard is open */}
