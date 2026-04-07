@@ -1,0 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* light mode — inverted from CLAUDE.md palette */
+    --bg: 0 0% 98%;
+    --surface: 0 0% 100%;
+    --border: 240 10% 90%;
+    --primary: 343 100% 59%;       /* #FF2D6B */
+    --accent: 54 91% 59%;          /* #F5E03A */
+    --danger: 16 100% 60%;         /* #FF6B35 */
+    --warn: 38 92% 50%;            /* #F59E0B */
+    --muted: 240 10% 70%;
+    --text: 240 10% 10%;
+    --text-sub: 240 7% 45%;
+  }
+
+  .dark {
+    /* dark mode from CLAUDE.md */
+    --bg: 240 6% 4%;               /* #0A0A0B */
+    --surface: 240 9% 7%;          /* #111114 */
+    --border: 240 11% 14%;         /* #1F1F26 */
+    --primary: 343 100% 59%;       /* #FF2D6B */
+    --accent: 54 91% 59%;          /* #F5E03A */
+    --danger: 16 100% 60%;         /* #FF6B35 */
+    --warn: 38 92% 50%;
+    --muted: 240 12% 26%;
+    --text: 240 20% 95%;           /* #F0F0F5 */
+    --text-sub: 240 11% 39%;       /* #5A5A6E */
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html, body, #root {
+    min-height: 100vh;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: hsl(var(--bg));
+    color: hsl(var(--text));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  button {
+    font-family: inherit;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+  }
+  .font-mono-ui {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}

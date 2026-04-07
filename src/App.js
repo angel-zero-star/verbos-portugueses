@@ -337,23 +337,23 @@ export default function App(){
 
   // ── PLAY ──
   const tl=card.tense==="presente"?"Presente":"Passado";const tc=card.tense==="presente"?"#1e7a3a":"#8e2b1d";
-  return(<div style={S.container}>
+  return(<div style={{...S.container,position:"relative"}}>
+    <button onClick={()=>setScreen("menu")} style={{...S.closeBtn,position:"absolute",top:0,right:0,padding:16}}>✕</button>
     <div style={S.top}>
-      <button onClick={()=>setScreen("menu")} style={S.closeBtn}>✕</button>
       <span>{idx+1}/{cards.length}</span>
       <span style={{fontWeight:"600"}}><span style={{color:"#1e7a3a"}}>{score.correct}</span>{" · "}<span style={{color:"#c0392b"}}>{score.wrong}</span></span>
     </div>
     <div style={S.play}>
       <div style={{...S.badge,background:tc}}>{tl}</div>
       <div style={S.prompt}><div style={S.pv}>{card.transl}</div></div>
-      <div style={S.pLine}><span style={S.pText}>{card.pronoun}</span><span style={S.pDots}>· · ·</span></div>
+      <div style={S.pLine}><span style={S.pText}>{card.pronoun}</span>{result===null&&<span style={S.pDots}>· · ·</span>}</div>
       <input ref={inputRef} style={{...S.inp,borderColor:result==="correct"?(accentNote?"#d4850a":"#1e7a3a"):result==="wrong"?"#c0392b":"#ccc",background:result==="correct"?(accentNote?"#fef9ee":"#eef7f0"):result==="wrong"?"#fdf0ee":"#fff"}} value={input} onChange={e=>setInput(e.target.value)} onKeyDown={onKey} placeholder="Type conjugation..." disabled={result!==null} autoFocus/>
       {result===null&&<button onClick={check} style={S.chk}>Check</button>}
-      {result==="correct"&&(<div style={S.fb}><span style={S.fbOk}>Correto! <AudioBtn text={card.answer}/></span>{accentNote&&<div style={S.aw}>Watch the accent: <strong>{accentNote}</strong> <AudioBtn text={accentNote}/></div>}
-        <div style={S.af}><div style={S.afVerb}>{card.verb}{card.prep!=="—"&&<span style={S.afPrep}> [{card.prep}]</span>}</div>{PRONOUNS.map(p=>(<div key={p} style={S.afR}><span style={S.afP}>{p}</span><span style={p===card.pronoun?{fontWeight:700}:{}}>{card[card.tense][p]}</span><AudioBtn text={`${p}, ${card[card.tense][p]}`}/></div>))}</div>
+      {result==="correct"&&(<div style={S.fb}><span style={S.fbOk}>Correto!</span>{accentNote&&<div style={S.aw}>Watch the accent: <strong>{accentNote}</strong> <AudioBtn text={accentNote}/></div>}
+        <div style={S.af}><div style={S.afVerb}><span>{card.verb}{card.prep!=="—"&&<span style={S.afPrep}> [{card.prep}]</span>}</span><AudioBtn text={card.verb}/></div>{PRONOUNS.map(p=>(<div key={p} style={S.afR}><span style={p===card.pronoun?{minWidth:110}:S.afP}>{p}</span><span style={p===card.pronoun?{fontWeight:700}:{}}>{card[card.tense][p]}</span><AudioBtn text={`${p}, ${card[card.tense][p]}`}/></div>))}</div>
         <button onClick={next} style={S.nxt}>Next →</button></div>)}
-      {result==="wrong"&&(<div style={S.fb}><div style={S.fbNo}>✗ The answer is: <strong>{card.answer}</strong> <AudioBtn text={card.answer}/></div>
-        <div style={S.af}><div style={S.afVerb}>{card.verb}{card.prep!=="—"&&<span style={S.afPrep}> [{card.prep}]</span>}</div>{PRONOUNS.map(p=>(<div key={p} style={S.afR}><span style={S.afP}>{p}</span><span style={p===card.pronoun?{fontWeight:700}:{}}>{card[card.tense][p]}</span><AudioBtn text={`${p}, ${card[card.tense][p]}`}/></div>))}</div>
+      {result==="wrong"&&(<div style={S.fb}><div style={S.fbNo}>✗ The answer is: <strong>{card.answer}</strong></div>
+        <div style={S.af}><div style={S.afVerb}><span>{card.verb}{card.prep!=="—"&&<span style={S.afPrep}> [{card.prep}]</span>}</span><AudioBtn text={card.verb}/></div>{PRONOUNS.map(p=>(<div key={p} style={S.afR}><span style={p===card.pronoun?{minWidth:110}:S.afP}>{p}</span><span style={p===card.pronoun?{fontWeight:700}:{}}>{card[card.tense][p]}</span><AudioBtn text={`${p}, ${card[card.tense][p]}`}/></div>))}</div>
         <button onClick={next} style={S.nxt}>Next →</button></div>)}
     </div>
   </div>);
@@ -410,6 +410,8 @@ const S={
   af:{background:"#faf8f5",borderRadius:8,padding:"10px 14px",display:"flex",flexDirection:"column",gap:3,fontSize:13,fontFamily:"system-ui,sans-serif"},
   afR:{display:"flex",gap:8,alignItems:"center"},
   afP:{color:"#999",fontStyle:"italic",minWidth:110},
+  afVerb:{background:"#e6e6e6",borderRadius:4,padding:"10px 8px",display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:16},
+  afPrep:{color:"#666"},
   nxt:{padding:10,background:"#1a3a5c",color:"#fff",border:"none",borderRadius:10,fontSize:15,fontFamily:"'Georgia',serif",cursor:"pointer"},
   audio:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:26,height:26,borderRadius:"50%",border:"1px solid #ddd",background:"#fafafa",cursor:"pointer",color:"#1a3a5c",verticalAlign:"middle",marginLeft:4,padding:0,transition:"all .15s"},
   rating:{display:"flex",flexDirection:"column",alignItems:"center",gap:2},
