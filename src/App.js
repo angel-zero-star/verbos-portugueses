@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine } from "recharts";
+import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowRight, Check, Sparkles, RotateCcw } from "lucide-react";
 import packageInfo from "../package.json";
+import { cn } from "./lib/utils";
+import { useTheme } from "./lib/useTheme";
+import { Button } from "./components/ui/Button";
+import { Card } from "./components/ui/Card";
+import { Input } from "./components/ui/Input";
+import { Badge } from "./components/ui/Badge";
 
 const ALL_VERBS = [
   // ── IRREGULAR ──
@@ -169,15 +177,30 @@ function norm(s){return s.trim().toLowerCase().replace(/\s+/g," ");}
 function cmpAns(i,c){const ni=norm(i),nc=norm(c);if(ni===nc)return"exact";if(stripAccents(ni)===stripAccents(nc))return"accent";return"wrong";}
 
 function speak(text){if(!window.speechSynthesis)return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="pt-PT";u.rate=0.85;const v=window.speechSynthesis.getVoices();const pt=v.find(x=>x.lang==="pt-PT")||v.find(x=>x.lang.startsWith("pt"));if(pt)u.voice=pt;window.speechSynthesis.speak(u);}
-function AudioBtn({text}){return(<button onClick={()=>speak(text)} style={S.audio} title="Listen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>);}
+
+function AudioBtn({text,className,size=14}){
+  return (
+    <button
+      type="button"
+      onClick={(e)=>{e.stopPropagation();speak(text);}}
+      title="Listen"
+      className={cn(
+        "inline-flex items-center justify-center h-7 w-7 rounded-full border border-border bg-surface text-text-sub hover:text-primary hover:border-primary/60 transition-colors shrink-0",
+        className
+      )}
+    >
+      <Volume2 size={size} strokeWidth={2.25}/>
+    </button>
+  );
+}
 
 function Confetti(){
   const ref=useRef(null);
   useEffect(()=>{
     const canvas=ref.current;const ctx=canvas.getContext("2d");
     canvas.width=window.innerWidth;canvas.height=window.innerHeight;
-    const colors=["#1a3a5c","#1e7a3a","#FFD700","#c0392b","#3498db","#e67e22"];
-    const pts=Array.from({length:100},()=>({
+    const colors=["#FF2D6B","#F5E03A","#FF6B35","#F59E0B","#F0F0F5"];
+    const pts=Array.from({length:120},()=>({
       x:Math.random()*canvas.width,y:Math.random()*-canvas.height*1.2,
       w:Math.random()*10+5,h:Math.random()*6+3,
       color:colors[Math.floor(Math.random()*colors.length)],
@@ -210,7 +233,56 @@ function sDel(k){try{localStorage.removeItem(k);}catch{}}
 
 function defaultConfig(){const c={};ALL_VERBS.forEach(v=>{c[v.id]={presente:true,passado:true};});return c;}
 
+// ── Animated number counter ──
+function AnimatedNumber({value,duration=1.2}){
+  const mv=useMotionValue(0);
+  const rounded=useTransform(mv,(v)=>Math.round(v));
+  const [display,setDisplay]=useState(0);
+  useEffect(()=>{
+    const controls=animate(mv,value,{duration,ease:"easeOut"});
+    const unsub=rounded.on("change",(v)=>setDisplay(v));
+    return ()=>{controls.stop();unsub();};
+  },[value,duration,mv,rounded]);
+  return <>{display}</>;
+}
+
+// ── Toggle pill (used on menu + settings filter buttons) ──
+function TogglePill({active,onClick,children}){
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "relative px-5 h-11 rounded-md text-sm font-medium border transition-all duration-200 flex-1 min-w-[88px]",
+        active
+          ? "bg-primary text-white border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_4px_20px_-6px_hsl(var(--primary)/0.6)]"
+          : "bg-surface text-text-sub border-border hover:text-text hover:border-muted"
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ── Page wrapper with consistent padding + animated entrance ──
+function Screen({children,className}){
+  return (
+    <motion.div
+      initial={{opacity:0,y:8}}
+      animate={{opacity:1,y:0}}
+      exit={{opacity:0,y:-4}}
+      transition={{duration:0.22,ease:"easeOut"}}
+      className={cn(
+        "w-full max-w-[480px] mx-auto px-6 md:px-10 pt-12 pb-28 flex flex-col gap-6",
+        className
+      )}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 export default function App(){
+  const {theme,toggle:toggleTheme}=useTheme();
   const [screen,setScreen]=useState("menu");
   const [filterIrregular,setFilterIrregular]=useState(true);
   const [filterRegular,setFilterRegular]=useState(true);
@@ -261,168 +333,564 @@ export default function App(){
   const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);setTimeout(()=>inputRef.current?.focus(),50);}};
   const onKey=(e)=>{if(e.key==="Enter"){result===null?check():next();}};
 
-  const card=cards[idx];const total=score.correct+score.wrong;const pct=total>0?Math.round((score.correct/total)*100):0;
+  const card=cards[idx];
+  const total=score.correct+score.wrong;
+  const pct=total>0?Math.round((score.correct/total)*100):0;
   const chartData=history.map((h,i)=>{const d=new Date(h.date);return{label:`${d.getDate()}/${d.getMonth()+1}`,score:h.pct,session:i+1};});
-  const trendText=()=>{if(history.length<2)return null;const l5=history.slice(-5),f5=history.slice(0,Math.min(5,history.length));const ar=l5.reduce((a,b)=>a+b.pct,0)/l5.length;const af=f5.reduce((a,b)=>a+b.pct,0)/f5.length;const d=Math.round(ar-af);if(d>5)return <span style={{color:"#1e7a3a"}}> · Up +{d}%</span>;if(d<-5)return <span style={{color:"#c0392b"}}> · Down {d}%</span>;return <span style={{color:"#888"}}> · Steady</span>;};
+  const trendText=()=>{
+    if(history.length<2)return null;
+    const l5=history.slice(-5),f5=history.slice(0,Math.min(5,history.length));
+    const ar=l5.reduce((a,b)=>a+b.pct,0)/l5.length;
+    const af=f5.reduce((a,b)=>a+b.pct,0)/f5.length;
+    const d=Math.round(ar-af);
+    if(d>5)return <span className="text-accent"> · Up +{d}%</span>;
+    if(d<-5)return <span className="text-danger"> · Down {d}%</span>;
+    return <span className="text-text-sub"> · Steady</span>;
+  };
 
-  const Chart=()=>(<div style={{width:"100%",height:140}}><ResponsiveContainer><BarChart data={chartData} margin={{top:5,right:5,bottom:5,left:-20}} barSize={14}><CartesianGrid strokeDasharray="3 3" stroke="#eee" vertical={false}/><XAxis dataKey="label" tick={{fontSize:10,fill:"#999"}} axisLine={false} tickLine={false}/><YAxis domain={[0,100]} tick={{fontSize:10,fill:"#999"}} axisLine={false} tickLine={false}/><Tooltip contentStyle={{fontSize:12,borderRadius:8,border:"1px solid #eee"}} cursor={{fill:"#f5f5f5"}} formatter={v=>[`${v}%`,"Score"]}/><Bar dataKey="score" fill="#1a3a5c" radius={[4,4,0,0]} isAnimationActive={true} animationDuration={600}/><ReferenceLine y={75} stroke="#eee" strokeDasharray="3 3" strokeWidth={1}/></BarChart></ResponsiveContainer></div>);
+  const Chart=()=>(
+    <div className="w-full h-[160px]">
+      <ResponsiveContainer>
+        <BarChart data={chartData} margin={{top:5,right:5,bottom:5,left:-20}} barSize={14}>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false}/>
+          <XAxis dataKey="label" tick={{fontSize:10,fill:"hsl(var(--text-sub))"}} axisLine={false} tickLine={false}/>
+          <YAxis domain={[0,100]} tick={{fontSize:10,fill:"hsl(var(--text-sub))"}} axisLine={false} tickLine={false}/>
+          <Tooltip
+            contentStyle={{
+              fontSize:12,
+              borderRadius:8,
+              border:"1px solid hsl(var(--border))",
+              background:"hsl(var(--surface))",
+              color:"hsl(var(--text))",
+            }}
+            cursor={{fill:"hsl(var(--surface))"}}
+            formatter={v=>[`${v}%`,"Score"]}
+          />
+          <Bar dataKey="score" fill="hsl(var(--primary))" radius={[4,4,0,0]} isAnimationActive={true} animationDuration={600}/>
+          <ReferenceLine y={75} stroke="hsl(var(--border))" strokeDasharray="3 3" strokeWidth={1}/>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
 
   const toggleVerb=(id,tense)=>{const nc={...config,[id]:{...config[id],[tense]:!config[id][tense]}};saveConfig(nc);};
   const bulkToggle=(type,tense,val)=>{const nc={...config};ALL_VERBS.filter(v=>type==="all"||v.type===type||(type==="regular"&&v.type!=="irregular")).forEach(v=>{nc[v.id]={...nc[v.id],[tense]:val};});saveConfig(nc);};
-  const Version=()=>(<div style={S.version}>v{packageInfo.version}</div>);
 
-  const NavBar=()=>(
-    <nav style={S.nav}>
-      <button onClick={()=>setScreen("menu")} style={{...S.navBtn,...(screen==="menu"?S.navActive:{})}} title="Play">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+  // ── Top utility bar (theme toggle + version) ──
+  const TopBar=()=>(
+    <div className="fixed top-0 left-0 right-0 z-40 px-4 pt-4 flex justify-between items-center pointer-events-none">
+      <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.15em] pointer-events-auto">
+        verbos · v{packageInfo.version}
+      </span>
+      <button
+        onClick={toggleTheme}
+        className="pointer-events-auto h-9 w-9 rounded-md border border-border bg-surface text-text-sub hover:text-primary hover:border-primary/60 transition-colors flex items-center justify-center"
+        title="Toggle theme"
+      >
+        {theme==="dark"?<Sun size={15}/>:<Moon size={15}/>}
       </button>
-      <button onClick={()=>setScreen("history")} style={{...S.navBtn,...(screen==="history"?S.navActive:{})}} title="Score">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>
-      </button>
-      <button onClick={()=>setScreen("settings")} style={{...S.navBtn,...(screen==="settings"?S.navActive:{})}} title="Settings">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      </button>
-    </nav>
+    </div>
   );
 
-  if(screen==="menu"){return(<div style={S.container}><div style={S.page}>
-    <div style={S.flag}><div style={{flex:1,background:"#006600"}}/><div style={{flex:1,background:"#FF0000"}}/><div style={S.shield}/></div>
-    <h1 style={S.title}>Verbos Portugueses</h1><p style={S.sub}>European Portuguese · Flashcards</p>
-    <div style={S.og}><label style={S.ol}>Verbs</label><div style={S.row}>
-      <button onClick={()=>setFilterIrregular(f=>!f)} style={{...S.qToggle,...(filterIrregular?S.toggleOn:S.toggleOff)}}>Irregular</button>
-      <button onClick={()=>setFilterRegular(f=>!f)} style={{...S.qToggle,...(filterRegular?S.toggleOn:S.toggleOff)}}>Regular</button>
-    </div></div>
-    <div style={S.og}><label style={S.ol}>Tense</label><div style={S.row}>
-      <button onClick={()=>setTensePresente(f=>!f)} style={{...S.qToggle,...(tensePresente?S.toggleOn:S.toggleOff)}}>Presente</button>
-      <button onClick={()=>setTensePassado(f=>!f)} style={{...S.qToggle,...(tensePassado?S.toggleOn:S.toggleOff)}}>Passado</button>
-    </div></div>
-    <button onClick={startGame} style={S.start}>Começar</button>
-  </div><NavBar/><Version/></div>);}
+  // ── Bottom navigation with sliding pill ──
+  const NavBar=()=>{
+    const items=[
+      {key:"menu",icon:Play,label:"Play"},
+      {key:"history",icon:Trophy,label:"Score"},
+      {key:"settings",icon:SettingsIcon,label:"Settings"},
+    ];
+    return (
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-surface/85 backdrop-blur-xl border-t border-border" style={{paddingBottom:"max(12px,env(safe-area-inset-bottom))"}}>
+        <div className="max-w-[480px] mx-auto px-4 pt-3 flex items-center justify-around gap-2">
+          {items.map(it=>{
+            const active=screen===it.key;
+            const Icon=it.icon;
+            return (
+              <button
+                key={it.key}
+                onClick={()=>setScreen(it.key)}
+                className="relative flex-1 h-12 rounded-md flex flex-col items-center justify-center gap-0.5 transition-colors"
+              >
+                {active && (
+                  <motion.div
+                    layoutId="nav-pill"
+                    className="absolute inset-0 bg-primary/15 border border-primary/30 rounded-md"
+                    transition={{type:"spring",stiffness:400,damping:32}}
+                  />
+                )}
+                <Icon
+                  size={20}
+                  strokeWidth={2.25}
+                  className={cn("relative z-10 transition-colors",active?"text-primary":"text-muted")}
+                />
+                <span className={cn("relative z-10 text-[9px] font-mono-ui uppercase tracking-[0.1em]",active?"text-primary":"text-muted")}>
+                  {it.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  };
 
-  if(screen==="settings"){const irregulars=ALL_VERBS.filter(v=>v.type==="irregular");const regulars=ALL_VERBS.filter(v=>v.type!=="irregular");const list=settingsTab==="irregular"?irregulars:regulars;const typeKey=settingsTab==="irregular"?"irregular":"regular";
-    return(<div style={S.container}><div style={S.page}>
-      <h1 style={{...S.title,fontSize:20}}>Settings</h1><p style={{fontSize:12,color:"#888",fontFamily:"system-ui,sans-serif",margin:0}}>Toggle verbs and tenses individually</p>
-      <div style={S.row}>{[["irregular","Irregular ("+irregulars.length+")"],["regular","Regular ("+regulars.length+")"]].map(([v,l])=>(<button key={v} onClick={()=>setSettingsTab(v)} style={{...S.ob,...(settingsTab===v?S.oba:{})}}>{l}</button>))}</div>
-      <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center"}}><button onClick={()=>bulkToggle(typeKey,"presente",true)} style={S.bulkBtn}>All Presente On</button><button onClick={()=>bulkToggle(typeKey,"passado",true)} style={S.bulkBtn}>All Passado On</button><button onClick={()=>{bulkToggle(typeKey,"presente",false);bulkToggle(typeKey,"passado",false);}} style={{...S.bulkBtn,color:"#c0392b",borderColor:"#e0c0c0"}}>All Off</button></div>
-      <div style={S.verbList}><div style={S.verbHeaderRow}><span style={{flex:1,fontSize:11,color:"#999",fontFamily:"system-ui,sans-serif"}}>Verb</span><span style={{width:55,textAlign:"center",fontSize:10,color:"#999",fontFamily:"system-ui,sans-serif"}}>Pres.</span><span style={{width:55,textAlign:"center",fontSize:10,color:"#999",fontFamily:"system-ui,sans-serif"}}>Pass.</span></div>
-        {list.map((v,i)=>(<div key={v.id} style={{...S.verbRow,background:i%2===0?"#fff":"#fafafa"}}><div style={{flex:1}}><span style={{fontSize:13,fontWeight:600,color:"#1a3a5c"}}>{v.verb}</span>{v.prep!=="—"&&<span style={{fontSize:10,color:"#aaa"}}> [{v.prep}]</span>}<br/><span style={{fontSize:11,color:"#888",fontStyle:"italic"}}>{v.transl}</span></div>
-          <div style={{width:55,display:"flex",justifyContent:"center"}}><button onClick={()=>toggleVerb(v.id,"presente")} style={{...S.toggle,...(config[v.id]?.presente?S.toggleOn:S.toggleOff)}}>{config[v.id]?.presente?"ON":"OFF"}</button></div>
-          <div style={{width:55,display:"flex",justifyContent:"center"}}><button onClick={()=>toggleVerb(v.id,"passado")} style={{...S.toggle,...(config[v.id]?.passado?S.toggleOn:S.toggleOff)}}>{config[v.id]?.passado?"ON":"OFF"}</button></div></div>))}</div>
-      </div><NavBar/></div>);}
+  // ─────────────────────── MENU ───────────────────────
+  if(screen==="menu"){
+    return (
+      <div className="min-h-screen bg-bg text-text">
+        <TopBar/>
+        <AnimatePresence mode="wait">
+          <Screen key="menu">
+            <div className="flex flex-col items-center text-center gap-3 mt-6">
+              <Badge variant="presente" className="mb-2">European Portuguese</Badge>
+              <h1 className="font-display text-[44px] leading-[1.05] tracking-tightest text-text">
+                Verbos
+              </h1>
+              <p className="text-text-sub text-sm max-w-[280px]">
+                A focused flashcard tool for mastering Portuguese verb conjugation.
+              </p>
+            </div>
 
-  if(screen==="history"){return(<div style={S.container}><div style={S.page}>
-    <h1 style={{...S.title,fontSize:20}}>Score</h1>
-    {history.length===0?(<p style={{fontSize:14,color:"#888",textAlign:"center"}}>No sessions yet. Play a round first!</p>):(<>
-      <p style={S.chartS}>{history.length} session{history.length!==1?"s":""}{trendText()}</p><Chart/>
-      <div style={{width:"100%",display:"flex",flexDirection:"column",gap:4}}>
-        {[...history].reverse().map((h,i)=>{const d=new Date(h.date);const ds=`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
-          return(<div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:i%2===0?"#fff":"#f7f7f7",borderRadius:6,fontFamily:"system-ui,sans-serif",fontSize:12}}>
-            <span style={{color:"#888"}}>{ds}</span><span style={{fontWeight:600,color:h.pct>=70?"#1e7a3a":h.pct>=40?"#d4850a":"#c0392b"}}>{h.pct}%</span><span style={{color:"#aaa"}}>{h.correct}/{h.total}</span></div>);})}</div>
-      <button onClick={()=>{sDel(SK_HIST);setHistory([]);}} style={S.clr}>Reset scores</button></>)}
-    </div><NavBar/></div>);}
+            <Card className="p-6 flex flex-col gap-5">
+              <div className="flex flex-col gap-3">
+                <label className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.15em]">
+                  Verbs
+                </label>
+                <div className="flex gap-2">
+                  <TogglePill active={filterIrregular} onClick={()=>setFilterIrregular(f=>!f)}>Irregular</TogglePill>
+                  <TogglePill active={filterRegular} onClick={()=>setFilterRegular(f=>!f)}>Regular</TogglePill>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                <label className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.15em]">
+                  Tense
+                </label>
+                <div className="flex gap-2">
+                  <TogglePill active={tensePresente} onClick={()=>setTensePresente(f=>!f)}>Presente</TogglePill>
+                  <TogglePill active={tensePassado} onClick={()=>setTensePassado(f=>!f)}>Passado</TogglePill>
+                </div>
+              </div>
+            </Card>
 
-  if(screen==="results"){
-    const rating=score.correct===10?{stars:"⭐⭐⭐",label:"Alegria!",confetti:true}:score.correct===9?{stars:"⭐⭐",label:"Óptimo!"}:score.correct===8?{stars:"⭐",label:"Fixe!"}:null;
-    return(<div style={S.container}>
-      {rating?.confetti&&<Confetti/>}
-      <div style={S.card}>
-        <h1 style={S.title}>Resultados</h1>
-        {rating&&<div style={S.rating}><span style={S.ratingStars}>{rating.stars}</span><span style={S.ratingLabel}>{rating.label}</span></div>}
-        <div style={S.big}>{pct}%</div>
-        <p style={S.det}>{score.correct} correct / {score.wrong} wrong{score.accentMisses>0&&<span style={{color:"#d4850a"}}> · {score.accentMisses} accent{score.accentMisses>1?"s":""} missed</span>}</p>
-        {wrongOnes.length>0&&(<div style={S.wl}><h3 style={S.wt}>Review these:</h3>{wrongOnes.map((w,i)=>(<div key={i} style={S.wi}><span style={S.wv}>{w.verb}</span><span style={S.wd}>{w.pronoun} · {w.tense} → <strong>{w.answer}</strong> <AudioBtn text={w.answer}/></span></div>))}</div>)}
-        <div style={S.row}><button onClick={startGame} style={S.start}>Play Again</button><button onClick={()=>setScreen("menu")} style={S.back}>Menu</button></div>
+            <Button size="xl" onClick={startGame} className="w-full">
+              <Play size={16} fill="currentColor" strokeWidth={0}/> Começar
+            </Button>
+          </Screen>
+        </AnimatePresence>
+        <NavBar/>
       </div>
-    </div>);}
+    );
+  }
 
-  // ── PLAY ──
-  const tl=card.tense==="presente"?"Presente":"Passado";const tc=card.tense==="presente"?"#1e7a3a":"#8e2b1d";
-  return(<div style={{...S.container,position:"relative"}}>
-    <button onClick={()=>setScreen("menu")} style={{...S.closeBtn,position:"absolute",top:0,right:0,padding:16}}>✕</button>
-    <div style={S.top}>
-      <span>{idx+1}/{cards.length}</span>
-      <span style={{fontWeight:"600"}}><span style={{color:"#1e7a3a"}}>{score.correct}</span>{" · "}<span style={{color:"#c0392b"}}>{score.wrong}</span></span>
+  // ─────────────────────── SETTINGS ───────────────────────
+  if(screen==="settings"){
+    const irregulars=ALL_VERBS.filter(v=>v.type==="irregular");
+    const regulars=ALL_VERBS.filter(v=>v.type!=="irregular");
+    const list=settingsTab==="irregular"?irregulars:regulars;
+    const typeKey=settingsTab==="irregular"?"irregular":"regular";
+    return (
+      <div className="min-h-screen bg-bg text-text">
+        <TopBar/>
+        <AnimatePresence mode="wait">
+          <Screen key="settings">
+            <div>
+              <h1 className="font-display text-[28px] tracking-tighter text-text">Settings</h1>
+              <p className="text-sm text-text-sub mt-1">Toggle verbs and tenses individually.</p>
+            </div>
+
+            <div className="flex gap-2">
+              {[["irregular","Irregular ("+irregulars.length+")"],["regular","Regular ("+regulars.length+")"]].map(([v,l])=>(
+                <TogglePill key={v} active={settingsTab===v} onClick={()=>setSettingsTab(v)}>{l}</TogglePill>
+              ))}
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="ghost" size="sm" onClick={()=>bulkToggle(typeKey,"presente",true)}>All Presente On</Button>
+              <Button variant="ghost" size="sm" onClick={()=>bulkToggle(typeKey,"passado",true)}>All Passado On</Button>
+              <Button variant="danger" size="sm" onClick={()=>{bulkToggle(typeKey,"presente",false);bulkToggle(typeKey,"passado",false);}}>All Off</Button>
+            </div>
+
+            <Card className="overflow-hidden">
+              <div className="grid grid-cols-[1fr_72px_72px] items-center px-4 py-3 border-b border-border text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">
+                <span>Verb</span>
+                <span className="text-center">Pres.</span>
+                <span className="text-center">Pass.</span>
+              </div>
+              <div className="max-h-[420px] overflow-y-auto no-scrollbar divide-y divide-border">
+                {list.map((v)=>(
+                  <div key={v.id} className="grid grid-cols-[1fr_72px_72px] items-center px-4 py-3 hover:bg-bg/40 transition-colors">
+                    <div className="min-w-0">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-sm font-semibold text-text">{v.verb}</span>
+                        {v.prep!=="—" && <span className="text-[10px] text-text-sub font-mono-ui">[{v.prep}]</span>}
+                      </div>
+                      <div className="text-[11px] text-text-sub italic truncate">{v.transl}</div>
+                    </div>
+                    <div className="flex justify-center">
+                      <MiniToggle on={!!config[v.id]?.presente} onClick={()=>toggleVerb(v.id,"presente")}/>
+                    </div>
+                    <div className="flex justify-center">
+                      <MiniToggle on={!!config[v.id]?.passado} onClick={()=>toggleVerb(v.id,"passado")}/>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </Screen>
+        </AnimatePresence>
+        <NavBar/>
+      </div>
+    );
+  }
+
+  // ─────────────────────── HISTORY ───────────────────────
+  if(screen==="history"){
+    return (
+      <div className="min-h-screen bg-bg text-text">
+        <TopBar/>
+        <AnimatePresence mode="wait">
+          <Screen key="history">
+            <div>
+              <h1 className="font-display text-[28px] tracking-tighter text-text">Score</h1>
+              <p className="text-sm text-text-sub mt-1">
+                {history.length===0
+                  ? "No sessions yet. Play a round first."
+                  : <>{history.length} session{history.length!==1?"s":""}{trendText()}</>
+                }
+              </p>
+            </div>
+
+            {history.length>0 && (
+              <>
+                <Card className="p-4">
+                  <Chart/>
+                </Card>
+
+                <div className="flex flex-col gap-1.5">
+                  {[...history].reverse().map((h,i)=>{
+                    const d=new Date(h.date);
+                    const ds=`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
+                    return (
+                      <div key={i} className="flex items-center justify-between px-4 py-3 rounded-md bg-surface border border-border text-sm">
+                        <span className="text-text-sub text-xs font-mono-ui">{ds}</span>
+                        <span className={cn(
+                          "font-semibold tabular-nums",
+                          h.pct>=70?"text-accent":h.pct>=40?"text-warn":"text-danger"
+                        )}>{h.pct}%</span>
+                        <span className="text-text-sub text-xs font-mono-ui">{h.correct}/{h.total}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={()=>{sDel(SK_HIST);setHistory([]);}}
+                  className="self-center mt-2 text-[11px] font-mono-ui uppercase tracking-[0.12em] text-text-sub hover:text-danger transition-colors flex items-center gap-1.5"
+                >
+                  <RotateCcw size={11}/> Reset scores
+                </button>
+              </>
+            )}
+          </Screen>
+        </AnimatePresence>
+        <NavBar/>
+      </div>
+    );
+  }
+
+  // ─────────────────────── RESULTS ───────────────────────
+  if(screen==="results"){
+    const rating=score.correct===10?{stars:3,label:"Alegria!",confetti:true}:score.correct===9?{stars:2,label:"Óptimo!"}:score.correct===8?{stars:1,label:"Fixe!"}:null;
+    return (
+      <div className="min-h-screen bg-bg text-text relative">
+        <TopBar/>
+        {rating?.confetti && <Confetti/>}
+        <AnimatePresence mode="wait">
+          <Screen key="results">
+            <div className="text-center flex flex-col items-center gap-3 mt-6">
+              <Badge variant="accent">Resultados</Badge>
+              {rating && (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="flex gap-2 mt-2">
+                    {Array.from({length:rating.stars}).map((_,i)=>(
+                      <motion.div
+                        key={i}
+                        initial={{scale:0,rotate:-30,opacity:0}}
+                        animate={{scale:[0,1.2,1],rotate:0,opacity:1}}
+                        transition={{delay:0.2+i*0.15,duration:0.5,times:[0,0.6,1],type:"spring",stiffness:400,damping:15}}
+                      >
+                        <Sparkles size={36} className="text-accent" strokeWidth={2} fill="hsl(var(--accent))"/>
+                      </motion.div>
+                    ))}
+                  </div>
+                  <motion.div
+                    initial={{opacity:0,y:6}}
+                    animate={{opacity:1,y:0}}
+                    transition={{delay:0.2+rating.stars*0.15+0.1}}
+                    className="text-[22px] font-display text-accent"
+                  >
+                    {rating.label}
+                  </motion.div>
+                </div>
+              )}
+            </div>
+
+            <Card className="p-8 flex flex-col items-center text-center">
+              <div className="font-display text-[88px] leading-none text-primary tabular-nums">
+                <AnimatedNumber value={pct}/>%
+              </div>
+              <p className="mt-3 text-sm text-text-sub">
+                <span className="text-accent font-semibold">{score.correct}</span> correct
+                {" · "}
+                <span className="text-danger font-semibold">{score.wrong}</span> wrong
+                {score.accentMisses>0 && (
+                  <span className="text-warn"> · {score.accentMisses} accent{score.accentMisses>1?"s":""} missed</span>
+                )}
+              </p>
+            </Card>
+
+            {wrongOnes.length>0 && (
+              <Card className="p-5">
+                <h3 className="text-[10px] font-mono-ui text-danger uppercase tracking-[0.15em] mb-3">Review these</h3>
+                <div className="flex flex-col gap-2 max-h-[260px] overflow-y-auto no-scrollbar">
+                  {wrongOnes.map((w,i)=>(
+                    <div key={i} className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-md bg-danger/5 border border-danger/20">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-text">{w.verb}</div>
+                        <div className="text-[11px] text-text-sub font-mono-ui">{w.pronoun} · {w.tense}</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-accent font-semibold">{w.answer}</span>
+                        <AudioBtn text={w.answer}/>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            <div className="flex gap-3">
+              <Button onClick={startGame} className="flex-1" size="lg">Play Again</Button>
+              <Button variant="ghost" onClick={()=>setScreen("menu")} size="lg">Menu</Button>
+            </div>
+          </Screen>
+        </AnimatePresence>
+      </div>
+    );
+  }
+
+  // ─────────────────────── PLAY ───────────────────────
+  const tenseLabel=card.tense==="presente"?"Presente":"Passado";
+  const tenseVariant=card.tense==="presente"?"presente":"passado";
+
+  return (
+    <div className="min-h-screen bg-bg text-text relative">
+      <TopBar/>
+      <Screen className="pt-16">
+        {/* Progress + close */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-1.5 rounded-full bg-surface border border-border overflow-hidden">
+            <motion.div
+              className="h-full bg-primary"
+              initial={false}
+              animate={{width:`${((idx+(result?1:0))/cards.length)*100}%`}}
+              transition={{type:"spring",stiffness:200,damping:28}}
+            />
+          </div>
+          <span className="text-[11px] font-mono-ui text-text-sub tabular-nums">
+            {idx+1}/{cards.length}
+          </span>
+          <button
+            onClick={()=>setScreen("menu")}
+            className="h-9 w-9 rounded-md border border-border bg-surface text-text-sub hover:text-danger hover:border-danger/60 transition-colors flex items-center justify-center"
+          >
+            <X size={15}/>
+          </button>
+        </div>
+
+        {/* Score row */}
+        <div className="flex items-center justify-between text-[11px] font-mono-ui uppercase tracking-[0.12em]">
+          <span className="text-text-sub">Round</span>
+          <span className="tabular-nums">
+            <span className="text-accent">{score.correct}</span>
+            <span className="text-text-sub mx-1">·</span>
+            <span className="text-danger">{score.wrong}</span>
+          </span>
+        </div>
+
+        {/* Card */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={idx}
+            initial={{opacity:0,y:14}}
+            animate={{
+              opacity:1,
+              y:0,
+              x: result==="wrong" ? [0,8,-8,6,-6,0] : 0,
+            }}
+            exit={{opacity:0,y:-8}}
+            transition={{
+              opacity:{duration:0.25,ease:"easeOut"},
+              y:{duration:0.25,ease:"easeOut"},
+              x:{duration:0.4,ease:"easeOut"},
+            }}
+          >
+            <Card className="p-7 flex flex-col gap-5">
+              <div className="flex items-center justify-between">
+                <Badge variant={tenseVariant}>{tenseLabel}</Badge>
+                <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">
+                  {card.type.replace("regular-","-")}
+                </span>
+              </div>
+
+              <div className="text-center py-2">
+                <div className="font-display text-[44px] leading-[1] tracking-tightest text-text">
+                  {card.transl}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-base font-mono-ui text-primary italic">
+                  {card.pronoun}
+                </span>
+                {result===null && (
+                  <span className="text-text-sub text-base tracking-[4px]">· · ·</span>
+                )}
+              </div>
+
+              <motion.div
+                animate={result==="correct" && !accentNote ? {scale:[1,1.04,1]} : {}}
+                transition={{duration:0.35}}
+              >
+                <Input
+                  ref={inputRef}
+                  value={input}
+                  onChange={e=>setInput(e.target.value)}
+                  onKeyDown={onKey}
+                  placeholder="Type conjugation..."
+                  disabled={result!==null}
+                  autoFocus
+                  className={cn(
+                    "text-base font-mono-ui",
+                    result==="correct" && !accentNote && "border-accent bg-accent/5 focus:border-accent focus:ring-accent/30",
+                    result==="correct" && accentNote && "border-warn bg-warn/5 focus:border-warn focus:ring-warn/30",
+                    result==="wrong" && "border-danger bg-danger/5 focus:border-danger focus:ring-danger/30",
+                  )}
+                />
+              </motion.div>
+
+              {result===null && (
+                <Button onClick={check} size="lg" className="w-full">Check</Button>
+              )}
+
+              {/* Feedback */}
+              <AnimatePresence>
+                {result==="correct" && (
+                  <motion.div
+                    initial={{opacity:0,y:6}}
+                    animate={{opacity:1,y:0}}
+                    transition={{duration:0.2}}
+                    className="flex flex-col gap-3"
+                  >
+                    <div className="flex items-center justify-center gap-2 text-accent">
+                      <Check size={18} strokeWidth={3}/>
+                      <span className="text-base font-semibold">Correto!</span>
+                    </div>
+                    {accentNote && (
+                      <div className="text-center text-xs text-warn bg-warn/10 border border-warn/30 rounded-md py-2 px-3">
+                        Watch the accent: <strong className="font-mono-ui">{accentNote}</strong>
+                      </div>
+                    )}
+                    <ConjugationTable card={card}/>
+                    <Button onClick={next} size="lg" className="w-full">
+                      Next <ArrowRight size={16}/>
+                    </Button>
+                  </motion.div>
+                )}
+
+                {result==="wrong" && (
+                  <motion.div
+                    initial={{opacity:0,y:6}}
+                    animate={{opacity:1,y:0}}
+                    transition={{duration:0.2}}
+                    className="flex flex-col gap-3"
+                  >
+                    <div className="text-center text-sm text-danger">
+                      <X size={14} className="inline -mt-0.5 mr-1" strokeWidth={3}/>
+                      The answer is: <strong className="font-mono-ui ml-1">{card.answer}</strong>
+                    </div>
+                    <ConjugationTable card={card}/>
+                    <Button onClick={next} size="lg" className="w-full">
+                      Next <ArrowRight size={16}/>
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Card>
+          </motion.div>
+        </AnimatePresence>
+      </Screen>
     </div>
-    <div style={S.play}>
-      <div style={{...S.badge,background:tc}}>{tl}</div>
-      <div style={S.prompt}><div style={S.pv}>{card.transl}</div></div>
-      <div style={S.pLine}><span style={S.pText}>{card.pronoun}</span>{result===null&&<span style={S.pDots}>· · ·</span>}</div>
-      <input ref={inputRef} style={{...S.inp,borderColor:result==="correct"?(accentNote?"#d4850a":"#1e7a3a"):result==="wrong"?"#c0392b":"#ccc",background:result==="correct"?(accentNote?"#fef9ee":"#eef7f0"):result==="wrong"?"#fdf0ee":"#fff"}} value={input} onChange={e=>setInput(e.target.value)} onKeyDown={onKey} placeholder="Type conjugation..." disabled={result!==null} autoFocus/>
-      {result===null&&<button onClick={check} style={S.chk}>Check</button>}
-      {result==="correct"&&(<div style={S.fb}><span style={S.fbOk}>Correto!</span>{accentNote&&<div style={S.aw}>Watch the accent: <strong>{accentNote}</strong> <AudioBtn text={accentNote}/></div>}
-        <div style={S.af}><div style={S.afVerb}><span>{card.verb}{card.prep!=="—"&&<span style={S.afPrep}> [{card.prep}]</span>}</span><AudioBtn text={card.verb}/></div>{PRONOUNS.map(p=>(<div key={p} style={S.afR}><span style={p===card.pronoun?{minWidth:110}:S.afP}>{p}</span><span style={p===card.pronoun?{fontWeight:700}:{}}>{card[card.tense][p]}</span><AudioBtn text={`${p}, ${card[card.tense][p]}`}/></div>))}</div>
-        <button onClick={next} style={S.nxt}>Next →</button></div>)}
-      {result==="wrong"&&(<div style={S.fb}><div style={S.fbNo}>✗ The answer is: <strong>{card.answer}</strong></div>
-        <div style={S.af}><div style={S.afVerb}><span>{card.verb}{card.prep!=="—"&&<span style={S.afPrep}> [{card.prep}]</span>}</span><AudioBtn text={card.verb}/></div>{PRONOUNS.map(p=>(<div key={p} style={S.afR}><span style={p===card.pronoun?{minWidth:110}:S.afP}>{p}</span><span style={p===card.pronoun?{fontWeight:700}:{}}>{card[card.tense][p]}</span><AudioBtn text={`${p}, ${card[card.tense][p]}`}/></div>))}</div>
-        <button onClick={next} style={S.nxt}>Next →</button></div>)}
-    </div>
-  </div>);
+  );
 }
 
-const S={
-  container:{minHeight:"100vh",background:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"'Georgia','Times New Roman',serif",padding:"20px 20px 80px"},
-  page:{width:"100%",maxWidth:480,padding:"32px 24px",display:"flex",flexDirection:"column",gap:20,alignItems:"center"},
-  card:{background:"#fff",borderRadius:16,padding:"28px 28px 24px",maxWidth:440,width:"100%",boxShadow:"0 4px 24px rgba(0,0,0,.08)",display:"flex",flexDirection:"column",alignItems:"center",gap:14},
-  flag:{width:60,height:40,borderRadius:4,overflow:"hidden",display:"flex",position:"relative",border:"1px solid #ddd"},
-  shield:{position:"absolute",left:"50%",top:"50%",transform:"translate(-50%,-50%)",width:14,height:14,borderRadius:"50%",background:"#FFD700",border:"2px solid #c0392b"},
-  title:{fontSize:24,fontWeight:700,color:"#1a3a5c",margin:0,letterSpacing:"-0.5px"},
-  sub:{fontSize:14,color:"#888",margin:"-6px 0 4px"},
-  og:{width:"100%",display:"flex",flexDirection:"column",gap:6},
-  ol:{fontSize:11,textTransform:"uppercase",letterSpacing:1,color:"#999",fontFamily:"system-ui,sans-serif"},
-  row:{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center"},
-  ob:{flex:1,padding:"8px 12px",border:"1.5px solid #ddd",borderRadius:8,background:"#fafafa",cursor:"pointer",fontSize:13,fontFamily:"system-ui,sans-serif",color:"#555",transition:"all .15s",minWidth:80},
-  oba:{borderColor:"#1a3a5c",background:"#1a3a5c",color:"#fff"},
-  start:{marginTop:4,padding:"12px 48px",background:"#1a3a5c",color:"#fff",border:"none",borderRadius:10,fontSize:16,fontFamily:"'Georgia',serif",cursor:"pointer"},
-  back:{padding:"12px 32px",background:"transparent",color:"#1a3a5c",border:"1.5px solid #1a3a5c",borderRadius:10,fontSize:14,fontFamily:"'Georgia',serif",cursor:"pointer"},
-  nav:{position:"fixed",bottom:0,left:0,right:0,background:"#fff",borderTop:"1px solid #eee",display:"flex",justifyContent:"space-around",alignItems:"center",padding:"14px 0 max(16px,env(safe-area-inset-bottom))",zIndex:100,boxShadow:"0 -2px 12px rgba(0,0,0,.06)"},
-  navBtn:{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"10px 0",border:"none",background:"transparent",color:"#ccc",cursor:"pointer",transition:"color .15s"},
-  navActive:{color:"#1a3a5c"},
-  chartWrap:{width:"100%",display:"flex",flexDirection:"column",alignItems:"center",gap:4},
-  chartT:{fontSize:13,textTransform:"uppercase",letterSpacing:1,color:"#1a3a5c",fontFamily:"system-ui,sans-serif",margin:0},
-  chartS:{fontSize:12,color:"#888",fontFamily:"system-ui,sans-serif",margin:0},
-  clr:{marginTop:4,padding:"4px 12px",background:"transparent",border:"1px solid #ddd",borderRadius:6,fontSize:11,fontFamily:"system-ui,sans-serif",color:"#aaa",cursor:"pointer"},
-  verbList:{width:"100%",maxHeight:400,overflowY:"auto",display:"flex",flexDirection:"column",gap:0},
-  verbHeaderRow:{display:"flex",alignItems:"center",padding:"4px 8px",borderBottom:"1px solid #eee"},
-  verbRow:{display:"flex",alignItems:"center",padding:"8px",borderBottom:"1px solid #f5f5f5"},
-  toggle:{padding:"3px 10px",borderRadius:4,border:"1px solid #ddd",fontSize:10,fontFamily:"system-ui,sans-serif",fontWeight:600,cursor:"pointer",transition:"all .15s",minWidth:36,textAlign:"center"},
-  qToggle:{flex:1,padding:"9px 16px",borderRadius:8,border:"1.5px solid #ddd",fontSize:14,fontFamily:"system-ui,sans-serif",fontWeight:600,cursor:"pointer",transition:"all .15s",textAlign:"center"},
-  toggleOn:{background:"#1e7a3a",color:"#fff",borderColor:"#1e7a3a"},
-  toggleOff:{background:"#f5f5f5",color:"#bbb",borderColor:"#ddd"},
-  bulkBtn:{padding:"5px 10px",border:"1px solid #ddd",borderRadius:6,fontSize:11,fontFamily:"system-ui,sans-serif",color:"#666",cursor:"pointer",background:"#fafafa"},
-  top:{width:"100%",maxWidth:440,display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,fontFamily:"system-ui,sans-serif",fontSize:13,color:"#999"},
-  closeBtn:{background:"none",border:"none",fontSize:16,color:"#bbb",cursor:"pointer",padding:"4px 8px",lineHeight:1},
-  play:{background:"#fff",borderRadius:16,padding:"28px 28px 24px",maxWidth:440,width:"100%",boxShadow:"0 4px 24px rgba(0,0,0,.08)",display:"flex",flexDirection:"column",gap:14},
-  badge:{alignSelf:"flex-start",color:"#fff",fontSize:11,fontFamily:"system-ui,sans-serif",fontWeight:600,textTransform:"uppercase",letterSpacing:1,padding:"3px 10px",borderRadius:4},
-  prompt:{textAlign:"center",padding:"8px 0"},
-  pv:{fontSize:28,fontWeight:700,color:"#1a3a5c",letterSpacing:"-0.5px"},
-  reveal:{fontSize:16,color:"#888",marginTop:6,fontStyle:"italic"},
-  pp:{fontSize:15,fontWeight:400,color:"#aaa"},
-  pLine:{display:"flex",alignItems:"center",gap:10,padding:"4px 0"},
-  pText:{fontSize:18,color:"#8e2b1d",fontStyle:"italic",fontWeight:600,minWidth:120},
-  pDots:{color:"#ddd",fontSize:18,letterSpacing:4},
-  inp:{width:"100%",padding:"12px 14px",fontSize:18,fontFamily:"'Georgia',serif",border:"2px solid #ccc",borderRadius:10,outline:"none",boxSizing:"border-box",transition:"border-color .2s,background .2s"},
-  chk:{padding:10,background:"#1a3a5c",color:"#fff",border:"none",borderRadius:10,fontSize:15,fontFamily:"'Georgia',serif",cursor:"pointer"},
-  fb:{display:"flex",flexDirection:"column",gap:10},
-  fbOk:{color:"#1e7a3a",fontSize:18,fontWeight:700,textAlign:"center"},
-  fbNo:{color:"#c0392b",fontSize:15,textAlign:"center",lineHeight:"1.6"},
-  aw:{textAlign:"center",fontSize:13,color:"#d4850a",fontFamily:"system-ui,sans-serif",background:"#fef9ee",padding:"6px 12px",borderRadius:6,border:"1px solid #f0ddb0"},
-  saBtn:{padding:"6px 12px",background:"transparent",border:"1px solid #ddd",borderRadius:6,fontSize:12,fontFamily:"system-ui,sans-serif",color:"#888",cursor:"pointer",alignSelf:"center"},
-  af:{background:"#faf8f5",borderRadius:8,padding:"10px 14px",display:"flex",flexDirection:"column",gap:3,fontSize:13,fontFamily:"system-ui,sans-serif"},
-  afR:{display:"flex",gap:8,alignItems:"center"},
-  afP:{color:"#999",fontStyle:"italic",minWidth:110},
-  afVerb:{background:"#e6e6e6",borderRadius:4,padding:"10px 8px",display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:16},
-  afPrep:{color:"#666"},
-  nxt:{padding:10,background:"#1a3a5c",color:"#fff",border:"none",borderRadius:10,fontSize:15,fontFamily:"'Georgia',serif",cursor:"pointer"},
-  audio:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:26,height:26,borderRadius:"50%",border:"1px solid #ddd",background:"#fafafa",cursor:"pointer",color:"#1a3a5c",verticalAlign:"middle",marginLeft:4,padding:0,transition:"all .15s"},
-  rating:{display:"flex",flexDirection:"column",alignItems:"center",gap:2},
-  ratingStars:{fontSize:28,letterSpacing:2},
-  ratingLabel:{fontSize:20,fontWeight:700,color:"#1a3a5c",fontFamily:"'Georgia',serif"},
-  big:{fontSize:64,fontWeight:700,color:"#1a3a5c",margin:"8px 0 0"},
-  det:{fontSize:14,color:"#888",fontFamily:"system-ui,sans-serif",margin:"0 0 8px"},
-  wl:{width:"100%",maxHeight:240,overflowY:"auto",display:"flex",flexDirection:"column",gap:6},
-  wt:{fontSize:13,textTransform:"uppercase",letterSpacing:1,color:"#c0392b",fontFamily:"system-ui,sans-serif",margin:"0 0 4px"},
-  wi:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 10px",background:"#fdf0ee",borderRadius:6,fontSize:13,fontFamily:"system-ui,sans-serif"},
-  wv:{fontWeight:600,color:"#1a3a5c"},
-  wd:{color:"#666",textAlign:"right"},
-  version:{position:"fixed",bottom:88,left:"50%",transform:"translateX(-50%)",fontSize:10,color:"#999",fontFamily:"monospace",opacity:0.8,zIndex:50},
-};
+// ── Conjugation table (used in correct/wrong feedback) ──
+function ConjugationTable({card}){
+  return (
+    <div className="rounded-md border border-border overflow-hidden">
+      {/* Header row: verb + audio */}
+      <div className="flex items-center justify-between px-4 py-3 bg-bg/60 border-b border-border">
+        <div className="flex items-baseline gap-2">
+          <span className="font-display text-base text-text">{card.verb}</span>
+          {card.prep!=="—" && <span className="text-xs text-text-sub font-mono-ui">[{card.prep}]</span>}
+        </div>
+        <AudioBtn text={card.verb}/>
+      </div>
+      {/* Pronoun rows */}
+      <div className="divide-y divide-border">
+        {PRONOUNS.map(p=>{
+          const active=p===card.pronoun;
+          return (
+            <div key={p} className="grid grid-cols-[110px_1fr_auto] items-center px-4 py-2.5 gap-3">
+              <span className={cn(
+                "text-xs font-mono-ui",
+                active ? "text-text" : "text-text-sub italic"
+              )}>
+                {p}
+              </span>
+              <span className={cn(
+                "text-sm",
+                active ? "text-primary font-bold" : "text-text"
+              )}>
+                {card[card.tense][p]}
+              </span>
+              <AudioBtn text={`${p}, ${card[card.tense][p]}`}/>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Mini on/off toggle pill (settings list) ──
+function MiniToggle({on,onClick}){
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "h-7 w-12 rounded-full border transition-all flex items-center px-0.5",
+        on ? "bg-primary/20 border-primary/50 justify-end" : "bg-surface border-border justify-start"
+      )}
+    >
+      <motion.span
+        layout
+        transition={{type:"spring",stiffness:500,damping:32}}
+        className={cn(
+          "block h-5 w-5 rounded-full",
+          on ? "bg-primary" : "bg-muted"
+        )}
+      />
+    </button>
+  );
+}
