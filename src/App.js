@@ -462,14 +462,6 @@ export default function App(){
     return()=>vv.removeEventListener("resize",onResize);
   },[]);
 
-  // When keyboard opens on play screen, scroll the input into view
-  useEffect(()=>{
-    if(!keyboardOpen||screen!=="play")return;
-    const t=setTimeout(()=>{
-      inputRef.current?.scrollIntoView({block:"center",behavior:"smooth"});
-    },200);
-    return()=>clearTimeout(t);
-  },[keyboardOpen,screen,idx]);
 
   const card=cards[idx];
   const total=score.correct+score.wrong;
@@ -933,7 +925,7 @@ export default function App(){
   const tenseVariant=card.tense==="presente"?"presente":"passado";
 
   return (
-    <div className="min-h-[100dvh] bg-bg text-text relative">
+    <div className="h-screen overflow-hidden bg-bg text-text relative">
       <TopBar/>
       <Screen>
         {/* Progress + score + close */}
@@ -1023,7 +1015,6 @@ export default function App(){
                   onChange={e=>setInput(e.target.value)}
                   placeholder={card.mode==="sentences"?"Type translation...":"Type conjugation..."}
                   disabled={result!==null}
-                  autoFocus
                   autoComplete="off"
                   autoCorrect="off"
                   autoCapitalize="off"
