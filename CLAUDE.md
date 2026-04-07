@@ -36,9 +36,16 @@ Not playful. Not rounded-soft.
 - NO serif fonts anywhere
 
 ## Spacing & Radius
-- Base unit: 4px
+
+**4px grid — strictly enforced.**
+Every padding, margin, gap, and size value MUST be a multiple of 4px.
+Allowed: 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, …
+Forbidden: 2px, 6px, 10px, 14px (i.e. Tailwind's .5 fractional classes like `py-1.5`, `px-2.5`, `gap-0.5`).
+This applies to ALL files — App.js, UI components, index.css, inline styles.
+When adding or editing any spacing, double-check no `.5` suffix appears.
+
 - Cards: rounded-lg (12px)
-- Buttons: rounded-md (8px), height 40px (lg: 48px, xl: 56px)
+- Buttons: rounded-md (8px), height 36px (sm) / 44px (md) / 48px (lg) / 56px (xl)
 - Input: rounded-md, height 48px, border 1px --brand-border, focus ring --brand-primary
 - Page padding: 24px mobile, 40px desktop
 - Max content width: 480px, centered

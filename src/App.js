@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine } from "recharts";
-import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowRight, Check, Sparkles, RotateCcw } from "lucide-react";
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine, Cell } from "recharts";
+import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle } from "lucide-react";
 import packageInfo from "../package.json";
 import { cn } from "./lib/utils";
 import { useTheme } from "./lib/useTheme";
@@ -9,6 +9,8 @@ import { Button } from "./components/ui/Button";
 import { Card } from "./components/ui/Card";
 import { Input } from "./components/ui/Input";
 import { Badge } from "./components/ui/Badge";
+import { SENTENCES } from "./data/sentences";
+import { evaluateSentence } from "./lib/evaluateSentence";
 
 const ALL_VERBS = [
   // ── IRREGULAR ──
@@ -21,7 +23,7 @@ const ALL_VERBS = [
   { id:"ter", verb:"ter", transl:"to have", prep:"de, que", type:"irregular",
     presente:{eu:"tenho",tu:"tens","ele/ela":"tem",nós:"temos","eles(as)/vocês":"têm"},
     passado:{eu:"tive",tu:"tiveste","ele/ela":"teve",nós:"tivemos","eles(as)/vocês":"tiveram"}},
-  { id:"haver", verb:"haver", transl:"to exist / aux.", prep:"de", type:"irregular",
+  { id:"haver", verb:"haver", transl:"to exist (for/ago)", prep:"de", type:"irregular", impessoal:true,
     presente:{eu:"hei",tu:"hás","ele/ela":"há",nós:"havemos","eles(as)/vocês":"hão"},
     passado:{eu:"houve",tu:"houveste","ele/ela":"houve",nós:"houvemos","eles(as)/vocês":"houveram"}},
   { id:"ir", verb:"ir", transl:"to go", prep:"a, para", type:"irregular",
@@ -155,9 +157,10 @@ const ALL_VERBS = [
   { id:"receber", verb:"receber", transl:"to receive", prep:"de", type:"regular-er", presente:{eu:"recebo",tu:"recebes","ele/ela":"recebe",nós:"recebemos","eles(as)/vocês":"recebem"}, passado:{eu:"recebi",tu:"recebeste","ele/ela":"recebeu",nós:"recebemos","eles(as)/vocês":"receberam"}},
   { id:"parecer", verb:"parecer", transl:"to seem", prep:"—", type:"regular-er", presente:{eu:"pareço",tu:"pareces","ele/ela":"parece",nós:"parecemos","eles(as)/vocês":"parecem"}, passado:{eu:"pareci",tu:"pareceste","ele/ela":"pareceu",nós:"parecemos","eles(as)/vocês":"pareceram"}},
   { id:"conhecer", verb:"conhecer", transl:"to know (people)", prep:"—", type:"regular-er", presente:{eu:"conheço",tu:"conheces","ele/ela":"conhece",nós:"conhecemos","eles(as)/vocês":"conhecem"}, passado:{eu:"conheci",tu:"conheceste","ele/ela":"conheceu",nós:"conhecemos","eles(as)/vocês":"conheceram"}},
-  { id:"acontecer", verb:"acontecer", transl:"to happen", prep:"—", type:"regular-er", presente:{eu:"aconteço",tu:"aconteces","ele/ela":"acontece",nós:"acontecemos","eles(as)/vocês":"acontecem"}, passado:{eu:"aconteci",tu:"aconteceste","ele/ela":"aconteceu",nós:"acontecemos","eles(as)/vocês":"aconteceram"}},
+  { id:"acontecer", verb:"acontecer", transl:"to happen", prep:"—", type:"regular-er", impessoal:true, presente:{eu:"aconteço",tu:"aconteces","ele/ela":"acontece",nós:"acontecemos","eles(as)/vocês":"acontecem"}, passado:{eu:"aconteci",tu:"aconteceste","ele/ela":"aconteceu",nós:"acontecemos","eles(as)/vocês":"aconteceram"}},
   { id:"descer", verb:"descer", transl:"to go down", prep:"—", type:"regular-er", presente:{eu:"desço",tu:"desces","ele/ela":"desce",nós:"descemos","eles(as)/vocês":"descem"}, passado:{eu:"desci",tu:"desceste","ele/ela":"desceu",nós:"descemos","eles(as)/vocês":"desceram"}},
-  { id:"chover", verb:"chover", transl:"to rain", prep:"—", type:"regular-er", presente:{eu:"chovo",tu:"choves","ele/ela":"chove",nós:"chovemos","eles(as)/vocês":"chovem"}, passado:{eu:"chovi",tu:"choveste","ele/ela":"choveu",nós:"chovemos","eles(as)/vocês":"choveram"}},
+  { id:"dever", verb:"dever", transl:"must / to have to", prep:"—", type:"regular-er", presente:{eu:"devo",tu:"deves","ele/ela":"deve",nós:"devemos","eles(as)/vocês":"devem"}, passado:{eu:"devi",tu:"deveste","ele/ela":"deveu",nós:"devemos","eles(as)/vocês":"deveram"}},
+  { id:"chover", verb:"chover", transl:"to rain", prep:"—", type:"regular-er", impessoal:true, presente:{eu:"chovo",tu:"choves","ele/ela":"chove",nós:"chovemos","eles(as)/vocês":"chovem"}, passado:{eu:"chovi",tu:"choveste","ele/ela":"choveu",nós:"chovemos","eles(as)/vocês":"choveram"}},
   // ── REGULAR -IR ──
   { id:"partir", verb:"partir", transl:"to leave / break", prep:"de, para", type:"regular-ir", presente:{eu:"parto",tu:"partes","ele/ela":"parte",nós:"partimos","eles(as)/vocês":"partem"}, passado:{eu:"parti",tu:"partiste","ele/ela":"partiu",nós:"partimos","eles(as)/vocês":"partiram"}},
   { id:"assistir", verb:"assistir", transl:"to watch / attend", prep:"a", type:"regular-ir", presente:{eu:"assisto",tu:"assistes","ele/ela":"assiste",nós:"assistimos","eles(as)/vocês":"assistem"}, passado:{eu:"assisti",tu:"assististe","ele/ela":"assistiu",nós:"assistimos","eles(as)/vocês":"assistiram"}},
@@ -168,10 +171,13 @@ const ALL_VERBS = [
 const PRONOUNS=["eu","tu","ele/ela","nós","eles(as)/vocês"];
 const PRONOUN_LABELS={"eu":"eu","tu":"tu","ele/ela":"ele(a)/você","nós":"nós","eles(as)/vocês":"eles(as)/vocês"};
 const pLabel=(p)=>PRONOUN_LABELS[p]||p;
+const DISPLAY_PRONOUNS=["eu","tu","ele","ela","você","nós","eles","elas","vocês"];
+const PRONOUN_KEY={"eu":"eu","tu":"tu","ele":"ele/ela","ela":"ele/ela","você":"ele/ela","nós":"nós","eles":"eles(as)/vocês","elas":"eles(as)/vocês","vocês":"eles(as)/vocês"};
 const TENSES=["presente","passado"];
 const SK_HIST="verbos-history";
 const SK_CONF="verbos-config";
 const SK_FILTERS="verbos-filters";
+const SK_MODE="verbos-mode";
 
 function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
 function stripAccents(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"");}
@@ -249,12 +255,14 @@ function AnimatedNumber({value,duration=1.2}){
 }
 
 // ── Toggle pill — monotone secondary look (Linear-like transparency) ──
-function TogglePill({active,onClick,children}){
+function TogglePill({active,onClick,children,disabled}){
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={cn(
         "relative px-5 h-11 rounded-md text-sm font-medium border transition-all duration-200 flex-1 min-w-[88px]",
+        disabled && "opacity-40 pointer-events-none",
         active
           ? "bg-secondary/10 text-text border-secondary/25"
           : "bg-transparent text-text-sub border-border hover:text-text hover:border-muted"
@@ -313,7 +321,7 @@ function Screen({children,className}){
       exit={{opacity:0,y:-4}}
       transition={{duration:0.22,ease:"easeOut"}}
       className={cn(
-        "w-full max-w-[480px] mx-auto px-6 md:px-10 pt-12 pb-28 flex flex-col gap-6",
+        "w-full max-w-[480px] mx-auto px-6 md:px-10 pt-6 pb-28 flex flex-col gap-4",
         className
       )}
     >
@@ -340,12 +348,24 @@ export default function App(){
   const [config,setConfig]=useState(defaultConfig);
   const [settingsTab,setSettingsTab]=useState("irregular");
   const inputRef=useRef(null);
+  const lastEnterRef=useRef(0);
+  const [keyboardOpen,setKeyboardOpen]=useState(false);
+  const [gameMode,setGameMode]=useState("conjugation"); // "conjugation" | "sentences"
+  const [showSplash,setShowSplash]=useState(true);
 
   useEffect(()=>{
     window.speechSynthesis?.getVoices();
     const h=sGet(SK_HIST);if(h&&Array.isArray(h))setHistory(h);
     const c=sGet(SK_CONF);if(c&&typeof c==="object"){const def=defaultConfig();Object.keys(def).forEach(k=>{if(!c[k])c[k]=def[k];});setConfig(c);}
     const f=sGet(SK_FILTERS);if(f){setFilterIrregular(f.filterIrregular??true);setFilterRegular(f.filterRegular??true);setTensePresente(f.tensePresente??true);setTensePassado(f.tensePassado??false);}
+    const m=sGet(SK_MODE);if(m==="conjugation"||m==="sentences")setGameMode(m);
+  },[]);
+
+  useEffect(()=>{sSet(SK_MODE,gameMode);},[gameMode]);
+
+  useEffect(()=>{
+    const t=setTimeout(()=>setShowSplash(false),1300);
+    return()=>clearTimeout(t);
   },[]);
 
   useEffect(()=>{sSet(SK_FILTERS,{filterIrregular,filterRegular,tensePresente,tensePassado});},[filterIrregular,filterRegular,tensePresente,tensePassado]);
@@ -353,6 +373,26 @@ export default function App(){
   const saveConfig=(nc)=>{setConfig(nc);sSet(SK_CONF,nc);};
 
   const startGame=()=>{
+    if(gameMode==="sentences"){
+      const pool=SENTENCES.filter(s=>{
+        if(s.tense==="presente"&&!tensePresente)return false;
+        if(s.tense==="passado"&&!tensePassado)return false;
+        return true;
+      });
+      if(pool.length===0){alert("No sentences match your filters!");return;}
+      const picked=shuffle(pool).slice(0,5).map(s=>({
+        mode:"sentences",
+        id:s.id,
+        verb:s.verb,
+        tense:s.tense,
+        en:s.en,
+        answer:s.pt,
+        alternatives:s.alternatives||[],
+      }));
+      setCards(picked);setIdx(0);setInput("");setResult(null);setAccentNote(null);
+      setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");
+      return;
+    }
     const gen=[];
     for(const v of ALL_VERBS){
       const conf=config[v.id];if(!conf)continue;
@@ -362,22 +402,79 @@ export default function App(){
       if(conf.presente&&tensePresente)tenses.push("presente");
       if(conf.passado&&tensePassado)tenses.push("passado");
       if(tenses.length===0)continue;
-      for(const t of tenses){const pr=PRONOUNS[Math.floor(Math.random()*PRONOUNS.length)];gen.push({...v,tense:t,pronoun:pr,answer:v[t][pr]});}
+      for(const t of tenses){
+        const pr=v.impessoal?"impessoal (ele)":DISPLAY_PRONOUNS[Math.floor(Math.random()*DISPLAY_PRONOUNS.length)];
+        const prKey=v.impessoal?"ele/ela":PRONOUN_KEY[pr];
+        gen.push({...v,mode:"conjugation",tense:t,pronoun:pr,pronounKey:prKey,answer:v[t][prKey]});
+      }
     }
     if(gen.length===0){alert("No verbs match your filters!");return;}
     setCards(shuffle(gen).slice(0,10));setIdx(0);setInput("");setResult(null);setAccentNote(null);
     setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");
   };
 
-  const check=()=>{if(!input.trim())return;const c=cards[idx],r=cmpAns(input,c.answer);if(r==="exact"){setResult("correct");setAccentNote(null);setScore(s=>({...s,correct:s.correct+1}));}else if(r==="accent"){setResult("correct");setAccentNote(c.answer);setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+1}));}else{setResult("wrong");setAccentNote(null);setScore(s=>({...s,wrong:s.wrong+1}));setWrongOnes(w=>[...w,c]);}};
+  const check=()=>{
+    if(!input.trim())return;
+    const c=cards[idx];
+    if(c.mode==="sentences"){
+      const {result:er,note}=evaluateSentence(input,c.answer,c.alternatives);
+      if(er==="correct"){
+        setResult("correct");setAccentNote(note?c.answer:null);
+        setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+(note?1:0)}));
+      }else if(er==="close"){
+        setResult("correct");setAccentNote(c.answer);
+        setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+1}));
+      }else{
+        setResult("wrong");setAccentNote(null);
+        setScore(s=>({...s,wrong:s.wrong+1}));
+        setWrongOnes(w=>[...w,{...c,userAnswer:input}]);
+      }
+      return;
+    }
+    const r=cmpAns(input,c.answer);
+    if(r==="exact"){setResult("correct");setAccentNote(null);setScore(s=>({...s,correct:s.correct+1}));}
+    else if(r==="accent"){setResult("correct");setAccentNote(c.answer);setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+1}));}
+    else{setResult("wrong");setAccentNote(null);setScore(s=>({...s,wrong:s.wrong+1}));setWrongOnes(w=>[...w,c]);}
+  };
 
-  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);setTimeout(()=>inputRef.current?.focus(),50);}};
-  const onKey=(e)=>{if(e.key==="Enter"){result===null?check():next();}};
+  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),mode:gameMode,correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);setTimeout(()=>inputRef.current?.focus(),50);}};
+  // Single Enter handler — debounced to avoid double-fire (key repeat / fast double-press)
+  useEffect(()=>{
+    if(screen!=="play")return;
+    const handler=(e)=>{
+      if(e.key!=="Enter"||e.repeat)return;
+      const now=Date.now();
+      if(now-lastEnterRef.current<350)return;
+      lastEnterRef.current=now;
+      e.preventDefault();
+      if(result===null)check();else next();
+    };
+    window.addEventListener("keydown",handler);
+    return()=>window.removeEventListener("keydown",handler);
+  },[screen,result,check,next]);
+
+  // Detect mobile keyboard via visualViewport
+  useEffect(()=>{
+    const vv=window.visualViewport;
+    if(!vv)return;
+    const onResize=()=>setKeyboardOpen(window.innerHeight-vv.height>150);
+    vv.addEventListener("resize",onResize);
+    return()=>vv.removeEventListener("resize",onResize);
+  },[]);
+
+  // When keyboard opens on play screen, scroll the input into view
+  useEffect(()=>{
+    if(!keyboardOpen||screen!=="play")return;
+    const t=setTimeout(()=>{
+      inputRef.current?.scrollIntoView({block:"center",behavior:"smooth"});
+    },200);
+    return()=>clearTimeout(t);
+  },[keyboardOpen,screen,idx]);
 
   const card=cards[idx];
   const total=score.correct+score.wrong;
   const pct=total>0?Math.round((score.correct/total)*100):0;
-  const chartData=history.map((h,i)=>{const d=new Date(h.date);return{label:`${d.getDate()}/${d.getMonth()+1}`,score:h.pct,session:i+1};});
+  const chartData=history.map((h,i)=>{const d=new Date(h.date);return{label:`${d.getDate()}/${d.getMonth()+1}`,score:h.pct,session:i+1,mode:h.mode||"conjugation"};});
   const trendText=()=>{
     if(history.length<2)return null;
     const l5=history.slice(-5),f5=history.slice(0,Math.min(5,history.length));
@@ -407,7 +504,11 @@ export default function App(){
             cursor={{fill:"hsl(var(--surface))"}}
             formatter={v=>[`${v}%`,"Score"]}
           />
-          <Bar dataKey="score" fill="hsl(var(--primary))" radius={[4,4,0,0]} isAnimationActive={true} animationDuration={600}/>
+          <Bar dataKey="score" radius={[4,4,0,0]} isAnimationActive={true} animationDuration={600}>
+            {chartData.map((d,i)=>(
+              <Cell key={i} fill={d.mode==="sentences"?"hsl(var(--warn))":"hsl(var(--primary))"}/>
+            ))}
+          </Bar>
           <ReferenceLine y={75} stroke="hsl(var(--border))" strokeDasharray="3 3" strokeWidth={1}/>
         </BarChart>
       </ResponsiveContainer>
@@ -437,7 +538,7 @@ export default function App(){
               <button
                 key={it.key}
                 onClick={()=>setScreen(it.key)}
-                className="relative flex-1 h-12 rounded-md flex flex-col items-center justify-center gap-0.5 transition-colors"
+                className="relative flex-1 h-12 rounded-md flex flex-col items-center justify-center gap-1 transition-colors"
               >
                 {active && (
                   <motion.div
@@ -462,43 +563,121 @@ export default function App(){
     );
   };
 
+  // ─────────────────────── SPLASH ───────────────────────
+  if(showSplash){
+    return (
+      <div className="fixed inset-0 bg-bg text-text flex flex-col items-center justify-center gap-5">
+        <motion.div
+          layoutId="brand-flag"
+          transition={{type:"spring",stiffness:260,damping:30}}
+        >
+          <FlagPT className="w-24 h-auto rounded-sm shadow-[0_0_0_1px_hsl(var(--border))]"/>
+        </motion.div>
+        <motion.h1
+          layoutId="brand-title"
+          className="font-display text-[72px] leading-[1] tracking-tightest text-text"
+          transition={{type:"spring",stiffness:260,damping:30}}
+        >
+          Verbos
+        </motion.h1>
+      </div>
+    );
+  }
+
   // ─────────────────────── MENU ───────────────────────
   if(screen==="menu"){
+    const modeTint=gameMode==="sentences"?"warn":"primary";
     return (
       <div className="min-h-screen bg-bg text-text">
         <TopBar/>
         <AnimatePresence mode="wait">
           <Screen key="menu">
-            <div className="flex flex-col items-center text-center gap-3 mt-6">
-              <FlagPT className="w-14 h-auto rounded-sm shadow-[0_0_0_1px_hsl(var(--border))] mb-2"/>
-              <h1 className="font-display text-[44px] leading-[1.05] tracking-tightest text-text">
-                Verbos
-              </h1>
-              <p className="text-text-sub text-sm max-w-[280px]">
-                A focused flashcard tool for mastering European Portuguese verb conjugation.
-              </p>
+
+            <div className="flex justify-end">
+              <button
+                className="h-9 w-9 rounded-full overflow-hidden shadow-[0_0_0_1px_hsl(var(--border))] hover:shadow-[0_0_0_2px_hsl(var(--muted))] transition-shadow"
+                title="Language: Portuguese"
+              >
+                <FlagPT className="h-full w-auto -translate-x-2"/>
+              </button>
             </div>
 
-            <Card className="p-6 flex flex-col gap-5">
-              <div className="flex flex-col gap-3">
-                <label className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.15em]">
-                  Verbs
-                </label>
-                <div className="flex gap-2">
-                  <TogglePill active={filterIrregular} onClick={()=>setFilterIrregular(f=>!f)}>Irregular</TogglePill>
-                  <TogglePill active={filterRegular} onClick={()=>setFilterRegular(f=>!f)}>Regular</TogglePill>
+            <div className={cn(
+              "rounded-lg border overflow-hidden bg-surface transition-colors duration-300",
+              gameMode==="sentences"?"border-warn/40":"border-primary/40"
+            )}>
+              <div className="grid grid-cols-2">
+                {[
+                  {value:"conjugation",icon:Layers,title:"Conjugate",sub:"Drill verb forms",tint:"primary"},
+                  {value:"sentences",icon:MessageCircle,title:"Translate",sub:"Build sentences",tint:"warn"},
+                ].map((m,i)=>{
+                  const active=gameMode===m.value;
+                  const Icon=m.icon;
+                  return (
+                    <motion.button
+                      key={m.value}
+                      onClick={()=>setGameMode(m.value)}
+                      whileTap={{scale:0.97}}
+                      className={cn(
+                        "relative overflow-hidden p-4 flex flex-col items-start gap-2 text-left transition-colors",
+                        i===0?"border-r border-border":"",
+                        active
+                          ? (m.tint==="warn"?"bg-warn/10":"bg-primary/10")
+                          : "bg-transparent hover:bg-surface"
+                      )}
+                    >
+                      <div className={cn(
+                        "h-9 w-9 rounded-md flex items-center justify-center border transition-colors",
+                        active
+                          ? (m.tint==="warn"
+                              ? "bg-warn/20 border-warn/50 text-warn"
+                              : "bg-primary/20 border-primary/50 text-primary")
+                          : "bg-transparent border-border text-text-sub"
+                      )}>
+                        <Icon size={18} strokeWidth={2.25}/>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className={cn("text-sm font-semibold",active?"text-text":"text-text-sub")}>{m.title}</span>
+                        <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.1em]">{m.sub}</span>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+
+              {/* Seam — tinted to match active mode */}
+              <div className={cn(
+                "h-px transition-colors duration-300",
+                gameMode==="sentences"?"bg-warn/40":"bg-primary/40"
+              )}/>
+
+              <div className="p-6 flex flex-col gap-5">
+                {gameMode==="conjugation" && (
+                  <div className="flex flex-col gap-3">
+                    <label className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.15em]">
+                      Verbs
+                    </label>
+                    <div className="flex gap-2">
+                      <TogglePill active={filterIrregular} onClick={()=>setFilterIrregular(f=>!f)}>Irregular</TogglePill>
+                      <TogglePill active={filterRegular} onClick={()=>setFilterRegular(f=>!f)}>Regular</TogglePill>
+                    </div>
+                  </div>
+                )}
+                <div className="flex flex-col gap-3">
+                  <label className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.15em]">
+                    Tense
+                  </label>
+                  <div className="flex gap-2">
+                    <TogglePill active={tensePresente} onClick={()=>setTensePresente(f=>!f)}>Presente</TogglePill>
+                    <TogglePill
+                      active={gameMode==="sentences"?false:tensePassado}
+                      onClick={()=>setTensePassado(f=>!f)}
+                      disabled={gameMode==="sentences"}
+                    >Passado</TogglePill>
+                  </div>
                 </div>
               </div>
-              <div className="flex flex-col gap-3">
-                <label className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.15em]">
-                  Tense
-                </label>
-                <div className="flex gap-2">
-                  <TogglePill active={tensePresente} onClick={()=>setTensePresente(f=>!f)}>Presente</TogglePill>
-                  <TogglePill active={tensePassado} onClick={()=>setTensePassado(f=>!f)}>Passado</TogglePill>
-                </div>
-              </div>
-            </Card>
+            </div>
 
             <Button size="xl" onClick={startGame} className="w-full">
               <Play size={16} fill="currentColor" strokeWidth={0}/> Começar
@@ -537,7 +716,7 @@ export default function App(){
               </div>
               <button
                 onClick={toggleTheme}
-                className="text-[11px] font-mono-ui uppercase tracking-[0.12em] text-text-sub hover:text-text transition-colors px-3 py-1.5 rounded-sm border border-border bg-surface"
+                className="text-[11px] font-mono-ui uppercase tracking-[0.12em] text-text-sub hover:text-text transition-colors px-3 py-2 rounded-sm border border-border bg-surface"
               >
                 {theme==="dark"?"Dark":"Light"}
               </button>
@@ -568,7 +747,7 @@ export default function App(){
                 {list.map((v)=>(
                   <div key={v.id} className="grid grid-cols-[1fr_72px_72px] items-center px-4 py-3 hover:bg-bg/40 transition-colors">
                     <div className="min-w-0">
-                      <div className="flex items-baseline gap-1.5">
+                      <div className="flex items-baseline gap-2">
                         <span className="text-sm font-semibold text-text">{v.verb}</span>
                         {v.prep!=="—" && <span className="text-[10px] text-text-sub font-mono-ui">[{v.prep}]</span>}
                       </div>
@@ -614,7 +793,7 @@ export default function App(){
                   <Chart/>
                 </Card>
 
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-2">
                   {[...history].reverse().map((h,i)=>{
                     const d=new Date(h.date);
                     const ds=`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
@@ -633,7 +812,7 @@ export default function App(){
 
                 <button
                   onClick={()=>{sDel(SK_HIST);setHistory([]);}}
-                  className="self-center mt-2 text-[11px] font-mono-ui uppercase tracking-[0.12em] text-text-sub hover:text-danger transition-colors flex items-center gap-1.5"
+                  className="self-center mt-2 text-[11px] font-mono-ui uppercase tracking-[0.12em] text-text-sub hover:text-danger transition-colors flex items-center gap-2"
                 >
                   <RotateCcw size={11}/> Reset scores
                 </button>
@@ -650,13 +829,13 @@ export default function App(){
   if(screen==="results"){
     const rating=score.correct===10?{stars:3,label:"Alegria!",confetti:true}:score.correct===9?{stars:2,label:"Óptimo!"}:score.correct===8?{stars:1,label:"Fixe!"}:null;
     return (
-      <div className="min-h-screen bg-bg text-text relative">
+      <div className="min-h-[100dvh] bg-bg text-text relative">
         <TopBar/>
         {rating?.confetti && <Confetti/>}
         <AnimatePresence mode="wait">
           <Screen key="results">
-            <div className="text-center flex flex-col items-center gap-3 mt-6">
-              <Badge variant="accent">Resultados</Badge>
+            <div className="text-center flex flex-col items-center gap-3">
+              <Badge variant="presente">Resultados</Badge>
               {rating && (
                 <div className="flex flex-col items-center gap-2">
                   <div className="flex gap-2 mt-2">
@@ -684,7 +863,7 @@ export default function App(){
             </div>
 
             <Card className="p-8 flex flex-col items-center text-center">
-              <div className="font-display text-[88px] leading-none text-primary tabular-nums">
+              <div className="font-display text-[88px] leading-none text-text tabular-nums">
                 <AnimatedNumber value={pct}/>%
               </div>
               <p className="mt-3 text-sm text-text-sub">
@@ -699,30 +878,52 @@ export default function App(){
 
             {wrongOnes.length>0 && (
               <Card className="p-5">
-                <h3 className="text-[10px] font-mono-ui text-danger uppercase tracking-[0.15em] mb-3">Review these</h3>
+                <h3 className="text-[10px] font-mono-ui text-text uppercase tracking-[0.15em] mb-3">Review these</h3>
                 <div className="flex flex-col gap-2 max-h-[260px] overflow-y-auto no-scrollbar">
                   {wrongOnes.map((w,i)=>(
-                    <div key={i} className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-md bg-danger/5 border border-danger/20">
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold text-text">{w.verb}</div>
-                        <div className="text-[11px] text-text-sub font-mono-ui">{pLabel(w.pronoun)} · {w.tense}</div>
+                    w.mode==="sentences" ? (
+                      <div key={i} className="flex flex-col gap-1 px-3 py-3 rounded-md bg-danger/5 border border-danger/20">
+                        <div className="text-[11px] text-text-sub font-mono-ui uppercase tracking-[0.1em]">{w.verb}</div>
+                        <div className="text-sm text-text italic">{w.en}</div>
+                        {w.userAnswer && (
+                          <div className="text-[12px] text-danger line-through truncate">{w.userAnswer}</div>
+                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-sm text-accent font-semibold">{w.answer}</span>
+                          <AudioBtn text={w.answer}/>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-accent font-semibold">{w.answer}</span>
-                        <AudioBtn text={w.answer}/>
+                    ) : (
+                      <div key={i} className="flex items-center justify-between gap-3 px-3 py-3 rounded-md bg-danger/5 border border-danger/20">
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-text">{w.verb}</div>
+                          <div className="text-[11px] text-text-sub italic">{w.transl}</div>
+                          <div className="text-[11px] text-text-sub font-mono-ui">{pLabel(w.pronounKey)} · {w.tense}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-accent font-semibold">{w.answer}</span>
+                          <AudioBtn text={w.answer}/>
+                        </div>
                       </div>
-                    </div>
+                    )
                   ))}
                 </div>
               </Card>
             )}
 
-            <div className="flex gap-3">
-              <Button onClick={startGame} className="flex-1" size="lg">Play Again</Button>
-              <Button variant="ghost" onClick={()=>setScreen("menu")} size="lg">Menu</Button>
-            </div>
           </Screen>
         </AnimatePresence>
+
+        {/* Sticky actions — same pattern as play screen */}
+        <div
+          className="fixed bottom-0 left-0 right-0 z-20 flex justify-center p-4 bg-gradient-to-t from-bg via-bg/95 to-transparent pointer-events-none"
+          style={{paddingBottom:"max(16px,env(safe-area-inset-bottom))"}}
+        >
+          <div className="w-full max-w-[480px] pointer-events-auto flex gap-3">
+            <Button onClick={startGame} className="flex-1" size="lg">Play Again</Button>
+            <Button variant="ghost" onClick={()=>setScreen("menu")} size="lg">Menu</Button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -732,12 +933,12 @@ export default function App(){
   const tenseVariant=card.tense==="presente"?"presente":"passado";
 
   return (
-    <div className="min-h-screen bg-bg text-text relative">
+    <div className="min-h-[100dvh] bg-bg text-text relative">
       <TopBar/>
-      <Screen className="pt-16">
-        {/* Progress + close */}
+      <Screen>
+        {/* Progress + score + close */}
         <div className="flex items-center gap-3">
-          <div className="flex-1 h-1.5 rounded-full bg-surface border border-border overflow-hidden">
+          <div className="flex-1 h-1 rounded-full bg-surface border border-border overflow-hidden">
             <motion.div
               className="h-full bg-primary"
               initial={false}
@@ -745,8 +946,10 @@ export default function App(){
               transition={{type:"spring",stiffness:200,damping:28}}
             />
           </div>
-          <span className="text-[11px] font-mono-ui text-text-sub tabular-nums">
-            {idx+1}/{cards.length}
+          <span className="text-[11px] font-mono-ui tabular-nums">
+            <span className="text-accent">{score.correct}</span>
+            <span className="text-text-sub mx-1">·</span>
+            <span className="text-danger">{score.wrong}</span>
           </span>
           <button
             onClick={()=>setScreen("menu")}
@@ -756,55 +959,59 @@ export default function App(){
           </button>
         </div>
 
-        {/* Score row */}
-        <div className="flex items-center justify-between text-[11px] font-mono-ui uppercase tracking-[0.12em]">
-          <span className="text-text-sub">Round</span>
-          <span className="tabular-nums">
-            <span className="text-accent">{score.correct}</span>
-            <span className="text-text-sub mx-1">·</span>
-            <span className="text-danger">{score.wrong}</span>
-          </span>
-        </div>
-
         {/* Card */}
         <AnimatePresence mode="wait">
           <motion.div
             key={idx}
-            initial={{opacity:0,y:14}}
+            initial={{opacity:0,x:120,rotate:4}}
             animate={{
               opacity:1,
-              y:0,
+              rotate:0,
               x: result==="wrong" ? [0,8,-8,6,-6,0] : 0,
             }}
-            exit={{opacity:0,y:-8}}
+            exit={{opacity:0,x:-120,rotate:-4}}
             transition={{
-              opacity:{duration:0.25,ease:"easeOut"},
-              y:{duration:0.25,ease:"easeOut"},
-              x:{duration:0.4,ease:"easeOut"},
+              opacity:{duration:0.3,ease:"easeOut"},
+              rotate:{duration:0.4,ease:[0.25,0.1,0.25,1]},
+              x: result==="wrong"
+                ? {duration:0.4,ease:"easeOut"}
+                : {duration:0.4,ease:[0.25,0.1,0.25,1]},
             }}
           >
             <Card className="p-7 flex flex-col gap-5">
               <div className="flex items-center justify-between">
                 <Badge variant={tenseVariant}>{tenseLabel}</Badge>
                 <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">
-                  {card.type==="irregular"?"Irregular":"Regular"}
+                  {card.mode==="sentences"
+                    ? card.verb
+                    : (card.type==="irregular"?"Irregular":"Regular")}
                 </span>
               </div>
 
-              <div className="text-center py-2">
-                <div className="font-display text-[44px] leading-[1] tracking-tightest text-text">
-                  {card.transl}
+              {card.mode==="sentences" ? (
+                <div className="text-center py-2">
+                  <div className="font-display text-[26px] leading-[1.15] tracking-tighter text-text">
+                    {card.en}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="text-center py-2">
+                    <div className="font-display text-[44px] leading-[1] tracking-tightest text-text">
+                      {card.transl}
+                    </div>
+                  </div>
 
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-base font-mono-ui text-primary italic">
-                  {pLabel(card.pronoun)}
-                </span>
-                {result===null && (
-                  <span className="text-text-sub text-base tracking-[4px]">· · ·</span>
-                )}
-              </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-base font-mono-ui text-primary italic">
+                      {card.pronoun}
+                    </span>
+                    {result===null && (
+                      <span className="text-text-sub text-base tracking-[4px]">· · ·</span>
+                    )}
+                  </div>
+                </>
+              )}
 
               <motion.div
                 animate={result==="correct" && !accentNote ? {scale:[1,1.04,1]} : {}}
@@ -814,10 +1021,13 @@ export default function App(){
                   ref={inputRef}
                   value={input}
                   onChange={e=>setInput(e.target.value)}
-                  onKeyDown={onKey}
-                  placeholder="Type conjugation..."
+                  placeholder={card.mode==="sentences"?"Type translation...":"Type conjugation..."}
                   disabled={result!==null}
                   autoFocus
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
                   className={cn(
                     "text-base font-mono-ui",
                     result==="correct" && !accentNote && "border-accent bg-accent/5 focus:border-accent focus:ring-accent/30",
@@ -826,10 +1036,6 @@ export default function App(){
                   )}
                 />
               </motion.div>
-
-              {result===null && (
-                <Button onClick={check} size="lg" className="w-full">Check</Button>
-              )}
 
               {/* Feedback */}
               <AnimatePresence>
@@ -849,10 +1055,7 @@ export default function App(){
                         Watch the accent: <strong className="font-mono-ui">{accentNote}</strong>
                       </div>
                     )}
-                    <ConjugationTable card={card}/>
-                    <Button onClick={next} size="lg" className="w-full">
-                      Next <ArrowRight size={16}/>
-                    </Button>
+                    {card.mode!=="sentences" && <ConjugationTable card={card}/>}
                   </motion.div>
                 )}
 
@@ -863,14 +1066,11 @@ export default function App(){
                     transition={{duration:0.2}}
                     className="flex flex-col gap-3"
                   >
-                    <div className="text-center text-sm text-danger">
-                      <X size={14} className="inline -mt-0.5 mr-1" strokeWidth={3}/>
-                      The answer is: <strong className="font-mono-ui ml-1">{card.answer}</strong>
+                    <div className="flex items-center justify-center gap-2 text-danger">
+                      <X size={16} strokeWidth={3}/>
+                      <strong className="font-mono-ui">{card.answer}</strong>
                     </div>
-                    <ConjugationTable card={card}/>
-                    <Button onClick={next} size="lg" className="w-full">
-                      Next <ArrowRight size={16}/>
-                    </Button>
+                    {card.mode!=="sentences" && <ConjugationTable card={card}/>}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -878,6 +1078,21 @@ export default function App(){
           </motion.div>
         </AnimatePresence>
       </Screen>
+
+      {/* Sticky action button — bottom of screen, hidden when mobile keyboard is open */}
+      {!keyboardOpen && (
+        <div
+          className="fixed bottom-0 left-0 right-0 z-20 flex justify-center p-4 bg-gradient-to-t from-bg via-bg/95 to-transparent pointer-events-none"
+          style={{paddingBottom:"max(16px,env(safe-area-inset-bottom))"}}
+        >
+          <div className="w-full max-w-[480px] pointer-events-auto">
+            {result===null
+              ? <Button onClick={check} size="lg" className="w-full">Check</Button>
+              : <Button onClick={next} size="lg" className="w-full">Next <ArrowRight size={16}/></Button>
+            }
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -901,14 +1116,14 @@ function ConjugationTable({card}){
       {/* Pronoun rows */}
       <div className="divide-y divide-border">
         {PRONOUNS.map(p=>{
-          const active=p===card.pronoun;
+          const active=p===card.pronounKey;
           return (
-            <div key={p} className="grid grid-cols-[110px_1fr_auto] items-center px-4 py-2.5 gap-3">
+            <div key={p} className="grid grid-cols-[110px_1fr_auto] items-center px-4 py-3 gap-3">
               <span className={cn(
                 "text-xs font-mono-ui",
                 active ? "text-text" : "text-text-sub italic"
               )}>
-                {pLabel(p)}
+                {active ? card.pronoun : pLabel(p)}
               </span>
               <span className={cn(
                 "text-sm",
@@ -916,7 +1131,7 @@ function ConjugationTable({card}){
               )}>
                 {card[card.tense][p]}
               </span>
-              <AudioBtn text={`${pLabel(p)}, ${card[card.tense][p]}`}/>
+              <AudioBtn text={card[card.tense][p]}/>
             </div>
           );
         })}
@@ -931,7 +1146,7 @@ function MiniToggle({on,onClick}){
     <button
       onClick={onClick}
       className={cn(
-        "h-7 w-12 rounded-full border transition-all flex items-center px-0.5",
+        "h-7 w-12 rounded-full border transition-all flex items-center px-1",
         on ? "bg-primary/20 border-primary/50 justify-end" : "bg-surface border-border justify-start"
       )}
     >
