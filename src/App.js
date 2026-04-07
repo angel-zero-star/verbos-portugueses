@@ -453,27 +453,27 @@ export default function App(){
     return()=>window.removeEventListener("keydown",handler);
   },[screen,result,check,next]);
 
-  // Detect mobile keyboard via visualViewport
+  // Track visual viewport so the play wrapper fits exactly inside the visible
+  // area (shrinks when the keyboard opens). --vvh is consumed by the play
+  // wrapper style below. No scroll lock — if content still doesn't fit on
+  // very small screens the browser can scroll as normal.
   useEffect(()=>{
     const vv=window.visualViewport;
-    if(!vv)return;
-    const onResize=()=>setKeyboardOpen(window.innerHeight-vv.height>150);
-    vv.addEventListener("resize",onResize);
-    return()=>vv.removeEventListener("resize",onResize);
-  },[]);
-
-  // Lock body scroll while playing so keyboard opening can't move the page
-  useEffect(()=>{
-    if(screen!=="play")return;
-    const prevBody=document.body.style.overflow;
-    const prevHtml=document.documentElement.style.overflow;
-    document.body.style.overflow="hidden";
-    document.documentElement.style.overflow="hidden";
-    return()=>{
-      document.body.style.overflow=prevBody;
-      document.documentElement.style.overflow=prevHtml;
+    const update=()=>{
+      const h=vv?vv.height:window.innerHeight;
+      document.documentElement.style.setProperty("--vvh",`${h}px`);
+      setKeyboardOpen(window.innerHeight-h>150);
     };
-  },[screen]);
+    update();
+    window.addEventListener("resize",update);
+    vv?.addEventListener("resize",update);
+    vv?.addEventListener("scroll",update);
+    return()=>{
+      window.removeEventListener("resize",update);
+      vv?.removeEventListener("resize",update);
+      vv?.removeEventListener("scroll",update);
+    };
+  },[]);
 
 
   const card=cards[idx];
@@ -938,7 +938,10 @@ export default function App(){
   const tenseVariant=card.tense==="presente"?"presente":"passado";
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-bg text-text">
+    <div
+      className="fixed left-0 right-0 top-0 overflow-hidden bg-bg text-text"
+      style={{height:"var(--vvh,100vh)"}}
+    >
       <TopBar/>
       <Screen>
         {/* Progress + score + close */}
