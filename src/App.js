@@ -939,7 +939,7 @@ export default function App(){
 
   return (
     <div
-      className="fixed left-0 right-0 top-0 overflow-hidden bg-bg text-text"
+      className="fixed left-0 right-0 top-0 overflow-y-auto bg-bg text-text"
       style={{height:"var(--vvh,100vh)"}}
     >
       <TopBar/>
@@ -967,8 +967,10 @@ export default function App(){
           </button>
         </div>
 
-        {/* Card */}
-        <AnimatePresence mode="wait">
+        {/* Card. mode="popLayout" so the new card mounts IMMEDIATELY (within
+            the user-gesture window) while the old card animates out as an
+            overlay — required so autoFocus can open the iOS keyboard. */}
+        <AnimatePresence mode="popLayout">
           <motion.div
             key={idx}
             initial={{opacity:0,x:120,rotate:4}}
