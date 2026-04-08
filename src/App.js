@@ -353,7 +353,8 @@ function SegmentedToggle({options,value,onChange}){
 }
 
 // ── Filter sheet (modal) — used for per-mode gear icons ──
-function FilterSheet({open, onClose, title, options, selected, onToggle, count, countLabel}){
+// rows: array of arrays of {key, label} — each inner array renders as one flex row
+function FilterSheet({open, onClose, title, rows, selected, onToggle, count, countLabel}){
   return (
     <AnimatePresence>
       {open && (
@@ -374,7 +375,7 @@ function FilterSheet({open, onClose, title, options, selected, onToggle, count, 
             className="fixed left-0 right-0 bottom-0 z-50 flex justify-center"
             style={{paddingBottom:"max(16px,env(safe-area-inset-bottom))"}}
           >
-            <div className="w-full max-w-[480px] mx-4 bg-surface border border-secondary/25 rounded-lg shadow-[0_4px_8px_0_rgba(0,0,0,0.4)] p-6 flex flex-col gap-5">
+            <div className="w-full max-w-[480px] mx-4 bg-surface border border-secondary/25 rounded-lg shadow-[0_4px_8px_0_rgba(0,0,0,0.4)] p-6 flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-display text-lg text-text tracking-tight">{title}</h3>
                 <button
@@ -384,15 +385,18 @@ function FilterSheet({open, onClose, title, options, selected, onToggle, count, 
                   <X size={14}/>
                 </button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {options.map(opt=>(
-                  <div key={opt.key} className={opt.full?"w-full":"flex-1 min-w-[88px]"}>
-                  <TogglePill
-                    active={!!selected[opt.key]}
-                    onClick={()=>onToggle(opt.key)}
-                  >
-                    {opt.label}
-                  </TogglePill>
+              <div className="flex flex-col gap-2">
+                {rows.map((row,ri)=>(
+                  <div key={ri} className="flex gap-2">
+                    {row.map(opt=>(
+                      <TogglePill
+                        key={opt.key}
+                        active={!!selected[opt.key]}
+                        onClick={()=>onToggle(opt.key)}
+                      >
+                        {opt.label}
+                      </TogglePill>
+                    ))}
                   </div>
                 ))}
               </div>
@@ -461,7 +465,7 @@ export default function App(){
   const [showSplash,setShowSplash]=useState(true);
 
   // Per-mode category filters (multi-select). All ON by default.
-  const [conjFilter,setConjFilter]=useState({irregular:true,regular:true,modal:true,movement:true,state:true,action:true});
+  const [conjFilter,setConjFilter]=useState({irregular:true,regular:true,modal:true,movement:true,state:true,action:true,presente:true,passado:false});
   const [palFilter,setPalFilter]=useState({substantivo:true,adjetivo:true});
   const [fraFilter,setFraFilter]=useState({frases:true,expressoes:true});
   const [filterSheet,setFilterSheet]=useState(null); // null | "conjugation" | "palavras" | "frases"
@@ -495,7 +499,7 @@ export default function App(){
 
   // Filtered pools (for counts shown in filter sheets AND for startGame)
   const activeConjVerbs=()=>{
-    const keys=Object.entries(conjFilter).filter(([,v])=>v).map(([k])=>k);
+    const keys=Object.entries(conjFilter).filter(([k,v])=>v&&CONJUGATE_CAT_KEYS.includes(k)).map(([k])=>k);
     const active=keys.length?keys:CONJUGATE_CAT_KEYS;
     return ALL_VERBS.filter(v=>v.categories.some(c=>active.includes(c)));
   };
@@ -510,8 +514,8 @@ export default function App(){
     const pool=[];
     if(active.includes("frases")){
       for(const s of SENTENCES){
-        if(s.tense==="presente"&&!tensePresente)continue;
-        if(s.tense==="passado"&&!tensePassado)continue;
+        if(s.tense==="presente"&&!conjFilter.presente)continue;
+        if(s.tense==="passado"&&!conjFilter.passado)continue;
         pool.push({kind:"sentence",id:s.id,verb:s.verb,tense:s.tense,en:s.en,pt:s.pt,alternatives:s.alternatives||[]});
       }
     }
@@ -563,8 +567,8 @@ export default function App(){
     for(const v of verbs){
       const conf=config[v.id];if(!conf)continue;
       const tenses=[];
-      if(conf.presente&&tensePresente)tenses.push("presente");
-      if(conf.passado&&tensePassado)tenses.push("passado");
+      if(conf.presente&&conjFilter.presente)tenses.push("presente");
+      if(conf.passado&&conjFilter.passado)tenses.push("passado");
       if(tenses.length===0)continue;
       for(const t of tenses){
         const pr=v.impessoal?"impessoal (ele)":DISPLAY_PRONOUNS[Math.floor(Math.random()*DISPLAY_PRONOUNS.length)];
@@ -834,7 +838,11 @@ export default function App(){
           open={filterSheet==="conjugation"}
           onClose={()=>setFilterSheet(null)}
           title="Conjugate — Filters"
-          options={CONJUGATE_CAT_KEYS.map(k=>({key:k,label:CONJUGATE_CAT_LABELS[k],full:k==="irregular"||k==="regular"}))}
+          rows={[
+            [{key:"irregular",label:"Irregular"},{key:"regular",label:"Regular"}],
+            [{key:"modal",label:"Modal"},{key:"movement",label:"Movement"},{key:"state",label:"State"},{key:"action",label:"Action"}],
+            [{key:"presente",label:"Presente"},{key:"passado",label:"Passado"}],
+          ]}
           selected={conjFilter}
           onToggle={(k)=>setConjFilter(f=>({...f,[k]:!f[k]}))}
           count={conjCount}
@@ -844,7 +852,7 @@ export default function App(){
           open={filterSheet==="palavras"}
           onClose={()=>setFilterSheet(null)}
           title="Palavras — Filters"
-          options={[{key:"substantivo",label:"Substantivos"},{key:"adjetivo",label:"Adjetivos"}]}
+          rows={[[{key:"substantivo",label:"Substantivos"},{key:"adjetivo",label:"Adjetivos"}]]}
           selected={palFilter}
           onToggle={(k)=>setPalFilter(f=>({...f,[k]:!f[k]}))}
           count={palCount}
@@ -854,7 +862,7 @@ export default function App(){
           open={filterSheet==="frases"}
           onClose={()=>setFilterSheet(null)}
           title="Frases — Filters"
-          options={[{key:"frases",label:"Verb Frases"},{key:"expressoes",label:"Expressões"}]}
+          rows={[[{key:"frases",label:"Verb Frases"},{key:"expressoes",label:"Expressões"}]]}
           selected={fraFilter}
           onToggle={(k)=>setFraFilter(f=>({...f,[k]:!f[k]}))}
           count={fraCount}
