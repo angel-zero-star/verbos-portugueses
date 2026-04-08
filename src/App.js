@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine, Cell } from "recharts";
-import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle } from "lucide-react";
+import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal } from "lucide-react";
 import packageInfo from "../package.json";
 import { cn } from "./lib/utils";
 import { useTheme } from "./lib/useTheme";
@@ -10,6 +10,8 @@ import { Card } from "./components/ui/Card";
 import { Input } from "./components/ui/Input";
 import { Badge } from "./components/ui/Badge";
 import { SENTENCES } from "./data/sentences";
+import { PALAVRAS } from "./data/palavras";
+import { EXPRESSOES } from "./data/expressoes";
 import { evaluateSentence } from "./lib/evaluateSentence";
 
 const ALL_VERBS = [
@@ -166,7 +168,42 @@ const ALL_VERBS = [
   { id:"assistir", verb:"assistir", transl:"to watch / attend", prep:"a", type:"regular-ir", presente:{eu:"assisto",tu:"assistes","ele/ela":"assiste",nós:"assistimos","eles(as)/vocês":"assistem"}, passado:{eu:"assisti",tu:"assististe","ele/ela":"assistiu",nós:"assistimos","eles(as)/vocês":"assistiram"}},
   { id:"discutir", verb:"discutir", transl:"to discuss", prep:"—", type:"regular-ir", presente:{eu:"discuto",tu:"discutes","ele/ela":"discute",nós:"discutimos","eles(as)/vocês":"discutem"}, passado:{eu:"discuti",tu:"discutiste","ele/ela":"discutiu",nós:"discutimos","eles(as)/vocês":"discutiram"}},
   { id:"abrir", verb:"abrir", transl:"to open", prep:"—", type:"regular-ir", presente:{eu:"abro",tu:"abres","ele/ela":"abre",nós:"abrimos","eles(as)/vocês":"abrem"}, passado:{eu:"abri",tu:"abriste","ele/ela":"abriu",nós:"abrimos","eles(as)/vocês":"abriram"}},
+  // ── REGULAR (added in content update) ──
+  { id:"ajudar", verb:"ajudar", transl:"to help", prep:"—", type:"regular-ar", presente:{eu:"ajudo",tu:"ajudas","ele/ela":"ajuda",nós:"ajudamos","eles(as)/vocês":"ajudam"}, passado:{eu:"ajudei",tu:"ajudaste","ele/ela":"ajudou",nós:"ajudámos","eles(as)/vocês":"ajudaram"}},
+  { id:"voltar", verb:"voltar", transl:"to come back", prep:"a, para", type:"regular-ar", presente:{eu:"volto",tu:"voltas","ele/ela":"volta",nós:"voltamos","eles(as)/vocês":"voltam"}, passado:{eu:"voltei",tu:"voltaste","ele/ela":"voltou",nós:"voltámos","eles(as)/vocês":"voltaram"}},
+  { id:"entregar", verb:"entregar", transl:"to deliver", prep:"a", type:"regular-ar", presente:{eu:"entrego",tu:"entregas","ele/ela":"entrega",nós:"entregamos","eles(as)/vocês":"entregam"}, passado:{eu:"entreguei",tu:"entregaste","ele/ela":"entregou",nós:"entregámos","eles(as)/vocês":"entregaram"}},
+  { id:"convidar", verb:"convidar", transl:"to invite", prep:"para", type:"regular-ar", presente:{eu:"convido",tu:"convidas","ele/ela":"convida",nós:"convidamos","eles(as)/vocês":"convidam"}, passado:{eu:"convidei",tu:"convidaste","ele/ela":"convidou",nós:"convidámos","eles(as)/vocês":"convidaram"}},
+  { id:"concordar", verb:"concordar", transl:"to agree", prep:"com", type:"regular-ar", presente:{eu:"concordo",tu:"concordas","ele/ela":"concorda",nós:"concordamos","eles(as)/vocês":"concordam"}, passado:{eu:"concordei",tu:"concordaste","ele/ela":"concordou",nós:"concordámos","eles(as)/vocês":"concordaram"}},
+  { id:"mostrar", verb:"mostrar", transl:"to show", prep:"a", type:"regular-ar", presente:{eu:"mostro",tu:"mostras","ele/ela":"mostra",nós:"mostramos","eles(as)/vocês":"mostram"}, passado:{eu:"mostrei",tu:"mostraste","ele/ela":"mostrou",nós:"mostrámos","eles(as)/vocês":"mostraram"}},
+  { id:"apanhar", verb:"apanhar", transl:"to catch / pick up", prep:"—", type:"regular-ar", presente:{eu:"apanho",tu:"apanhas","ele/ela":"apanha",nós:"apanhamos","eles(as)/vocês":"apanham"}, passado:{eu:"apanhei",tu:"apanhaste","ele/ela":"apanhou",nós:"apanhámos","eles(as)/vocês":"apanharam"}},
+  { id:"olhar", verb:"olhar", transl:"to look at", prep:"para", type:"regular-ar", presente:{eu:"olho",tu:"olhas","ele/ela":"olha",nós:"olhamos","eles(as)/vocês":"olham"}, passado:{eu:"olhei",tu:"olhaste","ele/ela":"olhou",nós:"olhámos","eles(as)/vocês":"olharam"}},
+  { id:"surfar", verb:"surfar", transl:"to surf", prep:"—", type:"regular-ar", presente:{eu:"surfo",tu:"surfas","ele/ela":"surfa",nós:"surfamos","eles(as)/vocês":"surfam"}, passado:{eu:"surfei",tu:"surfaste","ele/ela":"surfou",nós:"surfámos","eles(as)/vocês":"surfaram"}},
+  { id:"vender", verb:"vender", transl:"to sell", prep:"—", type:"regular-er", presente:{eu:"vendo",tu:"vendes","ele/ela":"vende",nós:"vendemos","eles(as)/vocês":"vendem"}, passado:{eu:"vendi",tu:"vendeste","ele/ela":"vendeu",nós:"vendemos","eles(as)/vocês":"venderam"}},
+  { id:"escolher", verb:"escolher", transl:"to choose", prep:"—", type:"regular-er", presente:{eu:"escolho",tu:"escolhes","ele/ela":"escolhe",nós:"escolhemos","eles(as)/vocês":"escolhem"}, passado:{eu:"escolhi",tu:"escolheste","ele/ela":"escolheu",nós:"escolhemos","eles(as)/vocês":"escolheram"}},
 ];
+
+// Category tagging — applied to every verb in ALL_VERBS.
+// "irregular"/"regular" mutually exclusive; a verb may have multiple extra tags.
+const CATEGORY_MODAL      = new Set(["poder","querer","dever","precisar","saber"]);
+const CATEGORY_MOVEMENT   = new Set(["ir","vir","chegar","partir","sair","voltar","entrar","subir","descer","levar","trazer","atravessar","apanhar","transportar"]);
+const CATEGORY_STATE      = new Set(["ser","estar","ter","ficar","parecer","haver","caber"]);
+function categoriesFor(v){
+  const cats = [v.type==="irregular" ? "irregular" : "regular"];
+  if(CATEGORY_MODAL.has(v.id))    cats.push("modal");
+  if(CATEGORY_MOVEMENT.has(v.id)) cats.push("movement");
+  if(CATEGORY_STATE.has(v.id))    cats.push("state");
+  // "action" = any verb not already tagged with modal/movement/state
+  if(cats.length===1) cats.push("action");
+  return cats;
+}
+// Enrich every verb in-place so all downstream code sees `.categories`.
+ALL_VERBS.forEach(v=>{ v.categories = categoriesFor(v); });
+
+const CONJUGATE_CAT_KEYS = ["irregular","regular","modal","movement","state","action"];
+const CONJUGATE_CAT_LABELS = {
+  irregular:"Irregular", regular:"Regular", modal:"Modal",
+  movement:"Movement",   state:"State",     action:"Action",
+};
 
 const PRONOUNS=["eu","tu","ele/ela","nós","eles(as)/vocês"];
 const PRONOUN_LABELS={"eu":"eu","tu":"tu","ele/ela":"ele(a)/você","nós":"nós","eles(as)/vocês":"eles(as)/vocês"};
@@ -178,11 +215,26 @@ const SK_HIST="verbos-history";
 const SK_CONF="verbos-config";
 const SK_FILTERS="verbos-filters";
 const SK_MODE="verbos-mode";
+const SK_FILTER_CONJ="verbos-filter-conjugate";
+const SK_FILTER_PAL="verbos-filter-palavras";
+const SK_FILTER_FRA="verbos-filter-frases";
 
 function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
 function stripAccents(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"");}
 function norm(s){return s.trim().toLowerCase().replace(/\s+/g," ");}
 function cmpAns(i,c){const ni=norm(i),nc=norm(c);if(ni===nc)return"exact";if(stripAccents(ni)===stripAccents(nc))return"accent";return"wrong";}
+// For Palavras/Frases: split answer on "/" (e.g. "casado / casada") and accept either form.
+// Returns "exact" | "accent" | "wrong".
+function cmpMulti(input, answer){
+  const parts = answer.split("/").map(s=>s.trim()).filter(Boolean);
+  let best="wrong";
+  for(const p of parts){
+    const r=cmpAns(input,p);
+    if(r==="exact")return"exact";
+    if(r==="accent")best="accent";
+  }
+  return best;
+}
 
 function speak(text){if(!window.speechSynthesis)return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="pt-PT";u.rate=0.85;const v=window.speechSynthesis.getVoices();const pt=v.find(x=>x.lang==="pt-PT")||v.find(x=>x.lang.startsWith("pt"));if(pt)u.voice=pt;window.speechSynthesis.speak(u);}
 
@@ -300,6 +352,61 @@ function SegmentedToggle({options,value,onChange}){
   );
 }
 
+// ── Filter sheet (modal) — used for per-mode gear icons ──
+function FilterSheet({open, onClose, title, options, selected, onToggle, count, countLabel}){
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            initial={{opacity:0}}
+            animate={{opacity:1}}
+            exit={{opacity:0}}
+            transition={{duration:0.2}}
+            onClick={onClose}
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{y:40,opacity:0}}
+            animate={{y:0,opacity:1}}
+            exit={{y:40,opacity:0}}
+            transition={{type:"spring",stiffness:320,damping:32}}
+            className="fixed left-0 right-0 bottom-0 z-50 flex justify-center"
+            style={{paddingBottom:"max(16px,env(safe-area-inset-bottom))"}}
+          >
+            <div className="w-full max-w-[480px] mx-4 bg-surface border border-secondary/25 rounded-lg shadow-[0_4px_8px_0_rgba(0,0,0,0.4)] p-6 flex flex-col gap-5">
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-lg text-text tracking-tight">{title}</h3>
+                <button
+                  onClick={onClose}
+                  className="h-8 w-8 rounded-md border border-border bg-secondary/05 text-text-sub hover:text-text flex items-center justify-center"
+                >
+                  <X size={14}/>
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {options.map(opt=>(
+                  <div key={opt.key} className={opt.full?"w-full":"flex-1 min-w-[88px]"}>
+                  <TogglePill
+                    active={!!selected[opt.key]}
+                    onClick={()=>onToggle(opt.key)}
+                  >
+                    {opt.label}
+                  </TogglePill>
+                  </div>
+                ))}
+              </div>
+              <div className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.15em] text-center">
+                {count} {countLabel}
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
 // Portuguese flag (simple SVG)
 function FlagPT({className}){
   return (
@@ -350,18 +457,32 @@ export default function App(){
   const inputRef=useRef(null);
   const lastEnterRef=useRef(0);
   const [keyboardOpen,setKeyboardOpen]=useState(false);
-  const [gameMode,setGameMode]=useState("conjugation"); // "conjugation" | "sentences"
+  const [gameMode,setGameMode]=useState("conjugation"); // "conjugation" | "palavras" | "frases"
   const [showSplash,setShowSplash]=useState(true);
+
+  // Per-mode category filters (multi-select). All ON by default.
+  const [conjFilter,setConjFilter]=useState({irregular:true,regular:true,modal:true,movement:true,state:true,action:true});
+  const [palFilter,setPalFilter]=useState({substantivo:true,adjetivo:true});
+  const [fraFilter,setFraFilter]=useState({frases:true,expressoes:true});
+  const [filterSheet,setFilterSheet]=useState(null); // null | "conjugation" | "palavras" | "frases"
 
   useEffect(()=>{
     window.speechSynthesis?.getVoices();
     const h=sGet(SK_HIST);if(h&&Array.isArray(h))setHistory(h);
     const c=sGet(SK_CONF);if(c&&typeof c==="object"){const def=defaultConfig();Object.keys(def).forEach(k=>{if(!c[k])c[k]=def[k];});setConfig(c);}
     const f=sGet(SK_FILTERS);if(f){setFilterIrregular(f.filterIrregular??true);setFilterRegular(f.filterRegular??true);setTensePresente(f.tensePresente??true);setTensePassado(f.tensePassado??false);}
-    const m=sGet(SK_MODE);if(m==="conjugation"||m==="sentences")setGameMode(m);
+    const m=sGet(SK_MODE);
+    if(m==="conjugation"||m==="palavras"||m==="frases")setGameMode(m);
+    else if(m==="sentences")setGameMode("frases"); // migrate old key
+    const fc=sGet(SK_FILTER_CONJ);if(fc&&typeof fc==="object")setConjFilter(f=>({...f,...fc}));
+    const fp=sGet(SK_FILTER_PAL);if(fp&&typeof fp==="object")setPalFilter(f=>({...f,...fp}));
+    const ff=sGet(SK_FILTER_FRA);if(ff&&typeof ff==="object")setFraFilter(f=>({...f,...ff}));
   },[]);
 
   useEffect(()=>{sSet(SK_MODE,gameMode);},[gameMode]);
+  useEffect(()=>{sSet(SK_FILTER_CONJ,conjFilter);},[conjFilter]);
+  useEffect(()=>{sSet(SK_FILTER_PAL,palFilter);},[palFilter]);
+  useEffect(()=>{sSet(SK_FILTER_FRA,fraFilter);},[fraFilter]);
 
   useEffect(()=>{
     const t=setTimeout(()=>setShowSplash(false),1300);
@@ -372,32 +493,75 @@ export default function App(){
 
   const saveConfig=(nc)=>{setConfig(nc);sSet(SK_CONF,nc);};
 
+  // Filtered pools (for counts shown in filter sheets AND for startGame)
+  const activeConjVerbs=()=>{
+    const keys=Object.entries(conjFilter).filter(([,v])=>v).map(([k])=>k);
+    const active=keys.length?keys:CONJUGATE_CAT_KEYS;
+    return ALL_VERBS.filter(v=>v.categories.some(c=>active.includes(c)));
+  };
+  const activePalavras=()=>{
+    const keys=Object.entries(palFilter).filter(([,v])=>v).map(([k])=>k);
+    const active=keys.length?keys:["substantivo","adjetivo"];
+    return PALAVRAS.filter(p=>active.includes(p.cat));
+  };
+  const activeFrases=()=>{
+    const keys=Object.entries(fraFilter).filter(([,v])=>v).map(([k])=>k);
+    const active=keys.length?keys:["frases","expressoes"];
+    const pool=[];
+    if(active.includes("frases")){
+      for(const s of SENTENCES){
+        if(s.tense==="presente"&&!tensePresente)continue;
+        if(s.tense==="passado"&&!tensePassado)continue;
+        pool.push({kind:"sentence",id:s.id,verb:s.verb,tense:s.tense,en:s.en,pt:s.pt,alternatives:s.alternatives||[]});
+      }
+    }
+    if(active.includes("expressoes")){
+      for(const e of EXPRESSOES){pool.push({kind:"expressao",en:e.en,pt:e.pt});}
+    }
+    return pool;
+  };
+
   const startGame=()=>{
-    if(gameMode==="sentences"){
-      const pool=SENTENCES.filter(s=>{
-        if(s.tense==="presente"&&!tensePresente)return false;
-        if(s.tense==="passado"&&!tensePassado)return false;
-        return true;
-      });
-      if(pool.length===0){alert("No sentences match your filters!");return;}
-      const picked=shuffle(pool).slice(0,5).map(s=>({
-        mode:"sentences",
-        id:s.id,
-        verb:s.verb,
-        tense:s.tense,
-        en:s.en,
-        answer:s.pt,
-        alternatives:s.alternatives||[],
+    if(gameMode==="palavras"){
+      const pool=activePalavras();
+      if(pool.length===0){alert("No palavras match your filters!");return;}
+      const picked=shuffle(pool).slice(0,10).map(p=>({
+        mode:"palavras",
+        en:p.en,
+        answer:p.pt,
+        cat:p.cat,
       }));
       setCards(picked);setIdx(0);setInput("");setResult(null);setAccentNote(null);
       setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");
       return;
     }
+    if(gameMode==="frases"){
+      const pool=activeFrases();
+      if(pool.length===0){alert("No frases match your filters!");return;}
+      const picked=shuffle(pool).slice(0,8).map(p=>p.kind==="sentence"?({
+        mode:"frases",
+        subMode:"sentence",
+        id:p.id,
+        verb:p.verb,
+        tense:p.tense,
+        en:p.en,
+        answer:p.pt,
+        alternatives:p.alternatives,
+      }):({
+        mode:"frases",
+        subMode:"expressao",
+        en:p.en,
+        answer:p.pt,
+      }));
+      setCards(picked);setIdx(0);setInput("");setResult(null);setAccentNote(null);
+      setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");
+      return;
+    }
+    // Conjugation
     const gen=[];
-    for(const v of ALL_VERBS){
+    const verbs=activeConjVerbs();
+    for(const v of verbs){
       const conf=config[v.id];if(!conf)continue;
-      if(!filterIrregular&&v.type==="irregular")continue;
-      if(!filterRegular&&v.type!=="irregular")continue;
       const tenses=[];
       if(conf.presente&&tensePresente)tenses.push("presente");
       if(conf.passado&&tensePassado)tenses.push("passado");
@@ -416,7 +580,15 @@ export default function App(){
   const check=()=>{
     if(!input.trim())return;
     const c=cards[idx];
-    if(c.mode==="sentences"){
+    // Palavras + Frases/expressao: simple slash-tolerant, accent-tolerant match.
+    if(c.mode==="palavras" || (c.mode==="frases" && c.subMode==="expressao")){
+      const r=cmpMulti(input,c.answer);
+      if(r==="exact"){setResult("correct");setAccentNote(null);setScore(s=>({...s,correct:s.correct+1}));}
+      else if(r==="accent"){setResult("correct");setAccentNote(c.answer);setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+1}));}
+      else{setResult("wrong");setAccentNote(null);setScore(s=>({...s,wrong:s.wrong+1}));setWrongOnes(w=>[...w,{...c,userAnswer:input}]);}
+      return;
+    }
+    if(c.mode==="frases" && c.subMode==="sentence"){
       const {result:er,note}=evaluateSentence(input,c.answer,c.alternatives);
       if(er==="correct"){
         setResult("correct");setAccentNote(note?c.answer:null);
@@ -511,7 +683,7 @@ export default function App(){
           />
           <Bar dataKey="score" radius={[4,4,0,0]} isAnimationActive={true} animationDuration={600}>
             {chartData.map((d,i)=>(
-              <Cell key={i} fill={d.mode==="sentences"?"hsl(var(--warn))":"hsl(var(--primary))"}/>
+              <Cell key={i} fill={d.mode==="frases"||d.mode==="sentences"?"hsl(var(--warn))":d.mode==="palavras"?"hsl(var(--accent))":"hsl(var(--primary))"}/>
             ))}
           </Bar>
           <ReferenceLine y={75} stroke="hsl(var(--border))" strokeDasharray="3 3" strokeWidth={1}/>
@@ -591,7 +763,14 @@ export default function App(){
 
   // ─────────────────────── MENU ───────────────────────
   if(screen==="menu"){
-    const modeTint=gameMode==="sentences"?"warn":"primary";
+    const conjCount=activeConjVerbs().length;
+    const palCount=activePalavras().length;
+    const fraCount=activeFrases().length;
+    const MODE_TILES=[
+      {value:"conjugation",icon:Layers,title:"Conjugate",sub:"Verb forms",count:conjCount,countLabel:"verbos"},
+      {value:"palavras",   icon:BookOpen,title:"Palavras",sub:"Nouns & adjectives",count:palCount,countLabel:"palavras"},
+      {value:"frases",     icon:MessageCircle,title:"Frases",sub:"Sentences & expressions",count:fraCount,countLabel:"frases"},
+    ];
     return (
       <div className="min-h-screen bg-bg text-text">
         <TopBar/>
@@ -607,86 +786,41 @@ export default function App(){
               </button>
             </div>
 
-            <div className={cn(
-              "rounded-lg border overflow-hidden bg-surface transition-colors duration-300",
-              gameMode==="sentences"?"border-warn/40":"border-primary/40"
-            )}>
-              <div className="grid grid-cols-2">
-                {[
-                  {value:"conjugation",icon:Layers,title:"Conjugate",sub:"Drill verb forms",tint:"primary"},
-                  {value:"sentences",icon:MessageCircle,title:"Translate",sub:"Build sentences",tint:"warn"},
-                ].map((m,i)=>{
-                  const active=gameMode===m.value;
-                  const Icon=m.icon;
-                  return (
-                    <motion.button
-                      key={m.value}
-                      onClick={()=>setGameMode(m.value)}
-                      whileTap={{scale:0.97}}
-                      className={cn(
-                        "relative overflow-hidden p-4 flex flex-col items-start gap-2 text-left transition-colors",
-                        i===0?"border-r border-border":"",
-                        active
-                          ? (m.tint==="warn"?"bg-warn/10":"bg-primary/10")
-                          : "bg-transparent hover:bg-surface"
-                      )}
-                    >
-                      <div className={cn(
-                        "h-9 w-9 rounded-md flex items-center justify-center border transition-colors",
-                        active
-                          ? (m.tint==="warn"
-                              ? "bg-warn/20 border-warn/50 text-warn"
-                              : "bg-primary/20 border-primary/50 text-primary")
-                          : "bg-transparent border-border text-text-sub"
-                      )}>
-                        <Icon size={18} strokeWidth={2.25}/>
+            {/* 3 mode tiles — per Figma spec */}
+            <div className="flex flex-col gap-3">
+              {MODE_TILES.map(m=>{
+                const Icon=m.icon;
+                const onPlay=()=>{setGameMode(m.value);setTimeout(startGame,0);};
+                return (
+                  <motion.div
+                    key={m.value}
+                    initial={{opacity:0,y:8}}
+                    animate={{opacity:1,y:0}}
+                    transition={{duration:0.25,ease:"easeOut"}}
+                  >
+                    <Card className="p-5 flex flex-col gap-2 items-start">
+                      <div className="flex items-start justify-between w-full">
+                        <div className="h-10 w-10 rounded-full bg-secondary/15 border border-secondary flex items-center justify-center text-text">
+                          <Icon size={20} strokeWidth={2.25}/>
+                        </div>
+                        <button
+                          onClick={()=>setFilterSheet(m.value)}
+                          title="Filter"
+                          className="h-9 w-9 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center"
+                        >
+                          <SlidersHorizontal size={16} strokeWidth={2.25}/>
+                        </button>
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <span className={cn("text-sm font-semibold",active?"text-text":"text-text-sub")}>{m.title}</span>
-                        <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.1em]">{m.sub}</span>
-                      </div>
-                    </motion.button>
-                  );
-                })}
-              </div>
-
-              {/* Seam — tinted to match active mode */}
-              <div className={cn(
-                "h-px transition-colors duration-300",
-                gameMode==="sentences"?"bg-warn/40":"bg-primary/40"
-              )}/>
-
-              <div className="p-6 flex flex-col gap-5">
-                {gameMode==="conjugation" && (
-                  <div className="flex flex-col gap-3">
-                    <label className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.15em]">
-                      Verbs
-                    </label>
-                    <div className="flex gap-2">
-                      <TogglePill active={filterIrregular} onClick={()=>setFilterIrregular(f=>!f)}>Irregular</TogglePill>
-                      <TogglePill active={filterRegular} onClick={()=>setFilterRegular(f=>!f)}>Regular</TogglePill>
-                    </div>
-                  </div>
-                )}
-                <div className="flex flex-col gap-3">
-                  <label className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.15em]">
-                    Tense
-                  </label>
-                  <div className="flex gap-2">
-                    <TogglePill active={tensePresente} onClick={()=>setTensePresente(f=>!f)}>Presente</TogglePill>
-                    <TogglePill
-                      active={gameMode==="sentences"?false:tensePassado}
-                      onClick={()=>setTensePassado(f=>!f)}
-                      disabled={gameMode==="sentences"}
-                    >Passado</TogglePill>
-                  </div>
-                </div>
-              </div>
+                      <div className="font-display text-lg text-text tracking-tight mt-2">{m.title}</div>
+                      <div className="text-xs text-text-sub">{m.sub} · <span className="font-mono-ui">{m.count} {m.countLabel}</span></div>
+                      <Button size="lg" onClick={onPlay} className="w-full mt-3 !bg-secondary !text-muted hover:!brightness-95">
+                        Começar
+                      </Button>
+                    </Card>
+                  </motion.div>
+                );
+              })}
             </div>
-
-            <Button size="xl" onClick={startGame} className="w-full">
-              <Play size={16} fill="currentColor" strokeWidth={0}/> Começar
-            </Button>
 
             <div className="mt-auto pt-8 text-center text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.15em]">
               verbos · v{packageInfo.version}
@@ -694,6 +828,38 @@ export default function App(){
           </Screen>
         </AnimatePresence>
         <NavBar/>
+
+        {/* Gear filter sheets — one per mode */}
+        <FilterSheet
+          open={filterSheet==="conjugation"}
+          onClose={()=>setFilterSheet(null)}
+          title="Conjugate — Filters"
+          options={CONJUGATE_CAT_KEYS.map(k=>({key:k,label:CONJUGATE_CAT_LABELS[k],full:k==="irregular"||k==="regular"}))}
+          selected={conjFilter}
+          onToggle={(k)=>setConjFilter(f=>({...f,[k]:!f[k]}))}
+          count={conjCount}
+          countLabel="verbos"
+        />
+        <FilterSheet
+          open={filterSheet==="palavras"}
+          onClose={()=>setFilterSheet(null)}
+          title="Palavras — Filters"
+          options={[{key:"substantivo",label:"Substantivos"},{key:"adjetivo",label:"Adjetivos"}]}
+          selected={palFilter}
+          onToggle={(k)=>setPalFilter(f=>({...f,[k]:!f[k]}))}
+          count={palCount}
+          countLabel="palavras"
+        />
+        <FilterSheet
+          open={filterSheet==="frases"}
+          onClose={()=>setFilterSheet(null)}
+          title="Frases — Filters"
+          options={[{key:"frases",label:"Verb Frases"},{key:"expressoes",label:"Expressões"}]}
+          selected={fraFilter}
+          onToggle={(k)=>setFraFilter(f=>({...f,[k]:!f[k]}))}
+          count={fraCount}
+          countLabel="frases"
+        />
       </div>
     );
   }
@@ -886,9 +1052,9 @@ export default function App(){
                 <h3 className="text-[10px] font-mono-ui text-text uppercase tracking-[0.15em] mb-3">Review these</h3>
                 <div className="flex flex-col gap-2 max-h-[260px] overflow-y-auto no-scrollbar">
                   {wrongOnes.map((w,i)=>(
-                    w.mode==="sentences" ? (
+                    (w.mode==="frases" || w.mode==="palavras" || w.mode==="sentences") ? (
                       <div key={i} className="flex flex-col gap-1 px-3 py-3 rounded-md bg-danger/5 border border-danger/20">
-                        <div className="text-[11px] text-text-sub font-mono-ui uppercase tracking-[0.1em]">{w.verb}</div>
+                        <div className="text-[11px] text-text-sub font-mono-ui uppercase tracking-[0.1em]">{w.mode==="palavras"?w.cat:w.subMode==="expressao"?"expressão":w.verb}</div>
                         <div className="text-sm text-text italic">{w.en}</div>
                         {w.userAnswer && (
                           <div className="text-[12px] text-danger line-through truncate">{w.userAnswer}</div>
@@ -934,8 +1100,10 @@ export default function App(){
   }
 
   // ─────────────────────── PLAY ───────────────────────
-  const tenseLabel=card.tense==="presente"?"Presente":"Passado";
-  const tenseVariant=card.tense==="presente"?"presente":"passado";
+  const hasTense=card.mode==="conjugation" || (card.mode==="frases" && card.subMode==="sentence");
+  const tenseLabel=!hasTense?(card.mode==="palavras"?(card.cat==="adjetivo"?"Adjetivo":"Substantivo"):"Expressão"):(card.tense==="presente"?"Presente":"Passado");
+  const tenseVariant=!hasTense?"presente":(card.tense==="presente"?"presente":"passado");
+  const isTextCard = card.mode!=="conjugation"; // palavras + frases both prompt English → type PT
 
   return (
     <div
@@ -992,13 +1160,15 @@ export default function App(){
               <div className="flex items-center justify-between">
                 <Badge variant={tenseVariant}>{tenseLabel}</Badge>
                 <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">
-                  {card.mode==="sentences"
-                    ? card.verb
-                    : (card.type==="irregular"?"Irregular":"Regular")}
+                  {card.mode==="conjugation"
+                    ? (card.type==="irregular"?"Irregular":"Regular")
+                    : card.mode==="palavras"
+                      ? "Palavra"
+                      : (card.subMode==="sentence" ? card.verb : "Frase")}
                 </span>
               </div>
 
-              {card.mode==="sentences" ? (
+              {isTextCard ? (
                 <div className="text-center py-2">
                   <div className="font-display text-[26px] leading-[1.15] tracking-tighter text-text">
                     {card.en}
@@ -1031,7 +1201,7 @@ export default function App(){
                   ref={inputRef}
                   value={input}
                   onChange={e=>setInput(e.target.value)}
-                  placeholder={card.mode==="sentences"?"Type translation...":"Type conjugation..."}
+                  placeholder={isTextCard?"Type translation...":"Type conjugation..."}
                   disabled={result!==null}
                   autoFocus={idx>0}
                   autoComplete="off"
@@ -1065,7 +1235,7 @@ export default function App(){
                         Watch the accent: <strong className="font-mono-ui">{accentNote}</strong>
                       </div>
                     )}
-                    {card.mode!=="sentences" && <ConjugationTable card={card}/>}
+                    {card.mode==="conjugation" && <ConjugationTable card={card}/>}
                   </motion.div>
                 )}
 
@@ -1080,7 +1250,7 @@ export default function App(){
                       <X size={16} strokeWidth={3}/>
                       <strong className="font-mono-ui">{card.answer}</strong>
                     </div>
-                    {card.mode!=="sentences" && <ConjugationTable card={card}/>}
+                    {card.mode==="conjugation" && <ConjugationTable card={card}/>}
                   </motion.div>
                 )}
               </AnimatePresence>
