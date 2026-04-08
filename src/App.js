@@ -353,7 +353,7 @@ function SegmentedToggle({options,value,onChange}){
 }
 
 // ── Filter sheet (modal) — used for per-mode gear icons ──
-// rows: array of arrays of {key, label} — each inner array renders as one flex row
+// rows: array of {label?, items:[{key,label}]} — each entry renders an optional section label + flex row
 function FilterSheet({open, onClose, title, rows, selected, onToggle, count, countLabel}){
   return (
     <AnimatePresence>
