@@ -385,18 +385,23 @@ function FilterSheet({open, onClose, title, rows, selected, onToggle, count, cou
                   <X size={14}/>
                 </button>
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 {rows.map((row,ri)=>(
-                  <div key={ri} className="flex gap-2">
-                    {row.map(opt=>(
-                      <TogglePill
-                        key={opt.key}
-                        active={!!selected[opt.key]}
-                        onClick={()=>onToggle(opt.key)}
-                      >
-                        {opt.label}
-                      </TogglePill>
-                    ))}
+                  <div key={ri} className="flex flex-col gap-2">
+                    {row.label && (
+                      <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">{row.label}</span>
+                    )}
+                    <div className="flex gap-2">
+                      {(row.items||row).map(opt=>(
+                        <TogglePill
+                          key={opt.key}
+                          active={!!selected[opt.key]}
+                          onClick={()=>onToggle(opt.key)}
+                        >
+                          {opt.label}
+                        </TogglePill>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -839,9 +844,9 @@ export default function App(){
           onClose={()=>setFilterSheet(null)}
           title="Conjugate — Filters"
           rows={[
-            [{key:"irregular",label:"Irregular"},{key:"regular",label:"Regular"}],
-            [{key:"modal",label:"Modal"},{key:"movement",label:"Movement"},{key:"state",label:"State"},{key:"action",label:"Action"}],
-            [{key:"presente",label:"Presente"},{key:"passado",label:"Passado"}],
+            {label:"Type",items:[{key:"irregular",label:"Irregular"},{key:"regular",label:"Regular"}]},
+            {label:"Category",items:[{key:"modal",label:"Modal"},{key:"movement",label:"Movement"},{key:"state",label:"State"},{key:"action",label:"Action"}]},
+            {label:"Tense",items:[{key:"presente",label:"Presente"},{key:"passado",label:"Passado"}]},
           ]}
           selected={conjFilter}
           onToggle={(k)=>setConjFilter(f=>({...f,[k]:!f[k]}))}
