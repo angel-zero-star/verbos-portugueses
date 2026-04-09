@@ -430,8 +430,9 @@ function FilterSheet({open, onClose, title, rows, selected, onToggle, count, cou
 }
 
 // ── Per-mode progress stats (computed from history) ──
-function modeStats(history,mode){
-  const s=history.filter(h=>h.mode===mode||(mode==="frases"&&h.mode==="sentences"));
+function modeStats(history,mode,subcat=null){
+  let s=history.filter(h=>h.mode===mode||(mode==="frases"&&h.mode==="sentences"));
+  if(subcat&&subcat!=="all") s=s.filter(h=>h.subcat===subcat);
   if(!s.length)return{count:0,avgPct:0,mastered:false};
   const avgPct=Math.round(s.reduce((a,b)=>a+b.pct,0)/s.length);
   return{count:s.length,avgPct,mastered:avgPct>=80&&s.length>=5};
@@ -486,13 +487,29 @@ function Screen({children,className}){
   );
 }
 
-// ── Library browse screen — per mode, shows all items grouped ──
-const CONJ_GROUPS=[
-  {key:"modal",    label:"Modal Verbs"},
-  {key:"state",    label:"State Verbs"},
-  {key:"movement", label:"Movement Verbs"},
-  {key:"action",   label:"Action Verbs"},
+// ── Home screen subcategory structure ──
+const MENU_SECTIONS=[
+  {mode:"conjugation",label:"Conjugations",icon:Layers,subcats:[
+    {key:"all",      label:"All Verbs"},
+    {key:"modal",    label:"Modal"},
+    {key:"state",    label:"State"},
+    {key:"movement", label:"Movement"},
+    {key:"action",   label:"Action"},
+  ]},
+  {mode:"palavras",label:"Palavras",icon:BookOpen,subcats:[
+    {key:"people",  label:"People & Jobs"},
+    {key:"food",    label:"Food & Drink"},
+    {key:"home",    label:"Home & Objects"},
+    {key:"nature",  label:"Nature & World"},
+    {key:"adjetivo",label:"Adjetivos"},
+  ]},
+  {mode:"frases",label:"Frases",icon:MessageCircle,subcats:[
+    {key:"expressoes",label:"Expressions"},
+    {key:"frases",    label:"Verb Sentences"},
+  ]},
 ];
+
+// ── Library browse screen — per mode, shows all items grouped ──
 const PAL_GROUPS=[
   {key:"people",  label:"People & Jobs"},
   {key:"food",    label:"Food & Drink"},
@@ -501,18 +518,34 @@ const PAL_GROUPS=[
   {key:"adjetivo",label:"Adjetivos"},
 ];
 
+const VERB_LIB_GROUPS=[
+  {key:"regular-ar", label:"Regular — ar",  filter:(v)=>v.type!=="irregular"&&v.verb.endsWith("ar")},
+  {key:"regular-er", label:"Regular — er",  filter:(v)=>v.type!=="irregular"&&v.verb.endsWith("er")},
+  {key:"regular-ir", label:"Regular — ir",  filter:(v)=>v.type!=="irregular"&&v.verb.endsWith("ir")},
+  {key:"irregular",  label:"Irregular",     filter:(v)=>v.type==="irregular"},
+];
+const VERB_PRONOUN_KEYS=["eu","tu","ele/ela","nós","eles(as)/vocês"];
+
 function LibraryScreen({mode,onBack,onPlay}){
   const modeLabel=mode==="conjugation"?"Verbs":mode==="palavras"?"Palavras":"Frases";
+  const [search,setSearch]=useState("");
+  const q=search.toLowerCase().trim();
+
   return(
     <div className="min-h-screen bg-bg text-text flex flex-col">
       {/* Sticky header */}
       <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-xl border-b border-border">
         <div className="max-w-[480px] mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={onBack} className="h-9 w-9 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center">
+          <button onClick={onBack} className="h-9 w-9 shrink-0 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center">
             <ArrowLeft size={16} strokeWidth={2.25}/>
           </button>
-          <span className="font-display text-lg text-text tracking-tight flex-1">{modeLabel}</span>
-          <Button size="sm" onClick={onPlay}>
+          <input
+            value={search}
+            onChange={e=>setSearch(e.target.value)}
+            placeholder={`Search ${modeLabel.toLowerCase()}…`}
+            className="flex-1 h-9 px-3 rounded-md bg-secondary/5 border border-border text-sm text-text placeholder:text-text-sub outline-none focus:border-secondary/40"
+          />
+          <Button size="sm" onClick={onPlay} className="shrink-0">
             <Play size={13} className="mr-1"/> Play
           </Button>
         </div>
@@ -520,82 +553,123 @@ function LibraryScreen({mode,onBack,onPlay}){
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-[480px] mx-auto px-4 py-4 pb-16 flex flex-col gap-6">
+        <div className="max-w-[480px] mx-auto px-4 py-4 pb-16 flex flex-col gap-8">
 
           {/* ── Conjugation ── */}
-          {mode==="conjugation"&&CONJ_GROUPS.map(g=>{
-            const verbs=[...ALL_VERBS.filter(v=>v.categories.includes(g.key))].sort((a,b)=>a.verb.localeCompare(b.verb));
+          {mode==="conjugation"&&VERB_LIB_GROUPS.map(g=>{
+            const verbs=ALL_VERBS
+              .filter(g.filter)
+              .filter(v=>!q||v.verb.includes(q)||v.transl.toLowerCase().includes(q))
+              .sort((a,b)=>a.verb.localeCompare(b.verb));
             if(!verbs.length)return null;
             return(
-              <div key={g.key} className="flex flex-col gap-1">
-                <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em] pb-1">{g.label}</span>
-                {verbs.map(v=>(
-                  <div key={v.id} className="flex items-center justify-between px-4 py-3 rounded-md bg-surface border border-border gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-sm font-semibold text-text">{v.verb}</span>
-                        {v.prep!=="—"&&<span className="text-[10px] text-text-sub font-mono-ui">[{v.prep}]</span>}
+              <div key={g.key} className="flex flex-col gap-3">
+                <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">{g.label}</span>
+                <div className="flex flex-col gap-3">
+                  {verbs.map(v=>(
+                    <div key={v.id} className="flex flex-col gap-3 px-4 py-4 rounded-lg bg-surface border border-border">
+                      {/* Verb header */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-sm font-semibold text-text">{v.verb}</span>
+                            {v.prep!=="—"&&<span className="text-[10px] text-text-sub font-mono-ui">[{v.prep}]</span>}
+                          </div>
+                          <div className="text-[11px] text-text-sub italic mt-0.5">{v.transl}</div>
+                        </div>
+                        <Badge variant={v.type==="irregular"?"passado":"presente"} className="shrink-0 mt-0.5">
+                          {v.type==="irregular"?"Irreg.":"Reg."}
+                        </Badge>
                       </div>
-                      <div className="text-[11px] text-text-sub italic truncate">{v.transl}</div>
+                      {/* Conjugation grid */}
+                      <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border">
+                        {["presente","passado"].map(tense=>(
+                          <div key={tense} className="flex flex-col gap-1">
+                            <span className="text-[9px] font-mono-ui text-text-sub uppercase tracking-[0.1em] mb-1">{tense}</span>
+                            {VERB_PRONOUN_KEYS.map(pk=>{
+                              const form=v[tense]?.[pk];
+                              if(!form)return null;
+                              return(
+                                <div key={pk} className="flex gap-2 items-baseline">
+                                  <span className="text-[10px] text-text-sub font-mono-ui w-20 shrink-0 leading-tight">{PRONOUN_LABELS[pk]||pk}</span>
+                                  <span className="text-[11px] text-text font-mono-ui leading-tight">{form}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <Badge variant={v.type==="irregular"?"passado":"presente"} className="shrink-0">
-                      {v.type==="irregular"?"Irreg.":"Reg."}
-                    </Badge>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             );
           })}
 
           {/* ── Palavras ── */}
           {mode==="palavras"&&PAL_GROUPS.map(g=>{
-            const words=g.key==="adjetivo"
+            const allWords=g.key==="adjetivo"
               ?PALAVRAS.filter(p=>p.cat==="adjetivo")
               :PALAVRAS.filter(p=>p.ctx===g.key);
+            const words=allWords.filter(p=>!q||p.en.toLowerCase().includes(q)||p.pt.toLowerCase().includes(q));
             if(!words.length)return null;
             return(
-              <div key={g.key} className="flex flex-col gap-1">
-                <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em] pb-1">{g.label}</span>
-                {words.map((p,i)=>(
-                  <div key={i} className="flex items-center justify-between px-4 py-3 rounded-md bg-surface border border-border gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[11px] text-text-sub italic">{p.en}</div>
-                      <div className="text-sm font-mono-ui text-text">{p.pt}</div>
+              <div key={g.key} className="flex flex-col gap-2">
+                <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">{g.label}</span>
+                <Card className="overflow-hidden divide-y divide-border">
+                  {words.map((p,i)=>(
+                    <div key={i} className="flex items-center justify-between px-4 py-3 gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[11px] text-text-sub italic">{p.en}</div>
+                        <div className="text-sm font-mono-ui text-text">{p.pt}</div>
+                      </div>
+                      <AudioBtn text={p.pt}/>
                     </div>
-                    <AudioBtn text={p.pt}/>
-                  </div>
-                ))}
+                  ))}
+                </Card>
               </div>
             );
           })}
 
           {/* ── Frases ── */}
-          {mode==="frases"&&(
-            <>
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em] pb-1">Verb Sentences</span>
-                {SENTENCES.map(s=>(
-                  <div key={s.id} className="flex flex-col px-4 py-3 rounded-md bg-surface border border-border gap-1">
-                    <div className="text-[11px] text-text-sub italic">{s.en}</div>
-                    <div className="text-sm font-mono-ui text-text">{s.pt}</div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] font-mono-ui text-text-sub">{s.verb}</span>
-                      <Badge variant={s.tense==="passado"?"passado":"presente"} className="text-[9px]">{s.tense}</Badge>
-                    </div>
+          {mode==="frases"&&(()=>{
+            const filtSentences=SENTENCES.filter(s=>!q||s.en.toLowerCase().includes(q)||s.pt.toLowerCase().includes(q));
+            const filtExpressoes=EXPRESSOES.filter(e=>!q||e.en.toLowerCase().includes(q)||e.pt.toLowerCase().includes(q));
+            return(
+              <>
+                {filtSentences.length>0&&(
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">Verb Sentences</span>
+                    <Card className="overflow-hidden divide-y divide-border">
+                      {filtSentences.map(s=>(
+                        <div key={s.id} className="flex flex-col px-4 py-3 gap-1">
+                          <div className="text-[11px] text-text-sub italic">{s.en}</div>
+                          <div className="text-sm font-mono-ui text-text">{s.pt}</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] font-mono-ui text-text-sub">{s.verb}</span>
+                            <Badge variant={s.tense==="passado"?"passado":"presente"} className="text-[9px]">{s.tense}</Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </Card>
                   </div>
-                ))}
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em] pb-1">Expressões</span>
-                {EXPRESSOES.map((e,i)=>(
-                  <div key={i} className="flex flex-col px-4 py-3 rounded-md bg-surface border border-border gap-1">
-                    <div className="text-[11px] text-text-sub italic">{e.en}</div>
-                    <div className="text-sm font-mono-ui text-text">{e.pt}</div>
+                )}
+                {filtExpressoes.length>0&&(
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">Expressões</span>
+                    <Card className="overflow-hidden divide-y divide-border">
+                      {filtExpressoes.map((e,i)=>(
+                        <div key={i} className="flex flex-col px-4 py-3 gap-1">
+                          <div className="text-[11px] text-text-sub italic">{e.en}</div>
+                          <div className="text-sm font-mono-ui text-text">{e.pt}</div>
+                        </div>
+                      ))}
+                    </Card>
                   </div>
-                ))}
-              </div>
-            </>
-          )}
+                )}
+              </>
+            );
+          })()}
 
         </div>
       </div>
@@ -616,6 +690,7 @@ export default function App(){
   const [history,setHistory]=useState([]);
   const inputRef=useRef(null);
   const lastEnterRef=useRef(0);
+  const subcatRef=useRef(null); // subcat of the current session
   const [keyboardOpen,setKeyboardOpen]=useState(false);
   const [gameMode,setGameMode]=useState("conjugation"); // "conjugation" | "palavras" | "frases"
   const [showSplash,setShowSplash]=useState(true);
@@ -684,46 +759,46 @@ export default function App(){
     return pool;
   };
 
-  const startGame=(modeOverride)=>{
+  const startGame=(modeOverride,subcat=null)=>{
     const gm=modeOverride??gameMode;
+    subcatRef.current=subcat;
+    setGameMode(gm);
     if(gm==="palavras"){
-      const pool=activePalavras();
+      let pool;
+      if(!subcat||subcat==="all")       pool=PALAVRAS;
+      else if(subcat==="adjetivo")      pool=PALAVRAS.filter(p=>p.cat==="adjetivo");
+      else                              pool=PALAVRAS.filter(p=>p.ctx===subcat);
       if(pool.length===0){alert("No palavras match your filters!");return;}
-      const picked=shuffle(pool).slice(0,10).map(p=>({
-        mode:"palavras",
-        en:p.en,
-        answer:p.pt,
-        cat:p.cat,
-      }));
+      const picked=shuffle(pool).slice(0,10).map(p=>({mode:"palavras",en:p.en,answer:p.pt,cat:p.cat}));
       setCards(picked);setIdx(0);setInput("");setResult(null);setAccentNote(null);
       setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");
       return;
     }
     if(gm==="frases"){
-      const pool=activeFrases();
+      const pool=[];
+      if(!subcat||subcat==="all"||subcat==="frases"){
+        for(const s of SENTENCES){
+          if(s.tense==="presente"&&!conjFilter.presente)continue;
+          if(s.tense==="passado"&&!conjFilter.passado)continue;
+          pool.push({kind:"sentence",id:s.id,verb:s.verb,tense:s.tense,en:s.en,pt:s.pt,alternatives:s.alternatives||[]});
+        }
+      }
+      if(!subcat||subcat==="all"||subcat==="expressoes"){
+        for(const e of EXPRESSOES)pool.push({kind:"expressao",en:e.en,pt:e.pt});
+      }
       if(pool.length===0){alert("No frases match your filters!");return;}
       const picked=shuffle(pool).slice(0,8).map(p=>p.kind==="sentence"?({
-        mode:"frases",
-        subMode:"sentence",
-        id:p.id,
-        verb:p.verb,
-        tense:p.tense,
-        en:p.en,
-        answer:p.pt,
-        alternatives:p.alternatives,
-      }):({
-        mode:"frases",
-        subMode:"expressao",
-        en:p.en,
-        answer:p.pt,
-      }));
+        mode:"frases",subMode:"sentence",id:p.id,verb:p.verb,tense:p.tense,en:p.en,answer:p.pt,alternatives:p.alternatives,
+      }):({mode:"frases",subMode:"expressao",en:p.en,answer:p.pt}));
       setCards(picked);setIdx(0);setInput("");setResult(null);setAccentNote(null);
       setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");
       return;
     }
-    // Conjugation
+    // Conjugation — subcat filters by semantic category; global type filter still applies
+    let verbs=ALL_VERBS;
+    if(subcat&&subcat!=="all") verbs=verbs.filter(v=>v.categories.includes(subcat));
+    verbs=verbs.filter(v=>(v.type==="irregular"&&conjFilter.irregular)||(v.type!=="irregular"&&conjFilter.regular));
     const gen=[];
-    const verbs=activeConjVerbs();
     for(const v of verbs){
       const tenses=[];
       if(conjFilter.presente)tenses.push("presente");
@@ -772,7 +847,7 @@ export default function App(){
     else{setResult("wrong");setAccentNote(null);setScore(s=>({...s,wrong:s.wrong+1}));setWrongOnes(w=>[...w,c]);}
   };
 
-  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),mode:gameMode,correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);setTimeout(()=>inputRef.current?.focus(),50);}};
+  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),mode:gameMode,subcat:subcatRef.current||"all",correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);setTimeout(()=>inputRef.current?.focus(),50);}};
   // Single Enter handler — debounced to avoid double-fire (key repeat / fast double-press)
   useEffect(()=>{
     if(screen!=="play")return;
@@ -924,85 +999,72 @@ export default function App(){
 
   // ─────────────────────── MENU ───────────────────────
   if(screen==="menu"){
-    const conjCount=activeConjVerbs().length;
-    const palCount=activePalavras().length;
-    const fraCount=activeFrases().length;
-    const MODE_TILES=[
-      {value:"conjugation",icon:Layers,title:"Conjugate",sub:"Verb forms",count:conjCount,countLabel:"verbos"},
-      {value:"palavras",   icon:BookOpen,title:"Palavras",sub:"Nouns & adjectives",count:palCount,countLabel:"palavras"},
-      {value:"frases",     icon:MessageCircle,title:"Frases",sub:"Sentences & expressions",count:fraCount,countLabel:"frases"},
-    ];
     return (
       <div className="min-h-screen bg-bg text-text">
         <TopBar/>
         <AnimatePresence mode="wait">
           <Screen key="menu">
-
             <div className="flex justify-end">
-              <button
-                className="h-9 w-9 rounded-full overflow-hidden shadow-[0_0_0_1px_hsl(var(--border))] hover:shadow-[0_0_0_2px_hsl(var(--muted))] transition-shadow"
-                title="Language: Portuguese"
-              >
+              <button className="h-9 w-9 rounded-full overflow-hidden shadow-[0_0_0_1px_hsl(var(--border))] hover:shadow-[0_0_0_2px_hsl(var(--muted))] transition-shadow" title="Language: Portuguese">
                 <FlagPT className="h-full w-auto -translate-x-2"/>
               </button>
             </div>
 
-            {/* 3 mode tiles — per Figma spec */}
-            {(()=>{
-              const statsMap={
-                conjugation:modeStats(history,"conjugation"),
-                palavras:modeStats(history,"palavras"),
-                frases:modeStats(history,"frases"),
-              };
-              return(
-              <div className="flex flex-col gap-3">
-              {MODE_TILES.map(m=>{
-                const Icon=m.icon;
-                const stats=statsMap[m.value];
-                const onPlay=()=>{setGameMode(m.value);startGame(m.value);};
-                return (
-                  <motion.div
-                    key={m.value}
-                    initial={{opacity:0,y:8}}
-                    animate={{opacity:1,y:0}}
-                    transition={{duration:0.25,ease:"easeOut"}}
-                  >
-                    <Card className="p-5 flex flex-col gap-2 items-start">
-                      <div className="flex items-start justify-between w-full">
-                        <div className="relative h-10 w-10">
-                          <ProgressRing pct={stats.avgPct} mastered={stats.mastered}/>
-                          <div className="absolute inset-0 rounded-full bg-secondary/15 border border-secondary flex items-center justify-center text-text">
-                            <Icon size={20} strokeWidth={2.25}/>
+            {MENU_SECTIONS.map((section,si)=>{
+              const Icon=section.icon;
+              const overallStats=modeStats(history,section.mode);
+              return (
+                <motion.div
+                  key={section.mode}
+                  initial={{opacity:0,y:8}}
+                  animate={{opacity:1,y:0}}
+                  transition={{duration:0.22,ease:"easeOut",delay:si*0.06}}
+                  className="flex flex-col gap-2"
+                >
+                  {/* Section header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 rounded-md bg-secondary/10 border border-secondary/25 flex items-center justify-center text-text">
+                        <Icon size={14} strokeWidth={2.25}/>
+                      </div>
+                      <div>
+                        <span className="font-display text-base text-text tracking-tight">{section.label}</span>
+                        {overallStats.count>0&&(
+                          <span className="ml-2 text-[10px] font-mono-ui text-text-sub">{overallStats.count} sessions · {overallStats.avgPct}% avg</span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={()=>{setLibraryMode(section.mode);setScreen("library");}}
+                      title="Browse library"
+                      className="h-8 w-8 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center"
+                    ><BookOpen size={14} strokeWidth={2.25}/></button>
+                  </div>
+
+                  {/* Subcategory rows */}
+                  <Card className="overflow-hidden divide-y divide-border">
+                    {section.subcats.map(sc=>{
+                      const stats=modeStats(history,section.mode,sc.key);
+                      return (
+                        <div key={sc.key} className="flex items-center justify-between px-4 py-3 hover:bg-secondary/5 transition-colors">
+                          <div>
+                            <span className="text-sm font-medium text-text">{sc.label}</span>
+                            {stats.count>0&&(
+                              <div className="text-[10px] font-mono-ui text-text-sub">
+                                {stats.count} sessions · {stats.avgPct}%{stats.mastered?" ✓":""}
+                              </div>
+                            )}
                           </div>
+                          <Button size="sm" onClick={()=>startGame(section.mode,sc.key)}>
+                            <Play size={12} className="mr-1"/>Play
+                          </Button>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={()=>{setLibraryMode(m.value);setScreen("library");}}
-                            title="Browse"
-                            className="h-9 w-9 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center"
-                          ><BookOpen size={16} strokeWidth={2.25}/></button>
-                          <button
-                            onClick={()=>setFilterSheet(m.value)}
-                            title="Filter"
-                            className="h-9 w-9 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center"
-                          ><SlidersHorizontal size={16} strokeWidth={2.25}/></button>
-                        </div>
-                      </div>
-                      <div className="font-display text-lg text-text tracking-tight mt-2">{m.title}</div>
-                      <div className="text-xs text-text-sub">
-                        {m.sub} · <span className="font-mono-ui">{m.count} {m.countLabel}</span>
-                        {stats.count>0&&<span className="font-mono-ui"> · {stats.count} sessions · {stats.avgPct}% avg</span>}
-                      </div>
-                      <Button size="lg" onClick={onPlay} className="w-full mt-3 !bg-secondary !text-muted hover:!brightness-95">
-                        Começar
-                      </Button>
-                    </Card>
-                  </motion.div>
-                );
-              })}
-              </div>
+                      );
+                    })}
+                  </Card>
+                </motion.div>
               );
-            })()}
+            })}
 
             <div className="mt-auto pt-8 text-center text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.15em]">
               verbos · v{packageInfo.version}
@@ -1010,44 +1072,6 @@ export default function App(){
           </Screen>
         </AnimatePresence>
         <NavBar/>
-
-        {/* Gear filter sheets — one per mode */}
-        <FilterSheet
-          open={filterSheet==="conjugation"}
-          onClose={()=>setFilterSheet(null)}
-          title="Conjugate — Filters"
-          rows={[
-            {label:"Type",items:[{key:"irregular",label:"Irregular"},{key:"regular",label:"Regular"}]},
-            {label:"Category",items:[{key:"modal",label:"Modal"},{key:"movement",label:"Movement"},{key:"state",label:"State"},{key:"action",label:"Action"}]},
-          ]}
-          selected={conjFilter}
-          onToggle={(k)=>setConjFilter(f=>({...f,[k]:!f[k]}))}
-          count={conjCount}
-          countLabel="verbos"
-        />
-        <FilterSheet
-          open={filterSheet==="palavras"}
-          onClose={()=>setFilterSheet(null)}
-          title="Palavras — Filters"
-          rows={[
-            {label:"Category",items:[{key:"substantivo",label:"Substantivos"},{key:"adjetivo",label:"Adjetivos"}]},
-            {label:"Context",items:[{key:"people",label:"People & Jobs"},{key:"food",label:"Food & Drink"},{key:"home",label:"Home & Objects"},{key:"nature",label:"Nature & World"}]},
-          ]}
-          selected={palFilter}
-          onToggle={(k)=>setPalFilter(f=>({...f,[k]:!f[k]}))}
-          count={palCount}
-          countLabel="palavras"
-        />
-        <FilterSheet
-          open={filterSheet==="frases"}
-          onClose={()=>setFilterSheet(null)}
-          title="Frases — Filters"
-          rows={[[{key:"frases",label:"Verb Frases"},{key:"expressoes",label:"Expressões"}]]}
-          selected={fraFilter}
-          onToggle={(k)=>setFraFilter(f=>({...f,[k]:!f[k]}))}
-          count={fraCount}
-          countLabel="frases"
-        />
       </div>
     );
   }
