@@ -10,28 +10,28 @@
     --bg: 0 0% 98%;
     --surface: 0 0% 100%;
     --border: 240 10% 90%;
-    --primary: 217 91% 60%;        /* #3B82F6 blue */
+    --primary: 217 76% 47%;        /* #1D63D3 blue — darkened for 4.5:1 white text on button */
     --secondary: 240 10% 10%;      /* near-black, use with /10 /20 for Linear-like transparency */
     --accent: 142 71% 45%;         /* #22C55E green — correct */
     --danger: 0 84% 60%;           /* #EF4444 red — wrong */
     --warn: 38 92% 50%;            /* #F59E0B amber — accent miss */
-    --muted: 240 10% 70%;
+    --muted: 240 8% 44%;           /* #676779 — 5.5:1 on white */
     --text: 240 10% 10%;
-    --text-sub: 240 7% 45%;
+    --text-sub: 240 7% 45%;        /* #6D6D7A — 5.0:1 on white */
   }
 
   .dark {
     --bg: 240 6% 4%;               /* #0A0A0B */
     --surface: 240 9% 7%;          /* #111114 */
     --border: 240 2% 18%;          /* #2d2d2e */
-    --primary: 217 91% 60%;        /* #3B82F6 blue */
+    --primary: 217 91% 60%;        /* #3B82F6 blue — 5.5:1 on dark bg */
     --secondary: 240 20% 95%;      /* near-white, use with /10 /20 for transparency */
     --accent: 142 71% 45%;         /* green */
     --danger: 0 84% 60%;           /* red */
     --warn: 38 92% 50%;
-    --muted: 240 12% 26%;
+    --muted: 240 10% 52%;          /* #787891 — 4.6:1 on dark bg */
     --text: 240 20% 95%;           /* #F0F0F5 */
-    --text-sub: 240 11% 39%;       /* #5A5A6E */
+    --text-sub: 240 10% 58%;       /* #89899F — 5.8:1 on dark bg */
   }
 
   * {

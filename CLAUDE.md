@@ -13,7 +13,9 @@ Not playful. Not rounded-soft.
 --brand-bg:        #0A0A0B        /* near-black (light: #FAFAFA) */
 --brand-surface:   #111114        /* card backgrounds */
 --brand-border:    #1F1F26        /* subtle borders */
---brand-primary:   #3B82F6        /* blue — MAIN CTA ONLY (e.g. Começar button, progress bar, big results %) */
+--brand-primary:   dark #3B82F6 / light #1D63D3
+                                  /* blue — MAIN CTA ONLY (e.g. Começar button, progress bar, big results %)
+                                     Dark: 5.5:1 contrast on dark bg; Light: 5.6:1 white text on button */
 --brand-secondary: #F0F0F5 (dark) / #0A0A0B (light)
                                   /* near-white in dark mode, near-black in light mode.
                                      Always used WITH opacity (/10, /20, /25) for Linear-like
@@ -22,9 +24,11 @@ Not playful. Not rounded-soft.
 --brand-accent:    #22C55E        /* green — correct answers */
 --brand-danger:    #EF4444        /* red — wrong answers */
 --brand-warn:      #F59E0B        /* amber — accent-miss warnings, passado badge */
---brand-muted:     #3A3A4A        /* muted text, disabled */
+--brand-muted:     dark #787891 / light #676779
+                                  /* muted text, nav inactive — WCAG AA: 4.6:1 dark, 5.5:1 light */
 --brand-text:      #F0F0F5        /* primary text */
---brand-text-sub:  #5A5A6E        /* secondary text */
+--brand-text-sub:  dark #89899F / light #6D6D7A
+                                  /* secondary text — WCAG AA: 5.8:1 dark, 5.0:1 light */
 
 **Usage discipline:** if you're about to tint something with `primary`, ask: "is this the one main CTA on this screen?" If no, use `secondary/10` bg + `secondary/25` border instead.
 
