@@ -494,14 +494,11 @@ const CONJ_GROUPS=[
   {key:"action",   label:"Action Verbs"},
 ];
 const PAL_GROUPS=[
-  {key:"casa",        label:"Casa"},
-  {key:"alimentacao", label:"Alimentação"},
-  {key:"roupa",       label:"Roupa & Acessórios"},
-  {key:"familia",     label:"Família & Pessoas"},
-  {key:"escola",      label:"Escola & Trabalho"},
-  {key:"cidade",      label:"Cidade & Transportes"},
-  {key:"natureza",    label:"Natureza"},
-  {key:"adjetivo",    label:"Adjetivos"},
+  {key:"people",  label:"People & Jobs"},
+  {key:"food",    label:"Food & Drink"},
+  {key:"home",    label:"Home & Objects"},
+  {key:"nature",  label:"Nature & World"},
+  {key:"adjetivo",label:"Adjetivos"},
 ];
 
 function LibraryScreen({mode,onBack,onPlay}){
@@ -625,7 +622,7 @@ export default function App(){
 
   // Per-mode category filters (multi-select). All ON by default.
   const [conjFilter,setConjFilter]=useState({irregular:true,regular:true,modal:true,movement:true,state:true,action:true,presente:true,passado:false});
-  const [palFilter,setPalFilter]=useState({substantivo:true,adjetivo:true,casa:true,alimentacao:true,roupa:true,familia:true,escola:true,cidade:true,natureza:true});
+  const [palFilter,setPalFilter]=useState({substantivo:true,adjetivo:true,people:true,food:true,home:true,nature:true});
   const [fraFilter,setFraFilter]=useState({frases:true,expressoes:true});
   const [filterSheet,setFilterSheet]=useState(null); // null | "conjugation" | "palavras" | "frases"
   const [libraryMode,setLibraryMode]=useState(null); // "conjugation" | "palavras" | "frases"
@@ -659,7 +656,7 @@ export default function App(){
     const active=keys.length?keys:CONJUGATE_CAT_KEYS;
     return ALL_VERBS.filter(v=>v.categories.some(c=>active.includes(c)));
   };
-  const CTX_KEYS=["casa","alimentacao","roupa","familia","escola","cidade","natureza"];
+  const CTX_KEYS=["people","food","home","nature"];
   const activePalavras=()=>{
     const activeCats=["substantivo","adjetivo"].filter(k=>palFilter[k]);
     const cats=activeCats.length?activeCats:["substantivo","adjetivo"];
@@ -1034,8 +1031,7 @@ export default function App(){
           title="Palavras — Filters"
           rows={[
             {label:"Category",items:[{key:"substantivo",label:"Substantivos"},{key:"adjetivo",label:"Adjetivos"}]},
-            {label:"Context",items:[{key:"casa",label:"Casa"},{key:"alimentacao",label:"Alimentação"},{key:"roupa",label:"Roupa"},{key:"familia",label:"Família"}]},
-            {items:[{key:"escola",label:"Escola"},{key:"cidade",label:"Cidade"},{key:"natureza",label:"Natureza"}]},
+            {label:"Context",items:[{key:"people",label:"People & Jobs"},{key:"food",label:"Food & Drink"},{key:"home",label:"Home & Objects"},{key:"nature",label:"Nature & World"}]},
           ]}
           selected={palFilter}
           onToggle={(k)=>setPalFilter(f=>({...f,[k]:!f[k]}))}
