@@ -222,7 +222,22 @@ const SK_FILTER_FRA="verbos-filter-frases";
 function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
 function stripAccents(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"");}
 function norm(s){return s.trim().toLowerCase().replace(/\s+/g," ");}
-function cmpAns(i,c){const ni=norm(i),nc=norm(c);if(ni===nc)return"exact";if(stripAccents(ni)===stripAccents(nc))return"accent";return"wrong";}
+const ARTICLE_RE=/^(o|a|os|as|um|uma|uns|umas)\s+/i;
+function stripArticle(s){return s.replace(ARTICLE_RE,"").trim();}
+function levenshtein(a,b){const m=a.length,n=b.length;const dp=Array.from({length:m+1},(_,i)=>Array.from({length:n+1},(_,j)=>i===0?j:j===0?i:0));for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);return dp[m][n];}
+function cmpAns(i,c){
+  const ni=norm(i),nc=norm(c);
+  if(ni===nc)return"exact";
+  const sia=stripAccents(ni),sca=stripAccents(nc);
+  if(sia===sca)return"accent";
+  // Article tolerance: strip leading article from both sides then compare
+  const nia=stripArticle(sia),nca=stripArticle(sca);
+  if(nia===nca)return"accent";
+  // Small typo tolerance: 1 edit for words up to 8 chars, 2 for longer
+  const maxDist=Math.max(...nca.split(" ").map(w=>w.length))>8?2:1;
+  if(levenshtein(sia,sca)<=maxDist||levenshtein(nia,nca)<=maxDist)return"accent";
+  return"wrong";
+}
 // For Palavras/Frases: split answer on "/" (e.g. "casado / casada") and accept either form.
 // Returns "exact" | "accent" | "wrong".
 function cmpMulti(input, answer){
@@ -530,8 +545,9 @@ export default function App(){
     return pool;
   };
 
-  const startGame=()=>{
-    if(gameMode==="palavras"){
+  const startGame=(modeOverride)=>{
+    const gm=modeOverride??gameMode;
+    if(gm==="palavras"){
       const pool=activePalavras();
       if(pool.length===0){alert("No palavras match your filters!");return;}
       const picked=shuffle(pool).slice(0,10).map(p=>({
@@ -544,7 +560,7 @@ export default function App(){
       setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");
       return;
     }
-    if(gameMode==="frases"){
+    if(gm==="frases"){
       const pool=activeFrases();
       if(pool.length===0){alert("No frases match your filters!");return;}
       const picked=shuffle(pool).slice(0,8).map(p=>p.kind==="sentence"?({
@@ -799,7 +815,7 @@ export default function App(){
             <div className="flex flex-col gap-3">
               {MODE_TILES.map(m=>{
                 const Icon=m.icon;
-                const onPlay=()=>{setGameMode(m.value);setTimeout(startGame,0);};
+                const onPlay=()=>{setGameMode(m.value);startGame(m.value);};
                 return (
                   <motion.div
                     key={m.value}
