@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine, Cell } from "recharts";
-import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal } from "lucide-react";
+import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal } from "lucide-react";
 import packageInfo from "../package.json";
 import { cn } from "./lib/utils";
 import { useTheme } from "./lib/useTheme";
@@ -306,8 +306,6 @@ function sGet(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null
 function sSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch{return false;}}
 function sDel(k){try{localStorage.removeItem(k);}catch{}}
 
-function defaultConfig(){const c={};ALL_VERBS.forEach(v=>{c[v.id]={presente:true,passado:true};});return c;}
-
 // ── Animated number counter ──
 function AnimatedNumber({value,duration=1.2}){
   const mv=useMotionValue(0);
@@ -431,6 +429,33 @@ function FilterSheet({open, onClose, title, rows, selected, onToggle, count, cou
   );
 }
 
+// ── Per-mode progress stats (computed from history) ──
+function modeStats(history,mode){
+  const s=history.filter(h=>h.mode===mode||(mode==="frases"&&h.mode==="sentences"));
+  if(!s.length)return{count:0,avgPct:0,mastered:false};
+  const avgPct=Math.round(s.reduce((a,b)=>a+b.pct,0)/s.length);
+  return{count:s.length,avgPct,mastered:avgPct>=80&&s.length>=5};
+}
+
+// ── Progress arc ring ──
+function ProgressRing({pct,mastered,size=40}){
+  const r=(size-6)/2;
+  const circ=2*Math.PI*r;
+  const dash=(pct/100)*circ;
+  return(
+    <svg width={size} height={size} className="absolute inset-0 -rotate-90" style={{overflow:"visible"}}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="hsl(var(--border))" strokeWidth={3}/>
+      <circle cx={size/2} cy={size/2} r={r} fill="none"
+        stroke={mastered?"hsl(var(--accent))":"hsl(var(--secondary))"}
+        strokeOpacity={mastered?1:0.5}
+        strokeWidth={3} strokeLinecap="round"
+        strokeDasharray={`${dash} ${circ}`}
+        style={{transition:"stroke-dasharray 0.6s ease"}}
+      />
+    </svg>
+  );
+}
+
 // Portuguese flag (simple SVG)
 function FlagPT({className}){
   return (
@@ -461,13 +486,129 @@ function Screen({children,className}){
   );
 }
 
+// ── Library browse screen — per mode, shows all items grouped ──
+const CONJ_GROUPS=[
+  {key:"modal",    label:"Modal Verbs"},
+  {key:"state",    label:"State Verbs"},
+  {key:"movement", label:"Movement Verbs"},
+  {key:"action",   label:"Action Verbs"},
+];
+const PAL_GROUPS=[
+  {key:"casa",        label:"Casa"},
+  {key:"alimentacao", label:"Alimentação"},
+  {key:"roupa",       label:"Roupa & Acessórios"},
+  {key:"familia",     label:"Família & Pessoas"},
+  {key:"escola",      label:"Escola & Trabalho"},
+  {key:"cidade",      label:"Cidade & Transportes"},
+  {key:"natureza",    label:"Natureza"},
+  {key:"adjetivo",    label:"Adjetivos"},
+];
+
+function LibraryScreen({mode,onBack,onPlay}){
+  const modeLabel=mode==="conjugation"?"Verbs":mode==="palavras"?"Palavras":"Frases";
+  return(
+    <div className="min-h-screen bg-bg text-text flex flex-col">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-xl border-b border-border">
+        <div className="max-w-[480px] mx-auto px-4 py-3 flex items-center gap-3">
+          <button onClick={onBack} className="h-9 w-9 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center">
+            <ArrowLeft size={16} strokeWidth={2.25}/>
+          </button>
+          <span className="font-display text-lg text-text tracking-tight flex-1">{modeLabel}</span>
+          <Button size="sm" onClick={onPlay}>
+            <Play size={13} className="mr-1"/> Play
+          </Button>
+        </div>
+      </div>
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-[480px] mx-auto px-4 py-4 pb-16 flex flex-col gap-6">
+
+          {/* ── Conjugation ── */}
+          {mode==="conjugation"&&CONJ_GROUPS.map(g=>{
+            const verbs=[...ALL_VERBS.filter(v=>v.categories.includes(g.key))].sort((a,b)=>a.verb.localeCompare(b.verb));
+            if(!verbs.length)return null;
+            return(
+              <div key={g.key} className="flex flex-col gap-1">
+                <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em] pb-1">{g.label}</span>
+                {verbs.map(v=>(
+                  <div key={v.id} className="flex items-center justify-between px-4 py-3 rounded-md bg-surface border border-border gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-sm font-semibold text-text">{v.verb}</span>
+                        {v.prep!=="—"&&<span className="text-[10px] text-text-sub font-mono-ui">[{v.prep}]</span>}
+                      </div>
+                      <div className="text-[11px] text-text-sub italic truncate">{v.transl}</div>
+                    </div>
+                    <Badge variant={v.type==="irregular"?"passado":"presente"} className="shrink-0">
+                      {v.type==="irregular"?"Irreg.":"Reg."}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+
+          {/* ── Palavras ── */}
+          {mode==="palavras"&&PAL_GROUPS.map(g=>{
+            const words=g.key==="adjetivo"
+              ?PALAVRAS.filter(p=>p.cat==="adjetivo")
+              :PALAVRAS.filter(p=>p.ctx===g.key);
+            if(!words.length)return null;
+            return(
+              <div key={g.key} className="flex flex-col gap-1">
+                <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em] pb-1">{g.label}</span>
+                {words.map((p,i)=>(
+                  <div key={i} className="flex items-center justify-between px-4 py-3 rounded-md bg-surface border border-border gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] text-text-sub italic">{p.en}</div>
+                      <div className="text-sm font-mono-ui text-text">{p.pt}</div>
+                    </div>
+                    <AudioBtn text={p.pt}/>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+
+          {/* ── Frases ── */}
+          {mode==="frases"&&(
+            <>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em] pb-1">Verb Sentences</span>
+                {SENTENCES.map(s=>(
+                  <div key={s.id} className="flex flex-col px-4 py-3 rounded-md bg-surface border border-border gap-1">
+                    <div className="text-[11px] text-text-sub italic">{s.en}</div>
+                    <div className="text-sm font-mono-ui text-text">{s.pt}</div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-mono-ui text-text-sub">{s.verb}</span>
+                      <Badge variant={s.tense==="passado"?"passado":"presente"} className="text-[9px]">{s.tense}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em] pb-1">Expressões</span>
+                {EXPRESSOES.map((e,i)=>(
+                  <div key={i} className="flex flex-col px-4 py-3 rounded-md bg-surface border border-border gap-1">
+                    <div className="text-[11px] text-text-sub italic">{e.en}</div>
+                    <div className="text-sm font-mono-ui text-text">{e.pt}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App(){
   const {theme,toggle:toggleTheme}=useTheme();
   const [screen,setScreen]=useState("menu");
-  const [filterIrregular,setFilterIrregular]=useState(true);
-  const [filterRegular,setFilterRegular]=useState(true);
-  const [tensePresente,setTensePresente]=useState(true);
-  const [tensePassado,setTensePassado]=useState(false);
   const [cards,setCards]=useState([]);
   const [idx,setIdx]=useState(0);
   const [input,setInput]=useState("");
@@ -476,8 +617,6 @@ export default function App(){
   const [score,setScore]=useState({correct:0,wrong:0,accentMisses:0});
   const [wrongOnes,setWrongOnes]=useState([]);
   const [history,setHistory]=useState([]);
-  const [config,setConfig]=useState(defaultConfig);
-  const [settingsTab,setSettingsTab]=useState("irregular");
   const inputRef=useRef(null);
   const lastEnterRef=useRef(0);
   const [keyboardOpen,setKeyboardOpen]=useState(false);
@@ -486,15 +625,15 @@ export default function App(){
 
   // Per-mode category filters (multi-select). All ON by default.
   const [conjFilter,setConjFilter]=useState({irregular:true,regular:true,modal:true,movement:true,state:true,action:true,presente:true,passado:false});
-  const [palFilter,setPalFilter]=useState({substantivo:true,adjetivo:true});
+  const [palFilter,setPalFilter]=useState({substantivo:true,adjetivo:true,casa:true,alimentacao:true,roupa:true,familia:true,escola:true,cidade:true,natureza:true});
   const [fraFilter,setFraFilter]=useState({frases:true,expressoes:true});
   const [filterSheet,setFilterSheet]=useState(null); // null | "conjugation" | "palavras" | "frases"
+  const [libraryMode,setLibraryMode]=useState(null); // "conjugation" | "palavras" | "frases"
 
   useEffect(()=>{
     window.speechSynthesis?.getVoices();
+    sDel(SK_CONF); sDel(SK_FILTERS); // clean up legacy per-verb config
     const h=sGet(SK_HIST);if(h&&Array.isArray(h))setHistory(h);
-    const c=sGet(SK_CONF);if(c&&typeof c==="object"){const def=defaultConfig();Object.keys(def).forEach(k=>{if(!c[k])c[k]=def[k];});setConfig(c);}
-    const f=sGet(SK_FILTERS);if(f){setFilterIrregular(f.filterIrregular??true);setFilterRegular(f.filterRegular??true);setTensePresente(f.tensePresente??true);setTensePassado(f.tensePassado??false);}
     const m=sGet(SK_MODE);
     if(m==="conjugation"||m==="palavras"||m==="frases")setGameMode(m);
     else if(m==="sentences")setGameMode("frases"); // migrate old key
@@ -513,9 +652,6 @@ export default function App(){
     return()=>clearTimeout(t);
   },[]);
 
-  useEffect(()=>{sSet(SK_FILTERS,{filterIrregular,filterRegular,tensePresente,tensePassado});},[filterIrregular,filterRegular,tensePresente,tensePassado]);
-
-  const saveConfig=(nc)=>{setConfig(nc);sSet(SK_CONF,nc);};
 
   // Filtered pools (for counts shown in filter sheets AND for startGame)
   const activeConjVerbs=()=>{
@@ -523,10 +659,16 @@ export default function App(){
     const active=keys.length?keys:CONJUGATE_CAT_KEYS;
     return ALL_VERBS.filter(v=>v.categories.some(c=>active.includes(c)));
   };
+  const CTX_KEYS=["casa","alimentacao","roupa","familia","escola","cidade","natureza"];
   const activePalavras=()=>{
-    const keys=Object.entries(palFilter).filter(([,v])=>v).map(([k])=>k);
-    const active=keys.length?keys:["substantivo","adjetivo"];
-    return PALAVRAS.filter(p=>active.includes(p.cat));
+    const activeCats=["substantivo","adjetivo"].filter(k=>palFilter[k]);
+    const cats=activeCats.length?activeCats:["substantivo","adjetivo"];
+    const activeCtx=CTX_KEYS.filter(k=>palFilter[k]);
+    return PALAVRAS.filter(p=>{
+      if(!cats.includes(p.cat))return false;
+      if(p.cat==="adjetivo")return true;
+      return activeCtx.length===0||activeCtx.length===CTX_KEYS.length||activeCtx.includes(p.ctx);
+    });
   };
   const activeFrases=()=>{
     const keys=Object.entries(fraFilter).filter(([,v])=>v).map(([k])=>k);
@@ -586,10 +728,9 @@ export default function App(){
     const gen=[];
     const verbs=activeConjVerbs();
     for(const v of verbs){
-      const conf=config[v.id];if(!conf)continue;
       const tenses=[];
-      if(conf.presente&&conjFilter.presente)tenses.push("presente");
-      if(conf.passado&&conjFilter.passado)tenses.push("passado");
+      if(conjFilter.presente)tenses.push("presente");
+      if(conjFilter.passado)tenses.push("passado");
       if(tenses.length===0)continue;
       for(const t of tenses){
         const pr=v.impessoal?"impessoal (ele)":DISPLAY_PRONOUNS[Math.floor(Math.random()*DISPLAY_PRONOUNS.length)];
@@ -717,8 +858,6 @@ export default function App(){
     </div>
   );
 
-  const toggleVerb=(id,tense)=>{const nc={...config,[id]:{...config[id],[tense]:!config[id][tense]}};saveConfig(nc);};
-  const bulkToggle=(type,tense,val)=>{const nc={...config};ALL_VERBS.filter(v=>type==="all"||v.type===type||(type==="regular"&&v.type!=="irregular")).forEach(v=>{nc[v.id]={...nc[v.id],[tense]:val};});saveConfig(nc);};
 
   // (TopBar removed — theme toggle now lives in Settings, version shown on menu footer)
   const TopBar=()=>null;
@@ -812,9 +951,17 @@ export default function App(){
             </div>
 
             {/* 3 mode tiles — per Figma spec */}
-            <div className="flex flex-col gap-3">
+            {(()=>{
+              const statsMap={
+                conjugation:modeStats(history,"conjugation"),
+                palavras:modeStats(history,"palavras"),
+                frases:modeStats(history,"frases"),
+              };
+              return(
+              <div className="flex flex-col gap-3">
               {MODE_TILES.map(m=>{
                 const Icon=m.icon;
+                const stats=statsMap[m.value];
                 const onPlay=()=>{setGameMode(m.value);startGame(m.value);};
                 return (
                   <motion.div
@@ -825,19 +972,30 @@ export default function App(){
                   >
                     <Card className="p-5 flex flex-col gap-2 items-start">
                       <div className="flex items-start justify-between w-full">
-                        <div className="h-10 w-10 rounded-full bg-secondary/15 border border-secondary flex items-center justify-center text-text">
-                          <Icon size={20} strokeWidth={2.25}/>
+                        <div className="relative h-10 w-10">
+                          <ProgressRing pct={stats.avgPct} mastered={stats.mastered}/>
+                          <div className="absolute inset-0 rounded-full bg-secondary/15 border border-secondary flex items-center justify-center text-text">
+                            <Icon size={20} strokeWidth={2.25}/>
+                          </div>
                         </div>
-                        <button
-                          onClick={()=>setFilterSheet(m.value)}
-                          title="Filter"
-                          className="h-9 w-9 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center"
-                        >
-                          <SlidersHorizontal size={16} strokeWidth={2.25}/>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={()=>{setLibraryMode(m.value);setScreen("library");}}
+                            title="Browse"
+                            className="h-9 w-9 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center"
+                          ><BookOpen size={16} strokeWidth={2.25}/></button>
+                          <button
+                            onClick={()=>setFilterSheet(m.value)}
+                            title="Filter"
+                            className="h-9 w-9 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center"
+                          ><SlidersHorizontal size={16} strokeWidth={2.25}/></button>
+                        </div>
                       </div>
                       <div className="font-display text-lg text-text tracking-tight mt-2">{m.title}</div>
-                      <div className="text-xs text-text-sub">{m.sub} · <span className="font-mono-ui">{m.count} {m.countLabel}</span></div>
+                      <div className="text-xs text-text-sub">
+                        {m.sub} · <span className="font-mono-ui">{m.count} {m.countLabel}</span>
+                        {stats.count>0&&<span className="font-mono-ui"> · {stats.count} sessions · {stats.avgPct}% avg</span>}
+                      </div>
                       <Button size="lg" onClick={onPlay} className="w-full mt-3 !bg-secondary !text-muted hover:!brightness-95">
                         Começar
                       </Button>
@@ -845,7 +1003,9 @@ export default function App(){
                   </motion.div>
                 );
               })}
-            </div>
+              </div>
+              );
+            })()}
 
             <div className="mt-auto pt-8 text-center text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.15em]">
               verbos · v{packageInfo.version}
@@ -862,7 +1022,6 @@ export default function App(){
           rows={[
             {label:"Type",items:[{key:"irregular",label:"Irregular"},{key:"regular",label:"Regular"}]},
             {label:"Category",items:[{key:"modal",label:"Modal"},{key:"movement",label:"Movement"},{key:"state",label:"State"},{key:"action",label:"Action"}]},
-            {label:"Tense",items:[{key:"presente",label:"Presente"},{key:"passado",label:"Passado"}]},
           ]}
           selected={conjFilter}
           onToggle={(k)=>setConjFilter(f=>({...f,[k]:!f[k]}))}
@@ -873,7 +1032,11 @@ export default function App(){
           open={filterSheet==="palavras"}
           onClose={()=>setFilterSheet(null)}
           title="Palavras — Filters"
-          rows={[[{key:"substantivo",label:"Substantivos"},{key:"adjetivo",label:"Adjetivos"}]]}
+          rows={[
+            {label:"Category",items:[{key:"substantivo",label:"Substantivos"},{key:"adjetivo",label:"Adjetivos"}]},
+            {label:"Context",items:[{key:"casa",label:"Casa"},{key:"alimentacao",label:"Alimentação"},{key:"roupa",label:"Roupa"},{key:"familia",label:"Família"}]},
+            {items:[{key:"escola",label:"Escola"},{key:"cidade",label:"Cidade"},{key:"natureza",label:"Natureza"}]},
+          ]}
           selected={palFilter}
           onToggle={(k)=>setPalFilter(f=>({...f,[k]:!f[k]}))}
           count={palCount}
@@ -893,12 +1056,17 @@ export default function App(){
     );
   }
 
+  // ─────────────────────── LIBRARY ───────────────────────
+  if(screen==="library"){
+    return <LibraryScreen
+      mode={libraryMode}
+      onBack={()=>setScreen("menu")}
+      onPlay={()=>{setGameMode(libraryMode);startGame(libraryMode);}}
+    />;
+  }
+
   // ─────────────────────── SETTINGS ───────────────────────
   if(screen==="settings"){
-    const irregulars=ALL_VERBS.filter(v=>v.type==="irregular");
-    const regulars=ALL_VERBS.filter(v=>v.type!=="irregular");
-    const list=settingsTab==="irregular"?irregulars:regulars;
-    const typeKey=settingsTab==="irregular"?"irregular":"regular";
     return (
       <div className="min-h-screen bg-bg text-text">
         <TopBar/>
@@ -906,7 +1074,7 @@ export default function App(){
           <Screen key="settings">
             <div>
               <h1 className="font-display text-[28px] tracking-tighter text-text">Settings</h1>
-              <p className="text-sm text-text-sub mt-1">Toggle verbs and tenses individually.</p>
+              <p className="text-sm text-text-sub mt-1">Appearance and global training filters.</p>
             </div>
 
             <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-md bg-secondary/5 border border-border">
@@ -922,47 +1090,21 @@ export default function App(){
               </button>
             </div>
 
-            <SegmentedToggle
-              value={settingsTab}
-              onChange={setSettingsTab}
-              options={[
-                {value:"irregular",label:`Irregular (${irregulars.length})`},
-                {value:"regular",label:`Regular (${regulars.length})`},
-              ]}
-            />
-
-            <div className="flex gap-2 flex-wrap">
-              <Button variant="ghost" size="sm" onClick={()=>bulkToggle(typeKey,"presente",true)}>All Presente On</Button>
-              <Button variant="ghost" size="sm" onClick={()=>bulkToggle(typeKey,"passado",true)}>All Passado On</Button>
-              <Button variant="danger" size="sm" onClick={()=>{bulkToggle(typeKey,"presente",false);bulkToggle(typeKey,"passado",false);}}>All Off</Button>
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">Tense</span>
+              <div className="flex gap-2">
+                <TogglePill active={conjFilter.presente} onClick={()=>setConjFilter(f=>({...f,presente:!f.presente}))}>Presente</TogglePill>
+                <TogglePill active={conjFilter.passado}  onClick={()=>setConjFilter(f=>({...f,passado:!f.passado}))}>Passado</TogglePill>
+              </div>
             </div>
 
-            <Card className="overflow-hidden">
-              <div className="grid grid-cols-[1fr_72px_72px] items-center px-4 py-3 border-b border-border text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">
-                <span>Verb</span>
-                <span className="text-center">Pres.</span>
-                <span className="text-center">Pass.</span>
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">Verb Type</span>
+              <div className="flex gap-2">
+                <TogglePill active={conjFilter.irregular} onClick={()=>setConjFilter(f=>({...f,irregular:!f.irregular}))}>Irregular</TogglePill>
+                <TogglePill active={conjFilter.regular}   onClick={()=>setConjFilter(f=>({...f,regular:!f.regular}))}>Regular</TogglePill>
               </div>
-              <div className="max-h-[420px] overflow-y-auto no-scrollbar divide-y divide-border">
-                {list.map((v)=>(
-                  <div key={v.id} className="grid grid-cols-[1fr_72px_72px] items-center px-4 py-3 hover:bg-bg/40 transition-colors">
-                    <div className="min-w-0">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-sm font-semibold text-text">{v.verb}</span>
-                        {v.prep!=="—" && <span className="text-[10px] text-text-sub font-mono-ui">[{v.prep}]</span>}
-                      </div>
-                      <div className="text-[11px] text-text-sub italic truncate">{v.transl}</div>
-                    </div>
-                    <div className="flex justify-center">
-                      <MiniToggle on={!!config[v.id]?.presente} onClick={()=>toggleVerb(v.id,"presente")}/>
-                    </div>
-                    <div className="flex justify-center">
-                      <MiniToggle on={!!config[v.id]?.passado} onClick={()=>toggleVerb(v.id,"passado")}/>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
+            </div>
           </Screen>
         </AnimatePresence>
         <NavBar/>
@@ -1349,24 +1491,3 @@ function ConjugationTable({card}){
   );
 }
 
-// ── Mini on/off toggle pill (settings list) ──
-function MiniToggle({on,onClick}){
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "h-7 w-12 rounded-full border transition-all flex items-center px-1",
-        on ? "bg-primary/20 border-primary/50 justify-end" : "bg-surface border-border justify-start"
-      )}
-    >
-      <motion.span
-        layout
-        transition={{type:"spring",stiffness:500,damping:32}}
-        className={cn(
-          "block h-5 w-5 rounded-full",
-          on ? "bg-primary" : "bg-muted"
-        )}
-      />
-    </button>
-  );
-}
