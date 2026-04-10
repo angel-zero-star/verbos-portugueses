@@ -539,14 +539,14 @@ function ConjGrid({verb,tenses}){
     <div className={cn("grid gap-4 pt-3 border-t border-border",tenses.length>1?"grid-cols-2":"grid-cols-1")}>
       {tenses.map(tense=>(
         <div key={tense} className="flex flex-col gap-1">
-          <span className="text-[9px] font-mono-ui text-text-sub uppercase tracking-[0.1em] mb-1">{tense}</span>
+          <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.1em] mb-1">{tense}</span>
           {VERB_PRONOUN_KEYS.map(pk=>{
             const form=verb[tense]?.[pk];
             if(!form)return null;
             return(
               <div key={pk} className="flex gap-2 items-baseline">
-                <span className="text-[10px] text-text-sub font-mono-ui w-20 shrink-0 leading-tight">{PRONOUN_LABELS[pk]||pk}</span>
-                <span className="text-[11px] text-text font-mono-ui leading-tight">{form}</span>
+                <span className="text-xs text-text-sub font-mono-ui w-24 shrink-0 leading-tight">{PRONOUN_LABELS[pk]||pk}</span>
+                <span className="text-sm text-text font-mono-ui leading-tight font-medium">{form}</span>
               </div>
             );
           })}
@@ -562,16 +562,11 @@ function VerbCard({v,tenses,badge,note}){
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-text">{v.verb}</span>
-            {note&&<span className="text-[10px] font-mono-ui text-text-sub">{note}</span>}
+            <span className="text-base font-semibold text-text">{v.verb}</span>
+            {v.prep!=="—"&&<span className="text-sm font-mono-ui text-text-sub">{v.prep}</span>}
+            {note&&<span className="text-xs font-mono-ui text-text-sub">{note}</span>}
           </div>
-          <div className="text-[11px] text-text-sub italic mt-0.5">{v.transl}</div>
-          {v.prep!=="—"&&(
-            <div className="flex items-center gap-1 mt-1">
-              <span className="text-[9px] font-mono-ui text-text-sub uppercase tracking-wider">prep</span>
-              <span className="text-xs font-mono-ui text-text font-semibold">{v.prep}</span>
-            </div>
-          )}
+          <div className="text-sm text-text-sub italic mt-0.5">{v.transl}</div>
         </div>
         <Badge variant={badge==="irreg"?"passado":"presente"} className="shrink-0 mt-0.5">
           {badge==="irreg"?"Irreg.":"Reg."}
@@ -659,15 +654,10 @@ function LibraryScreen({mode,onBack,onPlay,conjFilter}){
                       <div key={v.id} className="flex items-center justify-between px-4 py-3 gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-baseline gap-2 flex-wrap">
-                            <span className="text-sm font-semibold text-text">{v.verb}</span>
-                            {v.prep!=="—"&&(
-                              <span className="flex items-center gap-1">
-                                <span className="text-[9px] font-mono-ui text-text-sub uppercase tracking-wider">prep</span>
-                                <span className="text-xs font-mono-ui text-text font-semibold">{v.prep}</span>
-                              </span>
-                            )}
+                            <span className="text-base font-semibold text-text">{v.verb}</span>
+                            {v.prep!=="—"&&<span className="text-sm font-mono-ui text-text-sub">{v.prep}</span>}
                           </div>
-                          <div className="text-[11px] text-text-sub italic">{v.transl}</div>
+                          <div className="text-sm text-text-sub italic">{v.transl}</div>
                         </div>
                       </div>
                     ))}
@@ -707,8 +697,8 @@ function LibraryScreen({mode,onBack,onPlay,conjFilter}){
                     {words.map((p,i)=>(
                       <div key={i} className="flex items-center justify-between px-4 py-3 gap-3">
                         <div className="flex-1 min-w-0">
-                          <div className="text-[11px] text-text-sub italic">{p.en}</div>
-                          <div className="text-sm font-mono-ui text-text">{p.pt}</div>
+                          <div className="text-xs text-text-sub italic">{p.en}</div>
+                          <div className="text-base font-mono-ui text-text">{p.pt}</div>
                         </div>
                         <AudioBtn text={p.pt}/>
                       </div>
@@ -733,11 +723,11 @@ function LibraryScreen({mode,onBack,onPlay,conjFilter}){
                     <Card className="overflow-hidden divide-y divide-border">
                       {filtS.map(s=>(
                         <div key={s.id} className="flex flex-col px-4 py-3 gap-1">
-                          <div className="text-[11px] text-text-sub italic">{s.en}</div>
-                          <div className="text-sm font-mono-ui text-text">{s.pt}</div>
+                          <div className="text-xs text-text-sub italic">{s.en}</div>
+                          <div className="text-base font-mono-ui text-text">{s.pt}</div>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] font-mono-ui text-text-sub">{s.verb}</span>
-                            <Badge variant={s.tense==="passado"?"passado":"presente"} className="text-[9px]">{s.tense}</Badge>
+                            <span className="text-xs font-mono-ui text-text-sub">{s.verb}</span>
+                            <Badge variant={s.tense==="passado"?"passado":"presente"}>{s.tense}</Badge>
                           </div>
                         </div>
                       ))}
@@ -750,8 +740,8 @@ function LibraryScreen({mode,onBack,onPlay,conjFilter}){
                     <Card className="overflow-hidden divide-y divide-border">
                       {filtE.map((e,i)=>(
                         <div key={i} className="flex flex-col px-4 py-3 gap-1">
-                          <div className="text-[11px] text-text-sub italic">{e.en}</div>
-                          <div className="text-sm font-mono-ui text-text">{e.pt}</div>
+                          <div className="text-xs text-text-sub italic">{e.en}</div>
+                          <div className="text-base font-mono-ui text-text">{e.pt}</div>
                         </div>
                       ))}
                     </Card>
