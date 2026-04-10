@@ -880,12 +880,12 @@ export default function App(){
         }
       }
       if(!subcat||subcat==="all"||subcat==="expressoes"){
-        for(const e of EXPRESSOES)pool.push({kind:"expressao",en:e.en,pt:e.pt});
+        for(const e of EXPRESSOES)pool.push({kind:"expressao",en:e.en,pt:e.pt,alternatives:e.alternatives||[]});
       }
       if(pool.length===0){alert("No frases match your filters!");return;}
       const picked=shuffle(pool).slice(0,8).map(p=>p.kind==="sentence"?({
         mode:"frases",subMode:"sentence",id:p.id,verb:p.verb,tense:p.tense,en:p.en,answer:p.pt,alternatives:p.alternatives,
-      }):({mode:"frases",subMode:"expressao",en:p.en,answer:p.pt}));
+      }):({mode:"frases",subMode:"expressao",en:p.en,answer:p.pt,alternatives:p.alternatives||[]}));
       setCards(picked);setIdx(0);setInput("");setResult(null);setAccentNote(null);
       setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");
       return;
@@ -916,7 +916,9 @@ export default function App(){
     const c=cards[idx];
     // Palavras + Frases/expressao: simple slash-tolerant, accent-tolerant match.
     if(c.mode==="palavras" || (c.mode==="frases" && c.subMode==="expressao")){
-      const r=cmpMulti(input,c.answer);
+      const allAns=[c.answer,...(c.alternatives||[])];
+      let r="wrong";
+      for(const ans of allAns){const cr=cmpMulti(input,ans);if(cr==="exact"){r="exact";break;}if(cr==="accent")r="accent";}
       if(r==="exact"){setResult("correct");setAccentNote(null);setScore(s=>({...s,correct:s.correct+1}));}
       else if(r==="accent"){setResult("correct");setAccentNote(c.answer);setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+1}));}
       else{setResult("wrong");setAccentNote(null);setScore(s=>({...s,wrong:s.wrong+1}));setWrongOnes(w=>[...w,{...c,userAnswer:input}]);}
