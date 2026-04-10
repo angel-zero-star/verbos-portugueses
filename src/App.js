@@ -1591,6 +1591,7 @@ export default function App(){
                     <div className="flex items-center justify-center gap-2 text-accent">
                       <Check size={18} strokeWidth={3}/>
                       <span className="text-base font-semibold">{t("correct_label")}</span>
+                      {card.mode!=="conjugation" && <AudioBtn text={card.answer}/>}
                     </div>
                     {accentNote && (
                       <div className="text-center text-xs text-warn bg-warn/10 border border-warn/30 rounded-md py-2 px-3">
@@ -1617,6 +1618,7 @@ export default function App(){
                     <div className="flex items-center justify-center gap-2 text-danger">
                       <X size={16} strokeWidth={3}/>
                       <strong className="font-mono-ui">{card.answer}</strong>
+                      {card.mode!=="conjugation" && <AudioBtn text={card.answer}/>}
                     </div>
                     {card.alternatives?.length>0 && (
                       <div className="text-xs text-text-sub bg-secondary/5 border border-border rounded-md py-2 px-3">
