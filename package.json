@@ -1,6 +1,6 @@
 {
   "name": "verbos-portugueses",
-  "version": "1.29",
+  "version": "1.30",
   "private": true,
   "description": "European Portuguese verb conjugation flashcard game",
   "dependencies": {

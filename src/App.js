@@ -556,7 +556,7 @@ function ConjGrid({verb,tenses}){
   );
 }
 
-function VerbCard({v,tenses,badge,note}){
+function VerbCard({v,tenses,note}){
   return(
     <div className="flex flex-col gap-3 px-4 py-4 rounded-lg bg-surface border border-border">
       <div className="flex items-start justify-between gap-2">
@@ -568,9 +568,7 @@ function VerbCard({v,tenses,badge,note}){
           </div>
           <div className="text-sm text-text-sub italic mt-0.5">{v.transl}</div>
         </div>
-        <Badge variant={badge==="irreg"?"passado":"presente"} className="shrink-0 mt-0.5">
-          {badge==="irreg"?"Irreg.":"Reg."}
-        </Badge>
+        <AudioBtn text={v.verb} className="shrink-0"/>
       </div>
       <ConjGrid verb={v} tenses={tenses}/>
     </div>
@@ -664,7 +662,7 @@ function LibraryScreen({mode,onBack,conjFilter}){
             return(
               <div key={ending} className="flex flex-col gap-3">
                 <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">Regular — {ending}</span>
-                {exMatch&&exVerb&&<VerbCard v={exVerb} tenses={tenses} badge="reg" note="example"/>}
+                {exMatch&&exVerb&&<VerbCard v={exVerb} tenses={tenses} note="example"/>}
                 {others.length>0&&(
                   <Card className="overflow-hidden divide-y divide-border">
                     {others.map(v=>(
@@ -676,6 +674,7 @@ function LibraryScreen({mode,onBack,conjFilter}){
                           </div>
                           <div className="text-sm text-text-sub italic">{v.transl}</div>
                         </div>
+                        <AudioBtn text={v.verb}/>
                       </div>
                     ))}
                   </Card>
@@ -693,7 +692,7 @@ function LibraryScreen({mode,onBack,conjFilter}){
             if(!verbs.length)return null;
             return(
               <div className="flex flex-col gap-3">
-                {verbs.map(v=><VerbCard key={v.id} v={v} tenses={tenses} badge="irreg"/>)}
+                {verbs.map(v=><VerbCard key={v.id} v={v} tenses={tenses}/>)}
               </div>
             );
           })()}
