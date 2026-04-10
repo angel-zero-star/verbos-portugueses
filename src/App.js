@@ -738,13 +738,16 @@ function LibraryScreen({mode,onBack,conjFilter}){
                     <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">Verb Sentences</span>
                     <Card className="overflow-hidden divide-y divide-border">
                       {filtS.map(s=>(
-                        <div key={s.id} className="flex flex-col px-4 py-3 gap-1">
-                          <div className="text-xs text-text-sub italic">{s.en}</div>
-                          <div className="text-base font-mono-ui text-text">{s.pt}</div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs font-mono-ui text-text-sub">{s.verb}</span>
-                            <Badge variant={s.tense==="passado"?"passado":"presente"}>{s.tense}</Badge>
+                        <div key={s.id} className="flex items-start justify-between px-4 py-3 gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs text-text-sub italic">{s.en}</div>
+                            <div className="text-base font-mono-ui text-text">{s.pt}</div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs font-mono-ui text-text-sub">{s.verb}</span>
+                              <Badge variant={s.tense==="passado"?"passado":"presente"}>{s.tense}</Badge>
+                            </div>
                           </div>
+                          <AudioBtn text={s.pt} className="shrink-0 mt-1"/>
                         </div>
                       ))}
                     </Card>
@@ -755,9 +758,12 @@ function LibraryScreen({mode,onBack,conjFilter}){
                     <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">Expressões</span>
                     <Card className="overflow-hidden divide-y divide-border">
                       {filtE.map((e,i)=>(
-                        <div key={i} className="flex flex-col px-4 py-3 gap-1">
-                          <div className="text-xs text-text-sub italic">{e.en}</div>
-                          <div className="text-base font-mono-ui text-text">{e.pt}</div>
+                        <div key={i} className="flex items-start justify-between px-4 py-3 gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs text-text-sub italic">{e.en}</div>
+                            <div className="text-base font-mono-ui text-text">{e.pt}</div>
+                          </div>
+                          <AudioBtn text={e.pt} className="shrink-0 mt-1"/>
                         </div>
                       ))}
                     </Card>
