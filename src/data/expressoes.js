@@ -21,7 +21,7 @@ export const EXPRESSOES = [
   { en:"I don't remember",              pt:"Não me lembro" },
   { en:"It's ok / don't worry",         pt:"Não faz mal" },
   { en:"No problem",                    pt:"Não há problema" },
-  { en:"How are you doing?",            pt:"Como é que andas?" },
+  { en:"How are you doing?",            pt:"Como é que andas?",        alternatives:["Como estás?","Como está?","Tudo bem?","Como vai?"] },
   { en:"Come with me",                  pt:"Vir comigo",              alternatives:["Vem comigo"] },
   { en:"I think so",                    pt:"Eu acho que sim",          alternatives:["Acho que sim","Penso que sim","Eu penso que sim"] },
   { en:"I don't think so",              pt:"Eu acho que não",          alternatives:["Acho que não","Penso que não","Eu penso que não"] },

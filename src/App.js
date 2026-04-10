@@ -1518,6 +1518,12 @@ export default function App(){
                         Watch the accent: <strong className="font-mono-ui">{accentNote}</strong>
                       </div>
                     )}
+                    {card.alternatives?.length>0 && (
+                      <div className="text-xs text-text-sub bg-secondary/5 border border-border rounded-md py-2 px-3">
+                        <span className="font-mono-ui uppercase tracking-wider text-[10px]">Also: </span>
+                        {card.alternatives.join(" · ")}
+                      </div>
+                    )}
                     {card.mode==="conjugation" && <ConjugationTable card={card}/>}
                   </motion.div>
                 )}
@@ -1533,6 +1539,12 @@ export default function App(){
                       <X size={16} strokeWidth={3}/>
                       <strong className="font-mono-ui">{card.answer}</strong>
                     </div>
+                    {card.alternatives?.length>0 && (
+                      <div className="text-xs text-text-sub bg-secondary/5 border border-border rounded-md py-2 px-3">
+                        <span className="font-mono-ui uppercase tracking-wider text-[10px]">Also: </span>
+                        {card.alternatives.join(" · ")}
+                      </div>
+                    )}
                     {card.mode==="conjugation" && <ConjugationTable card={card}/>}
                   </motion.div>
                 )}
