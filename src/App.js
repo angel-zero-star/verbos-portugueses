@@ -518,18 +518,79 @@ const PAL_GROUPS=[
   {key:"adjetivo",label:"Adjetivos"},
 ];
 
-const VERB_LIB_GROUPS=[
-  {key:"regular-ar", label:"Regular — ar",  filter:(v)=>v.type!=="irregular"&&v.verb.endsWith("ar")},
-  {key:"regular-er", label:"Regular — er",  filter:(v)=>v.type!=="irregular"&&v.verb.endsWith("er")},
-  {key:"regular-ir", label:"Regular — ir",  filter:(v)=>v.type!=="irregular"&&v.verb.endsWith("ir")},
-  {key:"irregular",  label:"Irregular",     filter:(v)=>v.type==="irregular"},
-];
 const VERB_PRONOUN_KEYS=["eu","tu","ele/ela","nós","eles(as)/vocês"];
+const REG_EXAMPLES={ar:"tomar",er:"comer",ir:"partir"};
 
-function LibraryScreen({mode,onBack,onPlay}){
+// Pill toggle button used in LibraryScreen sub-headers
+function LibPill({active,onClick,children}){
+  return(
+    <button onClick={onClick}
+      className={cn("h-8 px-3 rounded-md text-sm font-medium border whitespace-nowrap transition-colors",
+        active?"bg-secondary/10 border-secondary/25 text-text":"bg-transparent border-border text-text-sub hover:text-text"
+      )}>
+      {children}
+    </button>
+  );
+}
+
+// Conjugation grid shared between example and irregular cards
+function ConjGrid({verb,tenses}){
+  return(
+    <div className={cn("grid gap-4 pt-3 border-t border-border",tenses.length>1?"grid-cols-2":"grid-cols-1")}>
+      {tenses.map(tense=>(
+        <div key={tense} className="flex flex-col gap-1">
+          <span className="text-[9px] font-mono-ui text-text-sub uppercase tracking-[0.1em] mb-1">{tense}</span>
+          {VERB_PRONOUN_KEYS.map(pk=>{
+            const form=verb[tense]?.[pk];
+            if(!form)return null;
+            return(
+              <div key={pk} className="flex gap-2 items-baseline">
+                <span className="text-[10px] text-text-sub font-mono-ui w-20 shrink-0 leading-tight">{PRONOUN_LABELS[pk]||pk}</span>
+                <span className="text-[11px] text-text font-mono-ui leading-tight">{form}</span>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function VerbCard({v,tenses,badge,note}){
+  return(
+    <div className="flex flex-col gap-3 px-4 py-4 rounded-lg bg-surface border border-border">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-text">{v.verb}</span>
+            {note&&<span className="text-[10px] font-mono-ui text-text-sub">{note}</span>}
+          </div>
+          <div className="text-[11px] text-text-sub italic mt-0.5">{v.transl}</div>
+          {v.prep!=="—"&&(
+            <div className="flex items-center gap-1 mt-1">
+              <span className="text-[9px] font-mono-ui text-text-sub uppercase tracking-wider">prep</span>
+              <span className="text-xs font-mono-ui text-text font-semibold">{v.prep}</span>
+            </div>
+          )}
+        </div>
+        <Badge variant={badge==="irreg"?"passado":"presente"} className="shrink-0 mt-0.5">
+          {badge==="irreg"?"Irreg.":"Reg."}
+        </Badge>
+      </div>
+      <ConjGrid verb={v} tenses={tenses}/>
+    </div>
+  );
+}
+
+function LibraryScreen({mode,onBack,onPlay,conjFilter}){
   const modeLabel=mode==="conjugation"?"Verbs":mode==="palavras"?"Palavras":"Frases";
   const [search,setSearch]=useState("");
   const q=search.toLowerCase().trim();
+  const [verbType,setVerbType]=useState("regular");
+  const [palCat,setPalCat]=useState("all");
+  const [frasCat,setFrasCat]=useState("all");
+
+  const tenses=["presente",...(conjFilter?.passado?["passado"]:[])];
 
   return(
     <div className="min-h-screen bg-bg text-text flex flex-col">
@@ -549,99 +610,128 @@ function LibraryScreen({mode,onBack,onPlay}){
             <Play size={13} className="mr-1"/> Play
           </Button>
         </div>
+
+        {/* Sub-header toggles */}
+        {mode==="conjugation"&&(
+          <div className="max-w-[480px] mx-auto px-4 pb-3 flex gap-2">
+            <LibPill active={verbType==="regular"}   onClick={()=>setVerbType("regular")}>Regular</LibPill>
+            <LibPill active={verbType==="irregular"} onClick={()=>setVerbType("irregular")}>Irregular</LibPill>
+          </div>
+        )}
+        {mode==="palavras"&&(
+          <div className="max-w-[480px] mx-auto px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
+            <LibPill active={palCat==="all"} onClick={()=>setPalCat("all")}>All</LibPill>
+            {PAL_GROUPS.map(g=>(
+              <LibPill key={g.key} active={palCat===g.key} onClick={()=>setPalCat(g.key)}>{g.label}</LibPill>
+            ))}
+          </div>
+        )}
+        {mode==="frases"&&(
+          <div className="max-w-[480px] mx-auto px-4 pb-3 flex gap-2">
+            <LibPill active={frasCat==="all"}        onClick={()=>setFrasCat("all")}>All</LibPill>
+            <LibPill active={frasCat==="frases"}     onClick={()=>setFrasCat("frases")}>Verb Sentences</LibPill>
+            <LibPill active={frasCat==="expressoes"} onClick={()=>setFrasCat("expressoes")}>Expressions</LibPill>
+          </div>
+        )}
       </div>
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-[480px] mx-auto px-4 py-4 pb-16 flex flex-col gap-8">
 
-          {/* ── Conjugation ── */}
-          {mode==="conjugation"&&VERB_LIB_GROUPS.map(g=>{
+          {/* ── Conjugation — Regular ── */}
+          {mode==="conjugation"&&verbType==="regular"&&["ar","er","ir"].map(ending=>{
+            const exId=REG_EXAMPLES[ending];
+            const exVerb=ALL_VERBS.find(v=>v.id===exId);
+            const exMatch=!q||(exVerb&&(exVerb.verb.includes(q)||exVerb.transl.toLowerCase().includes(q)));
+            const others=ALL_VERBS
+              .filter(v=>v.type===`regular-${ending}`&&v.id!==exId)
+              .filter(v=>!q||v.verb.includes(q)||v.transl.toLowerCase().includes(q))
+              .sort((a,b)=>a.verb.localeCompare(b.verb));
+            if(!exMatch&&!others.length)return null;
+            return(
+              <div key={ending} className="flex flex-col gap-3">
+                <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">Regular — {ending}</span>
+                {exMatch&&exVerb&&<VerbCard v={exVerb} tenses={tenses} badge="reg" note="example"/>}
+                {others.length>0&&(
+                  <Card className="overflow-hidden divide-y divide-border">
+                    {others.map(v=>(
+                      <div key={v.id} className="flex items-center justify-between px-4 py-3 gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline gap-2 flex-wrap">
+                            <span className="text-sm font-semibold text-text">{v.verb}</span>
+                            {v.prep!=="—"&&(
+                              <span className="flex items-center gap-1">
+                                <span className="text-[9px] font-mono-ui text-text-sub uppercase tracking-wider">prep</span>
+                                <span className="text-xs font-mono-ui text-text font-semibold">{v.prep}</span>
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-text-sub italic">{v.transl}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </Card>
+                )}
+              </div>
+            );
+          })}
+
+          {/* ── Conjugation — Irregular ── */}
+          {mode==="conjugation"&&verbType==="irregular"&&(()=>{
             const verbs=ALL_VERBS
-              .filter(g.filter)
+              .filter(v=>v.type==="irregular")
               .filter(v=>!q||v.verb.includes(q)||v.transl.toLowerCase().includes(q))
               .sort((a,b)=>a.verb.localeCompare(b.verb));
             if(!verbs.length)return null;
             return(
-              <div key={g.key} className="flex flex-col gap-3">
-                <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">{g.label}</span>
-                <div className="flex flex-col gap-3">
-                  {verbs.map(v=>(
-                    <div key={v.id} className="flex flex-col gap-3 px-4 py-4 rounded-lg bg-surface border border-border">
-                      {/* Verb header */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-sm font-semibold text-text">{v.verb}</span>
-                            {v.prep!=="—"&&<span className="text-[10px] text-text-sub font-mono-ui">[{v.prep}]</span>}
-                          </div>
-                          <div className="text-[11px] text-text-sub italic mt-0.5">{v.transl}</div>
-                        </div>
-                        <Badge variant={v.type==="irregular"?"passado":"presente"} className="shrink-0 mt-0.5">
-                          {v.type==="irregular"?"Irreg.":"Reg."}
-                        </Badge>
-                      </div>
-                      {/* Conjugation grid */}
-                      <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border">
-                        {["presente","passado"].map(tense=>(
-                          <div key={tense} className="flex flex-col gap-1">
-                            <span className="text-[9px] font-mono-ui text-text-sub uppercase tracking-[0.1em] mb-1">{tense}</span>
-                            {VERB_PRONOUN_KEYS.map(pk=>{
-                              const form=v[tense]?.[pk];
-                              if(!form)return null;
-                              return(
-                                <div key={pk} className="flex gap-2 items-baseline">
-                                  <span className="text-[10px] text-text-sub font-mono-ui w-20 shrink-0 leading-tight">{PRONOUN_LABELS[pk]||pk}</span>
-                                  <span className="text-[11px] text-text font-mono-ui leading-tight">{form}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <div className="flex flex-col gap-3">
+                {verbs.map(v=><VerbCard key={v.id} v={v} tenses={tenses} badge="irreg"/>)}
               </div>
             );
-          })}
+          })()}
 
           {/* ── Palavras ── */}
-          {mode==="palavras"&&PAL_GROUPS.map(g=>{
-            const allWords=g.key==="adjetivo"
-              ?PALAVRAS.filter(p=>p.cat==="adjetivo")
-              :PALAVRAS.filter(p=>p.ctx===g.key);
-            const words=allWords.filter(p=>!q||p.en.toLowerCase().includes(q)||p.pt.toLowerCase().includes(q));
-            if(!words.length)return null;
-            return(
-              <div key={g.key} className="flex flex-col gap-2">
-                <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">{g.label}</span>
-                <Card className="overflow-hidden divide-y divide-border">
-                  {words.map((p,i)=>(
-                    <div key={i} className="flex items-center justify-between px-4 py-3 gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[11px] text-text-sub italic">{p.en}</div>
-                        <div className="text-sm font-mono-ui text-text">{p.pt}</div>
+          {mode==="palavras"&&PAL_GROUPS
+            .filter(g=>palCat==="all"||g.key===palCat)
+            .map(g=>{
+              const allWords=g.key==="adjetivo"
+                ?PALAVRAS.filter(p=>p.cat==="adjetivo")
+                :PALAVRAS.filter(p=>p.ctx===g.key);
+              const words=allWords.filter(p=>!q||p.en.toLowerCase().includes(q)||p.pt.toLowerCase().includes(q));
+              if(!words.length)return null;
+              return(
+                <div key={g.key} className="flex flex-col gap-2">
+                  <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">{g.label}</span>
+                  <Card className="overflow-hidden divide-y divide-border">
+                    {words.map((p,i)=>(
+                      <div key={i} className="flex items-center justify-between px-4 py-3 gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[11px] text-text-sub italic">{p.en}</div>
+                          <div className="text-sm font-mono-ui text-text">{p.pt}</div>
+                        </div>
+                        <AudioBtn text={p.pt}/>
                       </div>
-                      <AudioBtn text={p.pt}/>
-                    </div>
-                  ))}
-                </Card>
-              </div>
-            );
-          })}
+                    ))}
+                  </Card>
+                </div>
+              );
+            })
+          }
 
           {/* ── Frases ── */}
           {mode==="frases"&&(()=>{
-            const filtSentences=SENTENCES.filter(s=>!q||s.en.toLowerCase().includes(q)||s.pt.toLowerCase().includes(q));
-            const filtExpressoes=EXPRESSOES.filter(e=>!q||e.en.toLowerCase().includes(q)||e.pt.toLowerCase().includes(q));
+            const showF=frasCat==="all"||frasCat==="frases";
+            const showE=frasCat==="all"||frasCat==="expressoes";
+            const filtS=SENTENCES.filter(s=>!q||s.en.toLowerCase().includes(q)||s.pt.toLowerCase().includes(q));
+            const filtE=EXPRESSOES.filter(e=>!q||e.en.toLowerCase().includes(q)||e.pt.toLowerCase().includes(q));
             return(
               <>
-                {filtSentences.length>0&&(
+                {showF&&filtS.length>0&&(
                   <div className="flex flex-col gap-2">
                     <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">Verb Sentences</span>
                     <Card className="overflow-hidden divide-y divide-border">
-                      {filtSentences.map(s=>(
+                      {filtS.map(s=>(
                         <div key={s.id} className="flex flex-col px-4 py-3 gap-1">
                           <div className="text-[11px] text-text-sub italic">{s.en}</div>
                           <div className="text-sm font-mono-ui text-text">{s.pt}</div>
@@ -654,11 +744,11 @@ function LibraryScreen({mode,onBack,onPlay}){
                     </Card>
                   </div>
                 )}
-                {filtExpressoes.length>0&&(
+                {showE&&filtE.length>0&&(
                   <div className="flex flex-col gap-2">
                     <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">Expressões</span>
                     <Card className="overflow-hidden divide-y divide-border">
-                      {filtExpressoes.map((e,i)=>(
+                      {filtE.map((e,i)=>(
                         <div key={i} className="flex flex-col px-4 py-3 gap-1">
                           <div className="text-[11px] text-text-sub italic">{e.en}</div>
                           <div className="text-sm font-mono-ui text-text">{e.pt}</div>
@@ -1082,6 +1172,7 @@ export default function App(){
       mode={libraryMode}
       onBack={()=>setScreen("menu")}
       onPlay={()=>{setGameMode(libraryMode);startGame(libraryMode);}}
+      conjFilter={conjFilter}
     />;
   }
 
