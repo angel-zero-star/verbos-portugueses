@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine, Cell } from "recharts";
-import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal } from "lucide-react";
+import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search } from "lucide-react";
 import packageInfo from "../package.json";
 import { cn } from "./lib/utils";
 import { useTheme } from "./lib/useTheme";
@@ -577,15 +577,20 @@ function VerbCard({v,tenses,badge,note}){
   );
 }
 
-function LibraryScreen({mode,onBack,onPlay,conjFilter}){
+function LibraryScreen({mode,onBack,conjFilter}){
   const modeLabel=mode==="conjugation"?"Verbs":mode==="palavras"?"Palavras":"Frases";
   const [search,setSearch]=useState("");
+  const [searchOpen,setSearchOpen]=useState(false);
+  const searchRef=useRef(null);
   const q=search.toLowerCase().trim();
   const [verbType,setVerbType]=useState("regular");
   const [palCat,setPalCat]=useState("all");
   const [frasCat,setFrasCat]=useState("all");
 
   const tenses=["presente",...(conjFilter?.passado?["passado"]:[])];
+
+  const openSearch=()=>{setSearchOpen(true);setTimeout(()=>searchRef.current?.focus(),50);};
+  const closeSearch=()=>{setSearchOpen(false);setSearch("");};
 
   return(
     <div className="min-h-screen bg-bg text-text flex flex-col">
@@ -595,15 +600,27 @@ function LibraryScreen({mode,onBack,onPlay,conjFilter}){
           <button onClick={onBack} className="h-9 w-9 shrink-0 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center">
             <ArrowLeft size={16} strokeWidth={2.25}/>
           </button>
-          <input
-            value={search}
-            onChange={e=>setSearch(e.target.value)}
-            placeholder={`Search ${modeLabel.toLowerCase()}…`}
-            className="flex-1 h-9 px-3 rounded-md bg-secondary/5 border border-border text-sm text-text placeholder:text-text-sub outline-none focus:border-secondary/40"
-          />
-          <Button size="sm" onClick={onPlay} className="shrink-0">
-            <Play size={13} className="mr-1"/> Play
-          </Button>
+          {searchOpen?(
+            <>
+              <input
+                ref={searchRef}
+                value={search}
+                onChange={e=>setSearch(e.target.value)}
+                placeholder={`Search ${modeLabel.toLowerCase()}…`}
+                className="flex-1 h-9 px-3 rounded-md bg-secondary/5 border border-border text-sm text-text placeholder:text-text-sub outline-none focus:border-secondary/40"
+              />
+              <button onClick={closeSearch} className="h-9 w-9 shrink-0 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center">
+                <X size={15} strokeWidth={2.25}/>
+              </button>
+            </>
+          ):(
+            <>
+              <span className="flex-1 font-display text-lg text-text tracking-tight">{modeLabel}</span>
+              <button onClick={openSearch} className="h-9 w-9 shrink-0 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center">
+                <Search size={15} strokeWidth={2.25}/>
+              </button>
+            </>
+          )}
         </div>
 
         {/* Sub-header toggles */}
@@ -1092,7 +1109,6 @@ export default function App(){
 
             {MENU_SECTIONS.map((section,si)=>{
               const Icon=section.icon;
-              const overallStats=modeStats(history,section.mode);
               return (
                 <motion.div
                   key={section.mode}
@@ -1107,12 +1123,7 @@ export default function App(){
                       <div className="h-7 w-7 rounded-md bg-secondary/10 border border-secondary/25 flex items-center justify-center text-text">
                         <Icon size={14} strokeWidth={2.25}/>
                       </div>
-                      <div>
-                        <span className="font-display text-base text-text tracking-tight">{section.label}</span>
-                        {overallStats.count>0&&(
-                          <span className="ml-2 text-[10px] font-mono-ui text-text-sub">{overallStats.count} sessions · {overallStats.avgPct}% avg</span>
-                        )}
-                      </div>
+                      <span className="font-display text-base text-text tracking-tight">{section.label}</span>
                     </div>
                     <button
                       onClick={()=>{setLibraryMode(section.mode);setScreen("library");}}
@@ -1161,7 +1172,6 @@ export default function App(){
     return <LibraryScreen
       mode={libraryMode}
       onBack={()=>setScreen("menu")}
-      onPlay={()=>{setGameMode(libraryMode);startGame(libraryMode);}}
       conjFilter={conjFilter}
     />;
   }
