@@ -218,6 +218,48 @@ const SK_MODE="verbos-mode";
 const SK_FILTER_CONJ="verbos-filter-conjugate";
 const SK_FILTER_PAL="verbos-filter-palavras";
 const SK_FILTER_FRA="verbos-filter-frases";
+const SK_LANG="verbos-lang";
+
+const STRINGS={
+  en:{
+    settings_title:"Settings", settings_sub:"Appearance and global training filters.",
+    theme:"Theme", dark:"Dark", light:"Light",
+    language:"Language",
+    tense:"Tense", verb_type:"Verb Type",
+    nav_play:"Play", nav_score:"Score", nav_settings:"Settings",
+    check:"Check", next:"Next",
+    correct_label:"Correto!", accent_warn:"Watch the accent:", also:"Also:",
+    conjugations:"Conjugations",
+    all_verbs:"All Verbs", modal:"Modal", state:"State", movement:"Movement", action:"Action",
+    people_jobs:"People & Jobs", food_drink:"Food & Drink",
+    home_objects:"Home & Objects", nature_world:"Nature & World", adjetivos:"Adjetivos",
+    expressions:"Expressions", verb_sentences:"Verb Sentences",
+    sessions:"sessions", avg:"avg",
+    verbs_label:"Verbs", palavras_label:"Palavras", frases_label:"Frases",
+    regular:"Regular", irregular:"Irregular", example:"example", all:"All",
+    play_again:"Play Again",
+    history_empty:"No sessions yet. Play a round first.",
+  },
+  pt:{
+    settings_title:"Definições", settings_sub:"Aparência e filtros de treino.",
+    theme:"Tema", dark:"Escuro", light:"Claro",
+    language:"Idioma",
+    tense:"Tempo", verb_type:"Tipo de Verbo",
+    nav_play:"Jogar", nav_score:"Pontuação", nav_settings:"Definições",
+    check:"Verificar", next:"Seguinte",
+    correct_label:"Correto!", accent_warn:"Atenção ao acento:", also:"Também:",
+    conjugations:"Conjugações",
+    all_verbs:"Todos", modal:"Modal", state:"Estado", movement:"Movimento", action:"Ação",
+    people_jobs:"Pessoas e Profissões", food_drink:"Comida e Bebida",
+    home_objects:"Casa e Objetos", nature_world:"Natureza e Mundo", adjetivos:"Adjetivos",
+    expressions:"Expressões", verb_sentences:"Frases com Verbos",
+    sessions:"sessões", avg:"méd",
+    verbs_label:"Verbos", palavras_label:"Palavras", frases_label:"Frases",
+    regular:"Regular", irregular:"Irregular", example:"exemplo", all:"Todos",
+    play_again:"Jogar Novamente",
+    history_empty:"Ainda sem sessões. Joga uma ronda primeiro.",
+  },
+};
 
 function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
 function stripAccents(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"");}
@@ -489,33 +531,33 @@ function Screen({children,className}){
 
 // ── Home screen subcategory structure ──
 const MENU_SECTIONS=[
-  {mode:"conjugation",label:"Conjugations",icon:Layers,subcats:[
-    {key:"all",      label:"All Verbs"},
-    {key:"modal",    label:"Modal"},
-    {key:"state",    label:"State"},
-    {key:"movement", label:"Movement"},
-    {key:"action",   label:"Action"},
+  {mode:"conjugation",tk:"conjugations",icon:Layers,subcats:[
+    {key:"all",      tk:"all_verbs"},
+    {key:"modal",    tk:"modal"},
+    {key:"state",    tk:"state"},
+    {key:"movement", tk:"movement"},
+    {key:"action",   tk:"action"},
   ]},
-  {mode:"palavras",label:"Palavras",icon:BookOpen,subcats:[
-    {key:"people",  label:"People & Jobs"},
-    {key:"food",    label:"Food & Drink"},
-    {key:"home",    label:"Home & Objects"},
-    {key:"nature",  label:"Nature & World"},
-    {key:"adjetivo",label:"Adjetivos"},
+  {mode:"palavras",tk:"palavras_label",icon:BookOpen,subcats:[
+    {key:"people",   tk:"people_jobs"},
+    {key:"food",     tk:"food_drink"},
+    {key:"home",     tk:"home_objects"},
+    {key:"nature",   tk:"nature_world"},
+    {key:"adjetivo", tk:"adjetivos"},
   ]},
-  {mode:"frases",label:"Frases",icon:MessageCircle,subcats:[
-    {key:"expressoes",label:"Expressions"},
-    {key:"frases",    label:"Verb Sentences"},
+  {mode:"frases",tk:"frases_label",icon:MessageCircle,subcats:[
+    {key:"expressoes",tk:"expressions"},
+    {key:"frases",    tk:"verb_sentences"},
   ]},
 ];
 
 // ── Library browse screen — per mode, shows all items grouped ──
 const PAL_GROUPS=[
-  {key:"people",  label:"People & Jobs"},
-  {key:"food",    label:"Food & Drink"},
-  {key:"home",    label:"Home & Objects"},
-  {key:"nature",  label:"Nature & World"},
-  {key:"adjetivo",label:"Adjetivos"},
+  {key:"people",   tk:"people_jobs"},
+  {key:"food",     tk:"food_drink"},
+  {key:"home",     tk:"home_objects"},
+  {key:"nature",   tk:"nature_world"},
+  {key:"adjetivo", tk:"adjetivos"},
 ];
 
 const VERB_PRONOUN_KEYS=["eu","tu","ele/ela","nós","eles(as)/vocês"];
@@ -575,8 +617,8 @@ function VerbCard({v,tenses,note}){
   );
 }
 
-function LibraryScreen({mode,onBack,conjFilter}){
-  const modeLabel=mode==="conjugation"?"Verbs":mode==="palavras"?"Palavras":"Frases";
+function LibraryScreen({mode,onBack,conjFilter,t=k=>k}){
+  const modeLabel=t(mode==="conjugation"?"verbs_label":mode==="palavras"?"palavras_label":"frases_label");
   const [search,setSearch]=useState("");
   const [searchOpen,setSearchOpen]=useState(false);
   const searchRef=useRef(null);
@@ -624,23 +666,23 @@ function LibraryScreen({mode,onBack,conjFilter}){
         {/* Sub-header toggles */}
         {mode==="conjugation"&&(
           <div className="max-w-[480px] mx-auto px-4 pb-3 flex gap-2">
-            <LibPill active={verbType==="regular"}   onClick={()=>setVerbType("regular")}>Regular</LibPill>
-            <LibPill active={verbType==="irregular"} onClick={()=>setVerbType("irregular")}>Irregular</LibPill>
+            <LibPill active={verbType==="regular"}   onClick={()=>setVerbType("regular")}>{t("regular")}</LibPill>
+            <LibPill active={verbType==="irregular"} onClick={()=>setVerbType("irregular")}>{t("irregular")}</LibPill>
           </div>
         )}
         {mode==="palavras"&&(
           <div className="max-w-[480px] mx-auto px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
-            <LibPill active={palCat==="all"} onClick={()=>setPalCat("all")}>All</LibPill>
+            <LibPill active={palCat==="all"} onClick={()=>setPalCat("all")}>{t("all")}</LibPill>
             {PAL_GROUPS.map(g=>(
-              <LibPill key={g.key} active={palCat===g.key} onClick={()=>setPalCat(g.key)}>{g.label}</LibPill>
+              <LibPill key={g.key} active={palCat===g.key} onClick={()=>setPalCat(g.key)}>{t(g.tk)}</LibPill>
             ))}
           </div>
         )}
         {mode==="frases"&&(
           <div className="max-w-[480px] mx-auto px-4 pb-3 flex gap-2">
-            <LibPill active={frasCat==="all"}        onClick={()=>setFrasCat("all")}>All</LibPill>
-            <LibPill active={frasCat==="frases"}     onClick={()=>setFrasCat("frases")}>Verb Sentences</LibPill>
-            <LibPill active={frasCat==="expressoes"} onClick={()=>setFrasCat("expressoes")}>Expressions</LibPill>
+            <LibPill active={frasCat==="all"}        onClick={()=>setFrasCat("all")}>{t("all")}</LibPill>
+            <LibPill active={frasCat==="frases"}     onClick={()=>setFrasCat("frases")}>{t("verb_sentences")}</LibPill>
+            <LibPill active={frasCat==="expressoes"} onClick={()=>setFrasCat("expressoes")}>{t("expressions")}</LibPill>
           </div>
         )}
       </div>
@@ -803,6 +845,8 @@ export default function App(){
   const [fraFilter,setFraFilter]=useState({frases:true,expressoes:true});
   const [filterSheet,setFilterSheet]=useState(null); // null | "conjugation" | "palavras" | "frases"
   const [libraryMode,setLibraryMode]=useState(null); // "conjugation" | "palavras" | "frases"
+  const [uiLang,setUiLang]=useState("en"); // "en" | "pt"
+  const t=key=>STRINGS[uiLang]?.[key]??STRINGS.en[key]??key;
 
   useEffect(()=>{
     window.speechSynthesis?.getVoices();
@@ -814,12 +858,14 @@ export default function App(){
     const fc=sGet(SK_FILTER_CONJ);if(fc&&typeof fc==="object")setConjFilter(f=>({...f,...fc}));
     const fp=sGet(SK_FILTER_PAL);if(fp&&typeof fp==="object")setPalFilter(f=>({...f,...fp}));
     const ff=sGet(SK_FILTER_FRA);if(ff&&typeof ff==="object")setFraFilter(f=>({...f,...ff}));
+    const lg=sGet(SK_LANG);if(lg==="en"||lg==="pt")setUiLang(lg);
   },[]);
 
   useEffect(()=>{sSet(SK_MODE,gameMode);},[gameMode]);
   useEffect(()=>{sSet(SK_FILTER_CONJ,conjFilter);},[conjFilter]);
   useEffect(()=>{sSet(SK_FILTER_PAL,palFilter);},[palFilter]);
   useEffect(()=>{sSet(SK_FILTER_FRA,fraFilter);},[fraFilter]);
+  useEffect(()=>{sSet(SK_LANG,uiLang);},[uiLang]);
 
   useEffect(()=>{
     const t=setTimeout(()=>setShowSplash(false),1300);
@@ -889,7 +935,7 @@ export default function App(){
         for(const e of EXPRESSOES)pool.push({kind:"expressao",en:e.en,pt:e.pt,alternatives:e.alternatives||[]});
       }
       if(pool.length===0){alert("No frases match your filters!");return;}
-      const picked=shuffle(pool).slice(0,8).map(p=>p.kind==="sentence"?({
+      const picked=shuffle(pool).slice(0,5).map(p=>p.kind==="sentence"?({
         mode:"frases",subMode:"sentence",id:p.id,verb:p.verb,tense:p.tense,en:p.en,answer:p.pt,alternatives:p.alternatives,
       }):({mode:"frases",subMode:"expressao",en:p.en,answer:p.pt,alternatives:p.alternatives||[]}));
       setCards(picked);setIdx(0);setInput("");setResult(null);setAccentNote(null);
@@ -1041,9 +1087,9 @@ export default function App(){
   // ── Bottom navigation with sliding pill ──
   const NavBar=()=>{
     const items=[
-      {key:"menu",icon:Play,label:"Play"},
-      {key:"history",icon:Trophy,label:"Score"},
-      {key:"settings",icon:SettingsIcon,label:"Settings"},
+      {key:"menu",icon:Play,label:t("nav_play")},
+      {key:"history",icon:Trophy,label:t("nav_score")},
+      {key:"settings",icon:SettingsIcon,label:t("nav_settings")},
     ];
     return (
       <nav className="fixed bottom-0 left-0 right-0 z-30 bg-surface/85 backdrop-blur-xl border-t border-border" style={{paddingBottom:"max(12px,env(safe-area-inset-bottom))"}}>
@@ -1130,7 +1176,7 @@ export default function App(){
                       <div className="h-7 w-7 rounded-md bg-secondary/10 border border-secondary/25 flex items-center justify-center text-text">
                         <Icon size={14} strokeWidth={2.25}/>
                       </div>
-                      <span className="font-display text-base text-text tracking-tight">{section.label}</span>
+                      <span className="font-display text-base text-text tracking-tight">{t(section.tk)}</span>
                     </div>
                     <button
                       onClick={()=>{setLibraryMode(section.mode);setScreen("library");}}
@@ -1146,15 +1192,15 @@ export default function App(){
                       return (
                         <div key={sc.key} className="flex items-center justify-between px-4 py-3 hover:bg-secondary/5 transition-colors">
                           <div>
-                            <span className="text-sm font-medium text-text">{sc.label}</span>
+                            <span className="text-sm font-medium text-text">{t(sc.tk)}</span>
                             {stats.count>0&&(
                               <div className="text-[10px] font-mono-ui text-text-sub">
-                                {stats.count} sessions · {stats.avgPct}%{stats.mastered?" ✓":""}
+                                {stats.count} {t("sessions")} · {stats.avgPct}%{stats.mastered?" ✓":""}
                               </div>
                             )}
                           </div>
                           <Button size="sm" onClick={()=>startGame(section.mode,sc.key)}>
-                            <Play size={12} className="mr-1"/>Play
+                            <Play size={12} className="mr-1"/>{t("nav_play")}
                           </Button>
                         </div>
                       );
@@ -1180,6 +1226,7 @@ export default function App(){
       mode={libraryMode}
       onBack={()=>setScreen("menu")}
       conjFilter={conjFilter}
+      t={t}
     />;
   }
 
@@ -1191,36 +1238,58 @@ export default function App(){
         <AnimatePresence mode="wait">
           <Screen key="settings">
             <div>
-              <h1 className="font-display text-[28px] tracking-tighter text-text">Settings</h1>
-              <p className="text-sm text-text-sub mt-1">Appearance and global training filters.</p>
+              <h1 className="font-display text-[28px] tracking-tighter text-text">{t("settings_title")}</h1>
+              <p className="text-sm text-text-sub mt-1">{t("settings_sub")}</p>
             </div>
 
+            {/* Theme */}
             <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-md bg-secondary/5 border border-border">
               <div className="flex items-center gap-2 text-sm text-text">
                 {theme==="dark"?<Moon size={15}/>:<Sun size={15}/>}
-                <span>Theme</span>
+                <span>{t("theme")}</span>
               </div>
               <button
                 onClick={toggleTheme}
                 className="text-[11px] font-mono-ui uppercase tracking-[0.12em] text-text-sub hover:text-text transition-colors px-3 py-2 rounded-sm border border-border bg-surface"
               >
-                {theme==="dark"?"Dark":"Light"}
+                {theme==="dark"?t("dark"):t("light")}
               </button>
             </div>
 
+            {/* Language */}
+            <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-md bg-secondary/5 border border-border">
+              <div className="flex items-center gap-2 text-sm text-text">
+                <span className="text-base">🌐</span>
+                <span>{t("language")}</span>
+              </div>
+              <div className="flex gap-1 p-1 rounded-md bg-secondary/5 border border-border">
+                {["en","pt"].map(lang=>(
+                  <button key={lang}
+                    onClick={()=>setUiLang(lang)}
+                    className={cn(
+                      "px-3 py-1 rounded-sm text-[11px] font-mono-ui uppercase tracking-[0.12em] transition-colors",
+                      uiLang===lang?"bg-secondary/15 border border-secondary/25 text-text":"text-text-sub hover:text-text"
+                    )}
+                  >{lang}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tense */}
             <div className="flex flex-col gap-2">
-              <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">Tense</span>
+              <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">{t("tense")}</span>
               <div className="flex gap-2">
                 <TogglePill active={conjFilter.presente} onClick={()=>setConjFilter(f=>({...f,presente:!f.presente}))}>Presente</TogglePill>
                 <TogglePill active={conjFilter.passado}  onClick={()=>setConjFilter(f=>({...f,passado:!f.passado}))}>Passado</TogglePill>
               </div>
             </div>
 
+            {/* Verb Type */}
             <div className="flex flex-col gap-2">
-              <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">Verb Type</span>
+              <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">{t("verb_type")}</span>
               <div className="flex gap-2">
-                <TogglePill active={conjFilter.irregular} onClick={()=>setConjFilter(f=>({...f,irregular:!f.irregular}))}>Irregular</TogglePill>
-                <TogglePill active={conjFilter.regular}   onClick={()=>setConjFilter(f=>({...f,regular:!f.regular}))}>Regular</TogglePill>
+                <TogglePill active={conjFilter.irregular} onClick={()=>setConjFilter(f=>({...f,irregular:!f.irregular}))}>{t("irregular")}</TogglePill>
+                <TogglePill active={conjFilter.regular}   onClick={()=>setConjFilter(f=>({...f,regular:!f.regular}))}>{t("regular")}</TogglePill>
               </div>
             </div>
           </Screen>
@@ -1241,7 +1310,7 @@ export default function App(){
               <h1 className="font-display text-[28px] tracking-tighter text-text">Score</h1>
               <p className="text-sm text-text-sub mt-1">
                 {history.length===0
-                  ? "No sessions yet. Play a round first."
+                  ? t("history_empty")
                   : <>{history.length} session{history.length!==1?"s":""}{trendText()}</>
                 }
               </p>
@@ -1380,7 +1449,7 @@ export default function App(){
           style={{paddingBottom:"max(16px,env(safe-area-inset-bottom))"}}
         >
           <div className="w-full max-w-[480px] pointer-events-auto flex gap-3">
-            <Button onClick={startGame} className="flex-1" size="lg">Play Again</Button>
+            <Button onClick={startGame} className="flex-1" size="lg">{t("play_again")}</Button>
             <Button variant="ghost" onClick={()=>setScreen("menu")} size="lg">Menu</Button>
           </div>
         </div>
@@ -1401,27 +1470,31 @@ export default function App(){
     >
       <TopBar/>
       <Screen>
-        {/* Progress + score + close */}
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-1 rounded-full bg-surface border border-border overflow-hidden">
+        {/* Progress bar top bar — Figma design */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 font-mono-ui text-xs tracking-[0.04em] font-medium">
+              <p className="tabular-nums">
+                <span className="text-text">{idx+1}</span>
+                <span className="text-text-sub"> / {cards.length}</span>
+              </p>
+              <span className="text-accent tabular-nums">({score.correct})</span>
+            </div>
+            <button
+              onClick={()=>setScreen("menu")}
+              className="h-6 w-6 text-text-sub hover:text-danger transition-colors flex items-center justify-center"
+            >
+              <X size={16}/>
+            </button>
+          </div>
+          <div className="h-1 rounded-sm bg-surface overflow-hidden">
             <motion.div
-              className="h-full bg-primary"
+              className="h-full bg-primary rounded-sm"
               initial={false}
               animate={{width:`${((idx+(result?1:0))/cards.length)*100}%`}}
               transition={{type:"spring",stiffness:200,damping:28}}
             />
           </div>
-          <span className="text-[11px] font-mono-ui tabular-nums">
-            <span className="text-accent">{score.correct}</span>
-            <span className="text-text-sub mx-1">·</span>
-            <span className="text-danger">{score.wrong}</span>
-          </span>
-          <button
-            onClick={()=>setScreen("menu")}
-            className="h-9 w-9 rounded-md border border-border bg-surface text-text-sub hover:text-danger hover:border-danger/60 transition-colors flex items-center justify-center"
-          >
-            <X size={15}/>
-          </button>
         </div>
 
         {/* Card. mode="popLayout" so the new card mounts IMMEDIATELY (within
@@ -1517,16 +1590,16 @@ export default function App(){
                   >
                     <div className="flex items-center justify-center gap-2 text-accent">
                       <Check size={18} strokeWidth={3}/>
-                      <span className="text-base font-semibold">Correto!</span>
+                      <span className="text-base font-semibold">{t("correct_label")}</span>
                     </div>
                     {accentNote && (
                       <div className="text-center text-xs text-warn bg-warn/10 border border-warn/30 rounded-md py-2 px-3">
-                        Watch the accent: <strong className="font-mono-ui">{accentNote}</strong>
+                        {t("accent_warn")} <strong className="font-mono-ui">{accentNote}</strong>
                       </div>
                     )}
                     {card.alternatives?.length>0 && (
                       <div className="text-xs text-text-sub bg-secondary/5 border border-border rounded-md py-2 px-3">
-                        <span className="font-mono-ui uppercase tracking-wider text-[10px]">Also: </span>
+                        <span className="font-mono-ui uppercase tracking-wider text-[10px]">{t("also")} </span>
                         {card.alternatives.join(" · ")}
                       </div>
                     )}
@@ -1547,7 +1620,7 @@ export default function App(){
                     </div>
                     {card.alternatives?.length>0 && (
                       <div className="text-xs text-text-sub bg-secondary/5 border border-border rounded-md py-2 px-3">
-                        <span className="font-mono-ui uppercase tracking-wider text-[10px]">Also: </span>
+                        <span className="font-mono-ui uppercase tracking-wider text-[10px]">{t("also")} </span>
                         {card.alternatives.join(" · ")}
                       </div>
                     )}
@@ -1568,8 +1641,8 @@ export default function App(){
         >
           <div className="w-full max-w-[480px] pointer-events-auto">
             {result===null
-              ? <Button onClick={check} size="lg" className="w-full">Check</Button>
-              : <Button onClick={next} size="lg" className="w-full">Next <ArrowRight size={16}/></Button>
+              ? <Button onClick={check} size="lg" className="w-full">{t("check")}</Button>
+              : <Button onClick={next} size="lg" className="w-full">{t("next")} <ArrowRight size={16}/></Button>
             }
           </div>
         </div>
