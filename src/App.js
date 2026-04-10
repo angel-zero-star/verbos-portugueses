@@ -1263,14 +1263,14 @@ export default function App(){
                 <span>{t("language")}</span>
               </div>
               <div className="flex gap-1 p-1 rounded-md bg-secondary/5 border border-border">
-                {["en","pt"].map(lang=>(
+                {[{key:"en",flag:"🇬🇧"},{key:"pt",flag:"🇵🇹"}].map(({key:lang,flag})=>(
                   <button key={lang}
                     onClick={()=>setUiLang(lang)}
                     className={cn(
-                      "px-3 py-1 rounded-sm text-[11px] font-mono-ui uppercase tracking-[0.12em] transition-colors",
+                      "flex items-center gap-1 px-3 py-1 rounded-sm text-[11px] font-mono-ui uppercase tracking-[0.12em] transition-colors",
                       uiLang===lang?"bg-secondary/15 border border-secondary/25 text-text":"text-text-sub hover:text-text"
                     )}
-                  >{lang}</button>
+                  ><span className="text-sm leading-none">{flag}</span>{lang}</button>
                 ))}
               </div>
             </div>
