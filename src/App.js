@@ -222,6 +222,7 @@ const SK_LANG="verbos-lang";
 
 const STRINGS={
   en:{
+    home_title:"Verbos", home_sub:"Choose a topic to practice.",
     settings_title:"Settings", settings_sub:"Appearance and global training filters.",
     theme:"Theme", dark:"Dark", light:"Light",
     language:"Language",
@@ -241,6 +242,7 @@ const STRINGS={
     history_empty:"No sessions yet. Play a round first.",
   },
   pt:{
+    home_title:"Verbos", home_sub:"Escolhe um tópico para praticar.",
     settings_title:"Definições", settings_sub:"Aparência e filtros de treino.",
     theme:"Tema", dark:"Escuro", light:"Claro",
     language:"Idioma",
@@ -1154,8 +1156,12 @@ export default function App(){
         <TopBar/>
         <AnimatePresence mode="wait">
           <Screen key="menu">
-            <div className="flex justify-end">
-              <button className="h-9 w-9 rounded-full overflow-hidden shadow-[0_0_0_1px_hsl(var(--border))] hover:shadow-[0_0_0_2px_hsl(var(--muted))] transition-shadow" title="Language: Portuguese">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h1 className="font-display text-[28px] tracking-tighter text-text">{t("home_title")}</h1>
+                <p className="text-sm text-text-sub mt-1">{t("home_sub")}</p>
+              </div>
+              <button className="mt-1 h-9 w-9 rounded-full overflow-hidden shadow-[0_0_0_1px_hsl(var(--border))] hover:shadow-[0_0_0_2px_hsl(var(--muted))] transition-shadow shrink-0" title="Language: Portuguese">
                 <FlagPT className="h-full w-auto -translate-x-2"/>
               </button>
             </div>
