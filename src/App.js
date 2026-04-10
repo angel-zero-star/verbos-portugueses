@@ -1555,6 +1555,29 @@ export default function App(){
                 </>
               )}
 
+              {/* Article helper buttons — palavras only, when answer needs an article */}
+              {card.mode==="palavras" && result===null && (()=>{
+                const first=card.answer.split('/')[0].trim().toLowerCase();
+                const isPlural=first.startsWith('os ')||first.startsWith('as ');
+                const isSingular=first.startsWith('o ')||first.startsWith('a ');
+                if(!isPlural&&!isSingular)return null;
+                const arts=isPlural?['Os','As']:['O','A'];
+                const pick=(art)=>{
+                  const rest=input.trim().replace(/^(os|as|o|a)\s+/i,'');
+                  setInput(art+' '+rest);
+                  setTimeout(()=>inputRef.current?.focus(),0);
+                };
+                return(
+                  <div className="flex gap-2 justify-center">
+                    {arts.map(art=>(
+                      <button key={art} onMouseDown={e=>{e.preventDefault();pick(art);}}
+                        className="h-9 px-5 rounded-md border border-border bg-secondary/5 text-sm font-mono-ui text-text-sub hover:text-text hover:bg-secondary/10 transition-colors"
+                      >{art}</button>
+                    ))}
+                  </div>
+                );
+              })()}
+
               <motion.div
                 animate={result==="correct" && !accentNote ? {scale:[1,1.04,1]} : {}}
                 transition={{duration:0.35}}
