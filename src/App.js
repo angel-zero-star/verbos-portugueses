@@ -1638,7 +1638,7 @@ export default function App(){
       style={{height:"var(--vvh,100vh)"}}
     >
       <TopBar/>
-      <Screen>
+      <Screen className="!pb-4">
         {/* Progress bar top bar — Figma design */}
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
@@ -1843,6 +1843,7 @@ export default function App(){
                       ref={inputRef}
                       value={input}
                       onChange={e=>setInput(e.target.value)}
+                      onFocus={()=>{requestAnimationFrame(()=>{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;if(playContainerRef.current)playContainerRef.current.scrollTop=0;});}}
                       placeholder={isTextCard?"Type translation...":"Type conjugation..."}
                       lang="pt"
                       autoFocus={idx>0}
