@@ -232,7 +232,7 @@ const STRINGS={
     language:"UI Language",
     tense:"Tense", verb_type:"Verb Type",
     nav_play:"Play", nav_score:"Score", nav_settings:"Settings",
-    check:"Check", next:"Next",
+    check:"Check", next:"Next", placeholder_translation:"Type translation...", placeholder_conjugation:"Type conjugation...",
     correct_label:"Correto!", accent_warn:"Watch the accent:", near_warn:"Small typo — correct form:", also:"Also:",
     conjugations:"Conjugations",
     all_verbs:"All Verbs", modal:"Modal", state:"State", movement:"Movement", action:"Action",
@@ -255,7 +255,7 @@ const STRINGS={
     language:"Idioma UI",
     tense:"Tempo", verb_type:"Tipo de Verbo",
     nav_play:"Jogar", nav_score:"Pontuação", nav_settings:"Definições",
-    check:"Verificar", next:"Seguinte",
+    check:"Verificar", next:"Seguinte", placeholder_translation:"Escreve a tradução...", placeholder_conjugation:"Escreve a conjugação...",
     correct_label:"Correto!", accent_warn:"Atenção ao acento:", near_warn:"Pequeno erro — forma correta:", also:"Também:",
     conjugations:"Conjugações",
     all_verbs:"Todos", modal:"Modal", state:"Estado", movement:"Movimento", action:"Ação",
@@ -855,6 +855,7 @@ export default function App(){
   const [accentNote,setAccentNote]=useState(null);
   const [isListening,setIsListening]=useState(false);
   const [isSpeaking,setIsSpeaking]=useState(false);
+  const [inputFocused,setInputFocused]=useState(false);
   const recRef=useRef(null);
   const [score,setScore]=useState({correct:0,wrong:0,accentMisses:0});
   const [wrongOnes,setWrongOnes]=useState([]);
@@ -1617,6 +1618,8 @@ export default function App(){
       ref={inputRef}
       value={input}
       onChange={e=>setInput(e.target.value)}
+      onFocus={()=>setInputFocused(true)}
+      onBlur={()=>setInputFocused(false)}
       lang="pt"
       autoComplete="off"
       autoCorrect="off"
@@ -1820,7 +1823,9 @@ export default function App(){
                   onClick={()=>inputRef.current?.focus({preventScroll:true})}
                   className={cn(
                     "flex-1 relative flex items-center h-11 rounded-2xl border bg-secondary/5 px-4 transition-colors cursor-text",
-                    isListening&&!input ? "border-danger/40" : "border-border"
+                    isListening&&!input ? "border-danger/40"
+                      : inputFocused ? "border-secondary/40"
+                      : "border-border"
                   )}
                 >
                   {isListening && !input ? (
@@ -1845,7 +1850,7 @@ export default function App(){
                   ) : input ? (
                     <span className="flex-1 text-base font-mono-ui text-text truncate">{input}</span>
                   ) : (
-                    <span className="flex-1 text-base font-mono-ui text-text-sub">{isTextCard?"Type translation...":"Type conjugation..."}</span>
+                    <span className="flex-1 text-base font-mono-ui text-text-sub">{isTextCard?t("placeholder_translation"):t("placeholder_conjugation")}</span>
                   )}
                   {input.length>0 && (
                     <button onMouseDown={e=>e.preventDefault()} onClick={(e)=>{e.stopPropagation();setInput("");inputRef.current?.focus({preventScroll:true});}}
