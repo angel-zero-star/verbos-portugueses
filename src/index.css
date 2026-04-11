@@ -69,15 +69,4 @@
   }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-  @keyframes blink-cursor { 0%,100%{opacity:1} 50%{opacity:0} }
-  .cursor-blink::before {
-    content:"";
-    display:inline-block;
-    width:2px;
-    height:1.1em;
-    background:currentColor;
-    margin-left:1px;
-    vertical-align:text-bottom;
-    animation:blink-cursor 1s step-end infinite;
-  }
 }

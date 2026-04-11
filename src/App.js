@@ -862,6 +862,7 @@ export default function App(){
   const [wrongOnes,setWrongOnes]=useState([]);
   const [history,setHistory]=useState([]);
   const inputRef=useRef(null);
+  const dummyInputRef=useRef(null);
   const lastEnterRef=useRef(0);
   const subcatRef=useRef(null); // subcat of the current session
   const [keyboardOpen,setKeyboardOpen]=useState(false);
@@ -953,7 +954,7 @@ export default function App(){
       if(pool.length===0){alert("No palavras match your filters!");return;}
       const picked=shuffle(pool).slice(0,10).map(p=>({mode:"palavras",en:p.en,answer:p.pt,cat:p.cat}));
       setCards(picked);setIdx(0);setInput("");setResult(null);setAccentNote(null);
-      setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");inputRef.current?.focus({preventScroll:true});
+      setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");focusInput();
       return;
     }
     if(gm==="frases"){
@@ -973,7 +974,7 @@ export default function App(){
         mode:"frases",subMode:"sentence",id:p.id,verb:p.verb,tense:p.tense,en:p.en,answer:p.pt,alternatives:p.alternatives,
       }):({mode:"frases",subMode:"expressao",en:p.en,answer:p.pt,alternatives:p.alternatives||[]}));
       setCards(picked);setIdx(0);setInput("");setResult(null);setAccentNote(null);
-      setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");inputRef.current?.focus({preventScroll:true});
+      setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");focusInput();
       return;
     }
     // Conjugation — subcat filters by semantic category; global type filter still applies
@@ -994,7 +995,7 @@ export default function App(){
     }
     if(gen.length===0){alert("No verbs match your filters!");return;}
     setCards(shuffle(gen).slice(0,10));setIdx(0);setInput("");setResult(null);setAccentNote(null);
-    setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");inputRef.current?.focus({preventScroll:true});
+    setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");focusInput();
   };
 
   const check=()=>{
@@ -1033,7 +1034,7 @@ export default function App(){
     else{setResult("wrong");setAccentNote(null);setScore(s=>({...s,wrong:s.wrong+1}));setWrongOnes(w=>[...w,c]);}
   };
 
-  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),mode:gameMode,subcat:subcatRef.current||"all",correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);inputRef.current?.focus({preventScroll:true});}};
+  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),mode:gameMode,subcat:subcatRef.current||"all",correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);focusInput();}};
 
   // Single Enter handler — debounced to avoid double-fire (key repeat / fast double-press)
   useEffect(()=>{
@@ -1092,6 +1093,13 @@ export default function App(){
     rec.onerror=()=>{setIsListening(false);setIsSpeaking(false);clearTimeout(speakTimeoutRef.current);};
     rec.onend=()=>{setIsListening(false);setIsSpeaking(false);clearTimeout(speakTimeoutRef.current);};
     recRef.current=rec;rec.start();setIsListening(true);
+  };
+
+  // Focus: if keyboard closed, open via dummy at top (no iOS scroll), then shift to real input.
+  // If keyboard already open, focus real input directly (viewport already adjusted).
+  const focusInput=()=>{
+    if(keyboardOpen){inputRef.current?.focus({preventScroll:true});}
+    else{dummyInputRef.current?.focus({preventScroll:true});setTimeout(()=>inputRef.current?.focus({preventScroll:true}),60);}
   };
 
   const card=cards[idx];
@@ -1608,22 +1616,10 @@ export default function App(){
 
   return (
     <>
-    {/* ── Hidden real input — pinned to top so iOS doesn't scroll ── */}
-    <input
-      ref={inputRef}
-      value={input}
-      onChange={e=>setInput(e.target.value)}
-      onFocus={()=>setInputFocused(true)}
-      onBlur={()=>setInputFocused(false)}
-      lang="pt"
-      autoComplete="off"
-      autoCorrect="off"
-      autoCapitalize="off"
-      spellCheck={false}
+    {/* Dummy input at top — only opens keyboard without iOS scroll */}
+    <input ref={dummyInputRef} readOnly
       className="fixed top-0 left-0 w-full opacity-0 pointer-events-none"
-      style={{fontSize:"16px",height:1,zIndex:0}}
-      tabIndex={-1}
-    />
+      style={{fontSize:"16px",height:1,zIndex:0}} tabIndex={-1} />
 
     {/* ── Layer 1: Card — completely static ── */}
     <div className="fixed inset-0 bg-bg text-text overflow-hidden pointer-events-none" style={{zIndex:10}}>
@@ -1815,17 +1811,16 @@ export default function App(){
 
                 {/* Visual input pill — tapping focuses hidden input */}
                 <div
-                  onClick={()=>inputRef.current?.focus({preventScroll:true})}
                   className={cn(
-                    "flex-1 relative flex items-center h-11 rounded-2xl border bg-secondary/5 px-4 transition-colors cursor-text",
+                    "flex-1 relative flex items-center h-11 rounded-2xl border bg-secondary/5 px-4 transition-colors",
                     isListening&&!input ? "border-danger/40"
                       : inputFocused ? "border-primary"
                       : "border-border"
                   )}
                 >
-                  {isListening && !input ? (
-                    /* Waveform bars */
-                    <div className="flex items-center gap-[3px] flex-1 h-full py-3">
+                  {isListening && !input && (
+                    /* Waveform bars — overlaid on top of input */
+                    <div className="absolute inset-0 flex items-center gap-[3px] px-4 py-3 pointer-events-none">
                       {[0.7,1,0.7].map((amp,i)=>(
                         <motion.div
                           key={i}
@@ -1842,11 +1837,25 @@ export default function App(){
                         />
                       ))}
                     </div>
-                  ) : input ? (
-                    <span className={cn("flex-1 text-base font-mono-ui text-text truncate", inputFocused && "cursor-blink")}>{input}</span>
-                  ) : (
-                    <span className={cn("flex-1 text-base font-mono-ui text-text-sub", inputFocused && "cursor-blink")}>{isTextCard?t("placeholder_translation"):t("placeholder_conjugation")}</span>
                   )}
+                  <input
+                    ref={inputRef}
+                    value={input}
+                    onChange={e=>setInput(e.target.value)}
+                    onFocus={()=>setInputFocused(true)}
+                    onBlur={()=>setInputFocused(false)}
+                    placeholder={isListening&&!input ? "" : (isTextCard?t("placeholder_translation"):t("placeholder_conjugation"))}
+                    lang="pt"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    style={{fontSize:"16px"}}
+                    className={cn(
+                      "flex-1 bg-transparent font-mono-ui text-base text-text placeholder:text-text-sub outline-none min-w-0",
+                      isListening&&!input && "opacity-0"
+                    )}
+                  />
                   {input.length>0 && (
                     <button onMouseDown={e=>e.preventDefault()} onClick={(e)=>{e.stopPropagation();setInput("");inputRef.current?.focus({preventScroll:true});}}
                       className="ml-2 text-text-sub hover:text-text transition-colors shrink-0"
