@@ -861,7 +861,6 @@ export default function App(){
   const inputRef=useRef(null);
   const lastEnterRef=useRef(0);
   const subcatRef=useRef(null); // subcat of the current session
-  const playContainerRef=useRef(null);
   const [keyboardOpen,setKeyboardOpen]=useState(false);
   const [gameMode,setGameMode]=useState("conjugation"); // "conjugation" | "palavras" | "frases"
   const [showSplash,setShowSplash]=useState(true);
@@ -1040,36 +1039,6 @@ export default function App(){
       return()=>clearTimeout(t);
     }
   },[result,idx,screen]);
-
-  // Kill ALL scrolling on the play screen — iOS Safari tries to scroll
-  // when focusing the input; this prevents it from ever happening.
-  useEffect(()=>{
-    if(screen!=="play") return;
-    const html=document.documentElement;
-    const body=document.body;
-    // CSS lock
-    html.style.position="fixed";
-    html.style.inset="0";
-    html.style.overflow="hidden";
-    body.style.position="fixed";
-    body.style.inset="0";
-    body.style.overflow="hidden";
-    // Event-level lock — capture phase so we get it before anything else
-    const kill=()=>{window.scrollTo(0,0);html.scrollTop=0;body.scrollTop=0;};
-    const preventTouch=(e)=>{if(playContainerRef.current&&!playContainerRef.current.contains(e.target))e.preventDefault();};
-    window.addEventListener("scroll",kill,{passive:true,capture:true});
-    html.addEventListener("scroll",kill,{passive:true,capture:true});
-    body.addEventListener("scroll",kill,{passive:true,capture:true});
-    document.addEventListener("touchmove",preventTouch,{passive:false});
-    return()=>{
-      html.style.position="";html.style.inset="";html.style.overflow="";
-      body.style.position="";body.style.inset="";body.style.overflow="";
-      window.removeEventListener("scroll",kill,{capture:true});
-      html.removeEventListener("scroll",kill,{capture:true});
-      body.removeEventListener("scroll",kill,{capture:true});
-      document.removeEventListener("touchmove",preventTouch);
-    };
-  },[screen]);
 
   // Single Enter handler — debounced to avoid double-fire (key repeat / fast double-press)
   useEffect(()=>{
@@ -1641,12 +1610,13 @@ export default function App(){
 
   return (
     <div
-      ref={playContainerRef}
-      className="fixed left-0 right-0 top-0 overflow-hidden bg-bg text-text"
+      className="fixed inset-0 flex flex-col bg-bg text-text"
       style={{height:"var(--vvh,100vh)"}}
     >
       <TopBar/>
-      <Screen className="!pb-4">
+      {/* Card area — fills remaining space, overflow hidden so nothing scrolls */}
+      <div className="flex-1 overflow-hidden px-6 pt-6">
+        <div className="max-w-[480px] mx-auto flex flex-col gap-4">
         {/* Progress bar top bar — Figma design */}
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
@@ -1770,14 +1740,11 @@ export default function App(){
             </Card>
           </motion.div>
         </AnimatePresence>
-      </Screen>
+        </div>
+      </div>
 
-      {/* ── Floating input bar — sits just above the keyboard ── */}
-      <div
-        className="fixed left-0 right-0 z-30 flex justify-center"
-        style={{bottom:"var(--keyboard-h,0px)"}}
-      >
-        <div className="w-full max-w-[480px]">
+      {/* ── Input bar — natural flex child, sits at bottom ── */}
+      <div className="w-full max-w-[480px] mx-auto shrink-0">
           {/* Article picker chips — above the bar */}
           {card.mode==="palavras" && result===null && (()=>{
             const first=card.answer.split('/')[0].trim().toLowerCase();
@@ -1898,7 +1865,6 @@ export default function App(){
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
       </div>
     </div>
   );
