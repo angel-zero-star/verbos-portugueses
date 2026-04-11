@@ -1802,12 +1802,30 @@ export default function App(){
 
                 {/* Input pill */}
                 <div className={cn(
-                  "flex-1 flex items-center h-11 rounded-2xl border bg-secondary/5 px-4 transition-colors",
+                  "flex-1 relative flex items-center h-11 rounded-2xl border bg-secondary/5 px-4 transition-colors",
                   isListening&&!input ? "border-danger/40" : "border-border focus-within:border-secondary/40"
                 )}>
-                  {isListening && !input ? (
-                    /* Waveform bars — animate only when speech is detected */
-                    <div className="flex items-center gap-[3px] flex-1 h-full py-3">
+                  {/* Input always mounted so keyboard stays open */}
+                  <input
+                    ref={inputRef}
+                    value={input}
+                    onChange={e=>setInput(e.target.value)}
+                    placeholder={isListening&&!input ? "" : (isTextCard?"Type translation...":"Type conjugation...")}
+                    lang="pt"
+                    autoFocus={idx>0}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    style={{fontSize:"16px"}}
+                    className={cn(
+                      "flex-1 bg-transparent font-mono-ui text-text placeholder:text-text-sub outline-none min-w-0",
+                      isListening&&!input && "opacity-0"
+                    )}
+                  />
+                  {/* Waveform bars overlay — only when listening with no text */}
+                  {isListening && !input && (
+                    <div className="absolute inset-0 flex items-center gap-[3px] px-4 py-3 pointer-events-none">
                       {[0.6,1,0.75,1,0.5,0.85,0.65].map((amp,i)=>(
                         <motion.div
                           key={i}
@@ -1824,21 +1842,6 @@ export default function App(){
                         />
                       ))}
                     </div>
-                  ) : (
-                    <input
-                      ref={inputRef}
-                      value={input}
-                      onChange={e=>setInput(e.target.value)}
-                      placeholder={isTextCard?"Type translation...":"Type conjugation..."}
-                      lang="pt"
-                      autoFocus={idx>0}
-                      autoComplete="off"
-                      autoCorrect="off"
-                      autoCapitalize="off"
-                      spellCheck={false}
-                      style={{fontSize:"16px"}}
-                      className="flex-1 bg-transparent font-mono-ui text-text placeholder:text-text-sub outline-none min-w-0"
-                    />
                   )}
                   {input.length>0 && (
                     <button onMouseDown={e=>e.preventDefault()} onClick={()=>{setInput("");inputRef.current?.focus({preventScroll:true});}}
