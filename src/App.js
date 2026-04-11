@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine, Cell } from "recharts";
-import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search, User, Mic, ArrowUp } from "lucide-react";
+import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search, User, Mic, ArrowUp, Globe } from "lucide-react";
 import packageInfo from "../package.json";
 import { cn } from "./lib/utils";
 import { useTheme } from "./lib/useTheme";
@@ -372,6 +372,20 @@ function AnimatedNumber({value,duration=1.2}){
 }
 
 // ── Toggle pill — monotone secondary look (Linear-like transparency) ──
+function ToggleSwitch({checked,onChange}){
+  return(
+    <button role="switch" aria-checked={checked} onClick={onChange}
+      className={cn("relative w-10 h-6 rounded-full transition-colors duration-200 flex-shrink-0",checked?"bg-primary":"bg-secondary/20")}
+    >
+      <motion.div
+        className="absolute top-[2px] left-[2px] w-5 h-5 rounded-full bg-white shadow-sm"
+        animate={{x:checked?16:0}}
+        transition={{type:"spring",stiffness:500,damping:30}}
+      />
+    </button>
+  );
+}
+
 function TogglePill({active,onClick,children,disabled}){
   return (
     <button
@@ -1324,18 +1338,23 @@ export default function App(){
                 {theme==="dark"?<Moon size={15}/>:<Sun size={15}/>}
                 <span>{t("theme")}</span>
               </div>
-              <button
-                onClick={toggleTheme}
-                className="text-[11px] font-mono-ui uppercase tracking-[0.12em] text-text-sub hover:text-text transition-colors px-3 py-2 rounded-sm border border-border bg-surface"
-              >
-                {theme==="dark"?t("dark"):t("light")}
-              </button>
+              <div className="flex gap-1 p-1 rounded-md bg-secondary/5 border border-border">
+                {[{key:"dark",label:t("dark")},{key:"light",label:t("light")}].map(({key,label})=>(
+                  <button key={key}
+                    onClick={()=>key!==theme&&toggleTheme()}
+                    className={cn(
+                      "px-3 py-1 rounded-sm text-[11px] font-mono-ui uppercase tracking-[0.12em] transition-colors",
+                      theme===key?"bg-secondary/15 border border-secondary/25 text-text":"text-text-sub hover:text-text"
+                    )}
+                  >{label}</button>
+                ))}
+              </div>
             </div>
 
             {/* Language */}
             <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-md bg-secondary/5 border border-border">
               <div className="flex items-center gap-2 text-sm text-text">
-                <span className="text-base">🌐</span>
+                <Globe size={15}/>
                 <span>{t("language")}</span>
               </div>
               <div className="flex gap-1 p-1 rounded-md bg-secondary/5 border border-border">
@@ -1386,19 +1405,27 @@ export default function App(){
             {/* Tense */}
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">{t("tense")}</span>
-              <div className="flex gap-2">
-                <TogglePill active={conjFilter.presente} onClick={()=>setConjFilter(f=>({...f,presente:!f.presente}))}>Presente</TogglePill>
-                <TogglePill active={conjFilter.passado}  onClick={()=>setConjFilter(f=>({...f,passado:!f.passado}))}>Passado</TogglePill>
-              </div>
+              <Card className="overflow-hidden divide-y divide-border">
+                {[{key:"presente",label:"Presente"},{key:"passado",label:"Passado"}].map(({key,label})=>(
+                  <div key={key} className="flex items-center justify-between px-4 py-3">
+                    <span className="text-sm text-text">{label}</span>
+                    <ToggleSwitch checked={conjFilter[key]} onChange={()=>setConjFilter(f=>({...f,[key]:!f[key]}))}/>
+                  </div>
+                ))}
+              </Card>
             </div>
 
             {/* Verb Type */}
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">{t("verb_type")}</span>
-              <div className="flex gap-2">
-                <TogglePill active={conjFilter.irregular} onClick={()=>setConjFilter(f=>({...f,irregular:!f.irregular}))}>{t("irregular")}</TogglePill>
-                <TogglePill active={conjFilter.regular}   onClick={()=>setConjFilter(f=>({...f,regular:!f.regular}))}>{t("regular")}</TogglePill>
-              </div>
+              <Card className="overflow-hidden divide-y divide-border">
+                {[{key:"irregular",label:t("irregular")},{key:"regular",label:t("regular")}].map(({key,label})=>(
+                  <div key={key} className="flex items-center justify-between px-4 py-3">
+                    <span className="text-sm text-text">{label}</span>
+                    <ToggleSwitch checked={conjFilter[key]} onChange={()=>setConjFilter(f=>({...f,[key]:!f[key]}))}/>
+                  </div>
+                ))}
+              </Card>
             </div>
           </Screen>
         </AnimatePresence>
