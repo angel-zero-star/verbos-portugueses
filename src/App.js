@@ -854,6 +854,7 @@ export default function App(){
   const [result,setResult]=useState(null);
   const [accentNote,setAccentNote]=useState(null);
   const [isListening,setIsListening]=useState(false);
+  const [isSpeaking,setIsSpeaking]=useState(false);
   const recRef=useRef(null);
   const [score,setScore]=useState({correct:0,wrong:0,accentMisses:0});
   const [wrongOnes,setWrongOnes]=useState([]);
@@ -1085,16 +1086,19 @@ export default function App(){
   const toggleMic=()=>{
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!SR)return;
-    if(isListening){recRef.current?.stop();setIsListening(false);return;}
+    if(isListening){recRef.current?.stop();setIsListening(false);setIsSpeaking(false);return;}
+    inputRef.current?.blur();
     const rec=new SR();
     rec.lang="pt-PT";rec.continuous=false;rec.interimResults=true;
+    rec.onspeechstart=()=>setIsSpeaking(true);
+    rec.onspeechend=()=>setIsSpeaking(false);
     rec.onresult=(e)=>{
       const t=Array.from(e.results).map(r=>r[0].transcript).join("");
       setInput(t);
-      if(e.results[e.results.length-1].isFinal)setIsListening(false);
+      if(e.results[e.results.length-1].isFinal){setIsListening(false);setIsSpeaking(false);}
     };
-    rec.onerror=()=>setIsListening(false);
-    rec.onend=()=>setIsListening(false);
+    rec.onerror=()=>{setIsListening(false);setIsSpeaking(false);};
+    rec.onend=()=>{setIsListening(false);setIsSpeaking(false);};
     recRef.current=rec;rec.start();setIsListening(true);
   };
 
@@ -1803,14 +1807,20 @@ export default function App(){
                   isListening&&!input ? "border-danger/40" : "border-border focus-within:border-secondary/40"
                 )}>
                   {isListening && !input ? (
-                    /* Waveform bars — shown while mic is active and no text yet */
+                    /* Waveform bars — animate only when speech is detected */
                     <div className="flex items-center gap-[3px] flex-1 h-full py-3">
                       {[0.6,1,0.75,1,0.5,0.85,0.65].map((amp,i)=>(
                         <motion.div
                           key={i}
                           className="w-[3px] rounded-full bg-danger/60 origin-center"
-                          animate={{scaleY:[amp*0.4,amp,amp*0.3,amp*0.9,amp*0.4]}}
-                          transition={{duration:0.7+i*0.07,repeat:Infinity,ease:"easeInOut",delay:i*0.08}}
+                          animate={isSpeaking
+                            ? {scaleY:[amp*0.4,amp,amp*0.3,amp*0.9,amp*0.4]}
+                            : {scaleY:0.15}
+                          }
+                          transition={isSpeaking
+                            ? {duration:0.7+i*0.07,repeat:Infinity,ease:"easeInOut",delay:i*0.08}
+                            : {duration:0.3}
+                          }
                           style={{height:"100%"}}
                         />
                       ))}
