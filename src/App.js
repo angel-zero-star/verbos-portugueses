@@ -1032,11 +1032,10 @@ export default function App(){
   };
 
   const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),mode:gameMode,subcat:subcatRef.current||"all",correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);}};
-  // Auto-focus input when transitioning to a new card (result resets to null).
-  // Uses a short delay so the AnimatePresence exit animation finishes first.
+  // Auto-focus hidden input when on play screen and awaiting answer.
   useEffect(()=>{
-    if(screen==="play" && result===null && idx>0){
-      const t=setTimeout(()=>inputRef.current?.focus({preventScroll:true}),220);
+    if(screen==="play" && result===null){
+      const t=setTimeout(()=>inputRef.current?.focus({preventScroll:true}), idx>0?220:50);
       return()=>clearTimeout(t);
     }
   },[result,idx,screen]);
@@ -1613,7 +1612,22 @@ export default function App(){
 
   return (
     <>
-    {/* ── Layer 1: Card — completely static, no focusable elements ── */}
+    {/* ── Hidden real input — pinned to top so iOS doesn't scroll ── */}
+    <input
+      ref={inputRef}
+      value={input}
+      onChange={e=>setInput(e.target.value)}
+      lang="pt"
+      autoComplete="off"
+      autoCorrect="off"
+      autoCapitalize="off"
+      spellCheck={false}
+      className="fixed top-0 left-0 w-full opacity-0 pointer-events-none"
+      style={{fontSize:"16px",height:1,zIndex:0}}
+      tabIndex={-1}
+    />
+
+    {/* ── Layer 1: Card — completely static ── */}
     <div className="fixed inset-0 bg-bg text-text overflow-hidden pointer-events-none" style={{zIndex:10}}>
       <TopBar/>
       <div className="px-6 pt-6">
@@ -1801,32 +1815,17 @@ export default function App(){
                   </motion.div>
                 </button>
 
-                {/* Input pill */}
-                <div className={cn(
-                  "flex-1 relative flex items-center h-11 rounded-2xl border bg-secondary/5 px-4 transition-colors",
-                  isListening&&!input ? "border-danger/40" : "border-border focus-within:border-secondary/40"
-                )}>
-                  {/* Input always mounted so keyboard stays open */}
-                  <input
-                    ref={inputRef}
-                    value={input}
-                    onChange={e=>setInput(e.target.value)}
-                    placeholder={isListening&&!input ? "" : (isTextCard?"Type translation...":"Type conjugation...")}
-                    lang="pt"
-                    autoFocus={idx>0}
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck={false}
-                    style={{fontSize:"16px"}}
-                    className={cn(
-                      "flex-1 bg-transparent font-mono-ui text-text placeholder:text-text-sub outline-none min-w-0",
-                      isListening&&!input && "opacity-0"
-                    )}
-                  />
-                  {/* Waveform bars overlay — only when listening with no text */}
-                  {isListening && !input && (
-                    <div className="absolute inset-0 flex items-center gap-[3px] px-4 py-3 pointer-events-none">
+                {/* Visual input pill — tapping focuses hidden input */}
+                <div
+                  onClick={()=>inputRef.current?.focus({preventScroll:true})}
+                  className={cn(
+                    "flex-1 relative flex items-center h-11 rounded-2xl border bg-secondary/5 px-4 transition-colors cursor-text",
+                    isListening&&!input ? "border-danger/40" : "border-border"
+                  )}
+                >
+                  {isListening && !input ? (
+                    /* Waveform bars */
+                    <div className="flex items-center gap-[3px] flex-1 h-full py-3">
                       {[0.6,1,0.75,1,0.5,0.85,0.65].map((amp,i)=>(
                         <motion.div
                           key={i}
@@ -1843,9 +1842,13 @@ export default function App(){
                         />
                       ))}
                     </div>
+                  ) : input ? (
+                    <span className="flex-1 text-base font-mono-ui text-text truncate">{input}</span>
+                  ) : (
+                    <span className="flex-1 text-base font-mono-ui text-text-sub">{isTextCard?"Type translation...":"Type conjugation..."}</span>
                   )}
                   {input.length>0 && (
-                    <button onMouseDown={e=>e.preventDefault()} onClick={()=>{setInput("");inputRef.current?.focus({preventScroll:true});}}
+                    <button onMouseDown={e=>e.preventDefault()} onClick={(e)=>{e.stopPropagation();setInput("");inputRef.current?.focus({preventScroll:true});}}
                       className="ml-2 text-text-sub hover:text-text transition-colors shrink-0"
                     ><X size={15}/></button>
                   )}
