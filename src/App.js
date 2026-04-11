@@ -1063,8 +1063,10 @@ export default function App(){
     const vv=window.visualViewport;
     const update=()=>{
       const h=vv?vv.height:window.innerHeight;
+      const top=vv?vv.offsetTop:0;
       const kh=Math.max(0,window.innerHeight-h);
       document.documentElement.style.setProperty("--vvh",`${h}px`);
+      document.documentElement.style.setProperty("--vv-top",`${top}px`);
       document.documentElement.style.setProperty("--keyboard-h",`${kh}px`);
       setKeyboardOpen(kh>150);
     };
@@ -1610,8 +1612,8 @@ export default function App(){
 
   return (
     <div
-      className="fixed inset-0 flex flex-col bg-bg text-text"
-      style={{height:"var(--vvh,100vh)"}}
+      className="fixed left-0 right-0 flex flex-col bg-bg text-text"
+      style={{top:"var(--vv-top,0px)",height:"var(--vvh,100vh)"}}
     >
       <TopBar/>
       {/* Card area — fills remaining space, overflow hidden so nothing scrolls */}
