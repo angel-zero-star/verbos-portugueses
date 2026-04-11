@@ -1036,30 +1036,38 @@ export default function App(){
   // Uses a short delay so the AnimatePresence exit animation finishes first.
   useEffect(()=>{
     if(screen==="play" && result===null && idx>0){
-      const t=setTimeout(()=>inputRef.current?.focus(),220);
+      const t=setTimeout(()=>inputRef.current?.focus({preventScroll:true}),220);
       return()=>clearTimeout(t);
     }
   },[result,idx,screen]);
 
-  // Lock body scroll on the play screen so iOS Safari can't scroll content
-  // behind the keyboard when the input is focused.
+  // Kill ALL scrolling on the play screen — iOS Safari tries to scroll
+  // when focusing the input; this prevents it from ever happening.
   useEffect(()=>{
     if(screen!=="play") return;
     const html=document.documentElement;
     const body=document.body;
+    // CSS lock
     html.style.position="fixed";
     html.style.inset="0";
     html.style.overflow="hidden";
     body.style.position="fixed";
     body.style.inset="0";
     body.style.overflow="hidden";
+    // Event-level lock — capture phase so we get it before anything else
+    const kill=()=>{window.scrollTo(0,0);html.scrollTop=0;body.scrollTop=0;};
+    const preventTouch=(e)=>{if(playContainerRef.current&&!playContainerRef.current.contains(e.target))e.preventDefault();};
+    window.addEventListener("scroll",kill,{passive:true,capture:true});
+    html.addEventListener("scroll",kill,{passive:true,capture:true});
+    body.addEventListener("scroll",kill,{passive:true,capture:true});
+    document.addEventListener("touchmove",preventTouch,{passive:false});
     return()=>{
-      html.style.position="";
-      html.style.inset="";
-      html.style.overflow="";
-      body.style.position="";
-      body.style.inset="";
-      body.style.overflow="";
+      html.style.position="";html.style.inset="";html.style.overflow="";
+      body.style.position="";body.style.inset="";body.style.overflow="";
+      window.removeEventListener("scroll",kill,{capture:true});
+      html.removeEventListener("scroll",kill,{capture:true});
+      body.removeEventListener("scroll",kill,{capture:true});
+      document.removeEventListener("touchmove",preventTouch);
     };
   },[screen]);
 
@@ -1780,7 +1788,7 @@ export default function App(){
             const pick=(art)=>{
               const rest=input.trim().replace(/^(os|as|o|a)\s+/i,'');
               setInput(art+' '+rest);
-              setTimeout(()=>inputRef.current?.focus(),0);
+              setTimeout(()=>inputRef.current?.focus({preventScroll:true}),0);
             };
             return(
               <div className="flex gap-2 px-4 pb-2">
@@ -1843,7 +1851,6 @@ export default function App(){
                       ref={inputRef}
                       value={input}
                       onChange={e=>setInput(e.target.value)}
-                      onFocus={()=>{requestAnimationFrame(()=>{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;if(playContainerRef.current)playContainerRef.current.scrollTop=0;});}}
                       placeholder={isTextCard?"Type translation...":"Type conjugation..."}
                       lang="pt"
                       autoFocus={idx>0}
@@ -1856,7 +1863,7 @@ export default function App(){
                     />
                   )}
                   {input.length>0 && (
-                    <button onMouseDown={e=>e.preventDefault()} onClick={()=>{setInput("");inputRef.current?.focus();}}
+                    <button onMouseDown={e=>e.preventDefault()} onClick={()=>{setInput("");inputRef.current?.focus({preventScroll:true});}}
                       className="ml-2 text-text-sub hover:text-text transition-colors shrink-0"
                     ><X size={15}/></button>
                   )}
