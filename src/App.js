@@ -952,7 +952,7 @@ export default function App(){
       if(pool.length===0){alert("No palavras match your filters!");return;}
       const picked=shuffle(pool).slice(0,10).map(p=>({mode:"palavras",en:p.en,answer:p.pt,cat:p.cat}));
       setCards(picked);setIdx(0);setInput("");setResult(null);setAccentNote(null);
-      setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");
+      setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");inputRef.current?.focus({preventScroll:true});
       return;
     }
     if(gm==="frases"){
@@ -972,7 +972,7 @@ export default function App(){
         mode:"frases",subMode:"sentence",id:p.id,verb:p.verb,tense:p.tense,en:p.en,answer:p.pt,alternatives:p.alternatives,
       }):({mode:"frases",subMode:"expressao",en:p.en,answer:p.pt,alternatives:p.alternatives||[]}));
       setCards(picked);setIdx(0);setInput("");setResult(null);setAccentNote(null);
-      setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");
+      setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");inputRef.current?.focus({preventScroll:true});
       return;
     }
     // Conjugation — subcat filters by semantic category; global type filter still applies
@@ -993,7 +993,7 @@ export default function App(){
     }
     if(gen.length===0){alert("No verbs match your filters!");return;}
     setCards(shuffle(gen).slice(0,10));setIdx(0);setInput("");setResult(null);setAccentNote(null);
-    setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");
+    setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");inputRef.current?.focus({preventScroll:true});
   };
 
   const check=()=>{
@@ -1032,14 +1032,7 @@ export default function App(){
     else{setResult("wrong");setAccentNote(null);setScore(s=>({...s,wrong:s.wrong+1}));setWrongOnes(w=>[...w,c]);}
   };
 
-  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),mode:gameMode,subcat:subcatRef.current||"all",correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);}};
-  // Auto-focus hidden input when on play screen and awaiting answer.
-  useEffect(()=>{
-    if(screen==="play" && result===null){
-      const t=setTimeout(()=>inputRef.current?.focus({preventScroll:true}), idx>0?220:50);
-      return()=>clearTimeout(t);
-    }
-  },[result,idx,screen]);
+  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),mode:gameMode,subcat:subcatRef.current||"all",correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);inputRef.current?.focus({preventScroll:true});}};
 
   // Single Enter handler — debounced to avoid double-fire (key repeat / fast double-press)
   useEffect(()=>{
@@ -1824,7 +1817,7 @@ export default function App(){
                   className={cn(
                     "flex-1 relative flex items-center h-11 rounded-2xl border bg-secondary/5 px-4 transition-colors cursor-text",
                     isListening&&!input ? "border-danger/40"
-                      : inputFocused ? "border-secondary/40"
+                      : inputFocused ? "border-primary"
                       : "border-border"
                   )}
                 >
@@ -1848,9 +1841,9 @@ export default function App(){
                       ))}
                     </div>
                   ) : input ? (
-                    <span className="flex-1 text-base font-mono-ui text-text truncate">{input}</span>
+                    <span className={cn("flex-1 text-base font-mono-ui text-text truncate", inputFocused && "cursor-blink")}>{input}</span>
                   ) : (
-                    <span className="flex-1 text-base font-mono-ui text-text-sub">{isTextCard?t("placeholder_translation"):t("placeholder_conjugation")}</span>
+                    <span className={cn("flex-1 text-base font-mono-ui text-text-sub", inputFocused && "cursor-blink")}>{isTextCard?t("placeholder_translation"):t("placeholder_conjugation")}</span>
                   )}
                   {input.length>0 && (
                     <button onMouseDown={e=>e.preventDefault()} onClick={(e)=>{e.stopPropagation();setInput("");inputRef.current?.focus({preventScroll:true});}}
