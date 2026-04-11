@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1.60';
+const CACHE_VERSION = 'v1.61';
 const CACHE_NAME = `verbos-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [

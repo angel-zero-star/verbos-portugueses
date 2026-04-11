@@ -857,6 +857,7 @@ export default function App(){
   const [isSpeaking,setIsSpeaking]=useState(false);
   const [inputFocused,setInputFocused]=useState(false);
   const recRef=useRef(null);
+  const speakTimeoutRef=useRef(null);
   const [score,setScore]=useState({correct:0,wrong:0,accentMisses:0});
   const [wrongOnes,setWrongOnes]=useState([]);
   const [history,setHistory]=useState([]);
@@ -1077,18 +1078,19 @@ export default function App(){
   const toggleMic=()=>{
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!SR)return;
-    if(isListening){recRef.current?.stop();setIsListening(false);setIsSpeaking(false);return;}
+    if(isListening){recRef.current?.stop();setIsListening(false);setIsSpeaking(false);clearTimeout(speakTimeoutRef.current);return;}
     const rec=new SR();
     rec.lang="pt-PT";rec.continuous=false;rec.interimResults=true;
-    rec.onspeechstart=()=>setIsSpeaking(true);
-    rec.onspeechend=()=>setIsSpeaking(false);
     rec.onresult=(e)=>{
       const t=Array.from(e.results).map(r=>r[0].transcript).join("");
       setInput(t);
+      setIsSpeaking(true);
+      clearTimeout(speakTimeoutRef.current);
       if(e.results[e.results.length-1].isFinal){setIsListening(false);setIsSpeaking(false);}
+      else{speakTimeoutRef.current=setTimeout(()=>setIsSpeaking(false),300);}
     };
-    rec.onerror=()=>{setIsListening(false);setIsSpeaking(false);};
-    rec.onend=()=>{setIsListening(false);setIsSpeaking(false);};
+    rec.onerror=()=>{setIsListening(false);setIsSpeaking(false);clearTimeout(speakTimeoutRef.current);};
+    rec.onend=()=>{setIsListening(false);setIsSpeaking(false);clearTimeout(speakTimeoutRef.current);};
     recRef.current=rec;rec.start();setIsListening(true);
   };
 
@@ -1824,7 +1826,7 @@ export default function App(){
                   {isListening && !input ? (
                     /* Waveform bars */
                     <div className="flex items-center gap-[3px] flex-1 h-full py-3">
-                      {[0.6,1,0.75,1,0.5,0.85,0.65].map((amp,i)=>(
+                      {[0.7,1,0.7].map((amp,i)=>(
                         <motion.div
                           key={i}
                           className="w-[3px] rounded-full bg-danger/60 origin-center"
