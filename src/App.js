@@ -1087,7 +1087,6 @@ export default function App(){
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!SR)return;
     if(isListening){recRef.current?.stop();setIsListening(false);setIsSpeaking(false);return;}
-    inputRef.current?.blur();
     const rec=new SR();
     rec.lang="pt-PT";rec.continuous=false;rec.interimResults=true;
     rec.onspeechstart=()=>setIsSpeaking(true);
