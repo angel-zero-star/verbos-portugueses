@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine, Cell } from "recharts";
-import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search, User } from "lucide-react";
+import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search, User, Mic, ArrowUp } from "lucide-react";
 import packageInfo from "../package.json";
 import { cn } from "./lib/utils";
 import { useTheme } from "./lib/useTheme";
@@ -838,6 +838,8 @@ export default function App(){
   const [input,setInput]=useState("");
   const [result,setResult]=useState(null);
   const [accentNote,setAccentNote]=useState(null);
+  const [isListening,setIsListening]=useState(false);
+  const recRef=useRef(null);
   const [score,setScore]=useState({correct:0,wrong:0,accentMisses:0});
   const [wrongOnes,setWrongOnes]=useState([]);
   const [history,setHistory]=useState([]);
@@ -1035,8 +1037,10 @@ export default function App(){
     const vv=window.visualViewport;
     const update=()=>{
       const h=vv?vv.height:window.innerHeight;
+      const kh=Math.max(0,window.innerHeight-h);
       document.documentElement.style.setProperty("--vvh",`${h}px`);
-      setKeyboardOpen(window.innerHeight-h>150);
+      document.documentElement.style.setProperty("--keyboard-h",`${kh}px`);
+      setKeyboardOpen(kh>150);
     };
     update();
     window.addEventListener("resize",update);
@@ -1049,6 +1053,22 @@ export default function App(){
     };
   },[]);
 
+
+  const toggleMic=()=>{
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR)return;
+    if(isListening){recRef.current?.stop();setIsListening(false);return;}
+    const rec=new SR();
+    rec.lang="pt-PT";rec.continuous=false;rec.interimResults=true;
+    rec.onresult=(e)=>{
+      const t=Array.from(e.results).map(r=>r[0].transcript).join("");
+      setInput(t);
+      if(e.results[e.results.length-1].isFinal)setIsListening(false);
+    };
+    rec.onerror=()=>setIsListening(false);
+    rec.onend=()=>setIsListening(false);
+    recRef.current=rec;rec.start();setIsListening(true);
+  };
 
   const card=cards[idx];
   const total=score.correct+score.wrong;
@@ -1628,74 +1648,17 @@ export default function App(){
                       {card.transl}
                     </div>
                   </div>
-
                   <div className="flex items-center justify-center gap-2">
-                    <span className="text-base font-mono-ui text-primary italic">
-                      {card.pronoun}
-                    </span>
-                    {result===null && (
-                      <span className="text-text-sub text-base tracking-[4px]">· · ·</span>
-                    )}
+                    <span className="text-base font-mono-ui text-primary italic">{card.pronoun}</span>
+                    {result===null && <span className="text-text-sub text-base tracking-[4px]">· · ·</span>}
                   </div>
                 </>
               )}
 
-              {/* Article helper buttons — palavras only, when answer needs an article */}
-              {card.mode==="palavras" && result===null && (()=>{
-                const first=card.answer.split('/')[0].trim().toLowerCase();
-                const isPlural=first.startsWith('os ')||first.startsWith('as ');
-                const isSingular=first.startsWith('o ')||first.startsWith('a ');
-                if(!isPlural&&!isSingular)return null;
-                const arts=isPlural?['Os','As']:['O','A'];
-                const pick=(art)=>{
-                  const rest=input.trim().replace(/^(os|as|o|a)\s+/i,'');
-                  setInput(art+' '+rest);
-                  setTimeout(()=>inputRef.current?.focus(),0);
-                };
-                return(
-                  <div className="flex gap-2 justify-center">
-                    {arts.map(art=>(
-                      <button key={art} onMouseDown={e=>{e.preventDefault();pick(art);}}
-                        className="h-9 px-5 rounded-md border border-border bg-secondary/5 text-sm font-mono-ui text-text-sub hover:text-text hover:bg-secondary/10 transition-colors"
-                      >{art}</button>
-                    ))}
-                  </div>
-                );
-              })()}
-
-              <motion.div
-                animate={result==="correct" && !accentNote ? {scale:[1,1.04,1]} : {}}
-                transition={{duration:0.35}}
-              >
-                <Input
-                  ref={inputRef}
-                  value={input}
-                  onChange={e=>setInput(e.target.value)}
-                  placeholder={isTextCard?"Type translation...":"Type conjugation..."}
-                  disabled={result!==null}
-                  autoFocus={idx>0}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  className={cn(
-                    "text-base font-mono-ui",
-                    result==="correct" && !accentNote && "border-accent bg-accent/5 focus:border-accent focus:ring-accent/30",
-                    result==="correct" && accentNote && "border-warn bg-warn/5 focus:border-warn focus:ring-warn/30",
-                    result==="wrong" && "border-danger bg-danger/5 focus:border-danger focus:ring-danger/30",
-                  )}
-                />
-              </motion.div>
-
-              {/* Feedback */}
+              {/* Feedback (shown inside card after validation) */}
               <AnimatePresence>
                 {result==="correct" && (
-                  <motion.div
-                    initial={{opacity:0,y:6}}
-                    animate={{opacity:1,y:0}}
-                    transition={{duration:0.2}}
-                    className="flex flex-col gap-3"
-                  >
+                  <motion.div initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{duration:0.2}} className="flex flex-col gap-3">
                     <div className="flex items-center justify-center gap-2 text-accent">
                       <Check size={18} strokeWidth={3}/>
                       <span className="text-base font-semibold">{t("correct_label")}</span>
@@ -1715,14 +1678,8 @@ export default function App(){
                     {card.mode==="conjugation" && <ConjugationTable card={card}/>}
                   </motion.div>
                 )}
-
                 {result==="wrong" && (
-                  <motion.div
-                    initial={{opacity:0,y:6}}
-                    animate={{opacity:1,y:0}}
-                    transition={{duration:0.2}}
-                    className="flex flex-col gap-3"
-                  >
+                  <motion.div initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{duration:0.2}} className="flex flex-col gap-3">
                     <div className="flex items-center justify-center gap-2 text-danger">
                       <X size={16} strokeWidth={3}/>
                       <strong className="font-mono-ui">{card.answer}</strong>
@@ -1743,20 +1700,118 @@ export default function App(){
         </AnimatePresence>
       </Screen>
 
-      {/* Sticky action button — bottom of screen, hidden when mobile keyboard is open */}
-      {!keyboardOpen && (
-        <div
-          className="fixed bottom-0 left-0 right-0 z-20 flex justify-center p-4 bg-gradient-to-t from-bg via-bg/95 to-transparent pointer-events-none"
-          style={{paddingBottom:"max(16px,env(safe-area-inset-bottom))"}}
-        >
-          <div className="w-full max-w-[480px] pointer-events-auto">
-            {result===null
-              ? <Button onClick={check} size="lg" className="w-full">{t("check")}</Button>
-              : <Button onClick={next} size="lg" className="w-full">{t("next")} <ArrowRight size={16}/></Button>
-            }
-          </div>
+      {/* ── Floating input bar — sits just above the keyboard ── */}
+      <div
+        className="fixed left-0 right-0 z-30 flex justify-center"
+        style={{bottom:"var(--keyboard-h,0px)"}}
+      >
+        <div className="w-full max-w-[480px]">
+          {/* Article picker chips — above the bar */}
+          {card.mode==="palavras" && result===null && (()=>{
+            const first=card.answer.split('/')[0].trim().toLowerCase();
+            const isPlural=first.startsWith('os ')||first.startsWith('as ');
+            const isSingular=first.startsWith('o ')||first.startsWith('a ');
+            if(!isPlural&&!isSingular)return null;
+            const arts=isPlural?['Os','As']:['O','A'];
+            const pick=(art)=>{
+              const rest=input.trim().replace(/^(os|as|o|a)\s+/i,'');
+              setInput(art+' '+rest);
+              setTimeout(()=>inputRef.current?.focus(),0);
+            };
+            return(
+              <div className="flex gap-2 px-4 pb-2">
+                {arts.map(art=>(
+                  <button key={art} onMouseDown={e=>{e.preventDefault();pick(art);}}
+                    className="h-8 px-4 rounded-full border border-border bg-surface/90 backdrop-blur text-sm font-mono-ui text-text-sub hover:text-text transition-colors shadow-sm"
+                  >{art}</button>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* Main bar */}
+          <AnimatePresence mode="wait">
+            {result===null ? (
+              /* Input state */
+              <motion.div
+                key="input-bar"
+                initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:8}}
+                transition={{duration:0.18}}
+                className="flex items-center gap-3 px-4 py-3 bg-surface/95 backdrop-blur border-t border-border"
+                style={{paddingBottom:"max(12px,env(safe-area-inset-bottom))"}}
+              >
+                {/* Mic */}
+                <button
+                  onMouseDown={e=>e.preventDefault()}
+                  onClick={toggleMic}
+                  className={cn(
+                    "h-11 w-11 shrink-0 rounded-full border flex items-center justify-center transition-colors",
+                    isListening
+                      ? "bg-danger/10 border-danger/40 text-danger"
+                      : "bg-secondary/5 border-border text-text-sub hover:text-text"
+                  )}
+                >
+                  <motion.div animate={isListening?{scale:[1,1.15,1]}:{scale:1}} transition={isListening?{repeat:Infinity,duration:0.8}:{}}>
+                    <Mic size={18}/>
+                  </motion.div>
+                </button>
+
+                {/* Input pill */}
+                <div className={cn(
+                  "flex-1 flex items-center h-11 rounded-2xl border bg-secondary/5 px-4 transition-colors",
+                  "border-border focus-within:border-secondary/40"
+                )}>
+                  <input
+                    ref={inputRef}
+                    value={input}
+                    onChange={e=>setInput(e.target.value)}
+                    placeholder={isTextCard?"Type translation...":"Type conjugation..."}
+                    lang="pt"
+                    autoFocus={idx>0}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    className="flex-1 bg-transparent text-base font-mono-ui text-text placeholder:text-text-sub outline-none min-w-0"
+                  />
+                  {input.length>0 && (
+                    <button onMouseDown={e=>e.preventDefault()} onClick={()=>{setInput("");inputRef.current?.focus();}}
+                      className="ml-2 text-text-sub hover:text-text transition-colors shrink-0"
+                    ><X size={15}/></button>
+                  )}
+                </div>
+
+                {/* Submit */}
+                <button
+                  onClick={check}
+                  disabled={!input.trim()}
+                  className={cn(
+                    "h-11 w-11 shrink-0 rounded-full flex items-center justify-center transition-all",
+                    input.trim()
+                      ? "bg-primary text-white hover:brightness-90 active:scale-95"
+                      : "bg-secondary/10 text-text-sub cursor-not-allowed"
+                  )}
+                >
+                  <ArrowUp size={18} strokeWidth={2.5}/>
+                </button>
+              </motion.div>
+            ) : (
+              /* Next state */
+              <motion.div
+                key="next-bar"
+                initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:8}}
+                transition={{duration:0.18}}
+                className="flex items-center gap-3 px-4 py-3 bg-surface/95 backdrop-blur border-t border-border"
+                style={{paddingBottom:"max(12px,env(safe-area-inset-bottom))"}}
+              >
+                <Button onClick={next} size="lg" className="w-full">
+                  {t("next")} <ArrowRight size={16}/>
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      )}
+      </div>
     </div>
   );
 }
