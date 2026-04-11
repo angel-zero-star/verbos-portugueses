@@ -861,6 +861,7 @@ export default function App(){
   const inputRef=useRef(null);
   const lastEnterRef=useRef(0);
   const subcatRef=useRef(null); // subcat of the current session
+  const playContainerRef=useRef(null);
   const [keyboardOpen,setKeyboardOpen]=useState(false);
   const [gameMode,setGameMode]=useState("conjugation"); // "conjugation" | "palavras" | "frases"
   const [showSplash,setShowSplash]=useState(true);
@@ -1030,7 +1031,38 @@ export default function App(){
     else{setResult("wrong");setAccentNote(null);setScore(s=>({...s,wrong:s.wrong+1}));setWrongOnes(w=>[...w,c]);}
   };
 
-  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),mode:gameMode,subcat:subcatRef.current||"all",correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);setTimeout(()=>inputRef.current?.focus(),50);}};
+  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),mode:gameMode,subcat:subcatRef.current||"all",correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);}};
+  // Auto-focus input when transitioning to a new card (result resets to null).
+  // Uses a short delay so the AnimatePresence exit animation finishes first.
+  useEffect(()=>{
+    if(screen==="play" && result===null && idx>0){
+      const t=setTimeout(()=>inputRef.current?.focus(),220);
+      return()=>clearTimeout(t);
+    }
+  },[result,idx,screen]);
+
+  // Lock body scroll on the play screen so iOS Safari can't scroll content
+  // behind the keyboard when the input is focused.
+  useEffect(()=>{
+    if(screen!=="play") return;
+    const html=document.documentElement;
+    const body=document.body;
+    html.style.position="fixed";
+    html.style.inset="0";
+    html.style.overflow="hidden";
+    body.style.position="fixed";
+    body.style.inset="0";
+    body.style.overflow="hidden";
+    return()=>{
+      html.style.position="";
+      html.style.inset="";
+      html.style.overflow="";
+      body.style.position="";
+      body.style.inset="";
+      body.style.overflow="";
+    };
+  },[screen]);
+
   // Single Enter handler — debounced to avoid double-fire (key repeat / fast double-press)
   useEffect(()=>{
     if(screen!=="play")return;
@@ -1601,7 +1633,8 @@ export default function App(){
 
   return (
     <div
-      className="fixed left-0 right-0 top-0 overflow-y-auto bg-bg text-text"
+      ref={playContainerRef}
+      className="fixed left-0 right-0 top-0 overflow-hidden bg-bg text-text"
       style={{height:"var(--vvh,100vh)"}}
     >
       <TopBar/>
@@ -1790,21 +1823,37 @@ export default function App(){
                 {/* Input pill */}
                 <div className={cn(
                   "flex-1 flex items-center h-11 rounded-2xl border bg-secondary/5 px-4 transition-colors",
-                  "border-border focus-within:border-secondary/40"
+                  isListening&&!input ? "border-danger/40" : "border-border focus-within:border-secondary/40"
                 )}>
-                  <input
-                    ref={inputRef}
-                    value={input}
-                    onChange={e=>setInput(e.target.value)}
-                    placeholder={isTextCard?"Type translation...":"Type conjugation..."}
-                    lang="pt"
-                    autoFocus={idx>0}
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck={false}
-                    className="flex-1 bg-transparent text-base font-mono-ui text-text placeholder:text-text-sub outline-none min-w-0"
-                  />
+                  {isListening && !input ? (
+                    /* Waveform bars — shown while mic is active and no text yet */
+                    <div className="flex items-center gap-[3px] flex-1 h-full py-3">
+                      {[0.6,1,0.75,1,0.5,0.85,0.65].map((amp,i)=>(
+                        <motion.div
+                          key={i}
+                          className="w-[3px] rounded-full bg-danger/60 origin-center"
+                          animate={{scaleY:[amp*0.4,amp,amp*0.3,amp*0.9,amp*0.4]}}
+                          transition={{duration:0.7+i*0.07,repeat:Infinity,ease:"easeInOut",delay:i*0.08}}
+                          style={{height:"100%"}}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <input
+                      ref={inputRef}
+                      value={input}
+                      onChange={e=>setInput(e.target.value)}
+                      placeholder={isTextCard?"Type translation...":"Type conjugation..."}
+                      lang="pt"
+                      autoFocus={idx>0}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      style={{fontSize:"16px"}}
+                      className="flex-1 bg-transparent font-mono-ui text-text placeholder:text-text-sub outline-none min-w-0"
+                    />
+                  )}
                   {input.length>0 && (
                     <button onMouseDown={e=>e.preventDefault()} onClick={()=>{setInput("");inputRef.current?.focus();}}
                       className="ml-2 text-text-sub hover:text-text transition-colors shrink-0"
