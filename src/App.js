@@ -1612,13 +1612,10 @@ export default function App(){
   const isTextCard = card.mode!=="conjugation"; // palavras + frases both prompt English → type PT
 
   return (
-    <div
-      className="fixed inset-0 flex flex-col bg-bg text-text"
-      style={{paddingBottom:"var(--keyboard-h,0px)"}}
-    >
+    <div className="fixed inset-0 bg-bg text-text overflow-hidden">
       <TopBar/>
-      {/* Card area — fills remaining space, overflow hidden so nothing scrolls */}
-      <div className="flex-1 overflow-hidden px-6 pt-6">
+      {/* Card area — stays in place regardless of keyboard */}
+      <div className="px-6 pt-6 overflow-hidden">
         <div className="max-w-[480px] mx-auto flex flex-col gap-4">
         {/* Progress bar top bar — Figma design */}
         <div className="flex flex-col gap-3">
@@ -1746,8 +1743,12 @@ export default function App(){
         </div>
       </div>
 
-      {/* ── Input bar — natural flex child, sits at bottom ── */}
-      <div className="w-full max-w-[480px] mx-auto shrink-0">
+      {/* ── Input bar — floats above keyboard ── */}
+      <div
+        className="absolute left-0 right-0 flex justify-center"
+        style={{bottom:"var(--keyboard-h,0px)"}}
+      >
+      <div className="w-full max-w-[480px]">
           {/* Article picker chips — above the bar */}
           {card.mode==="palavras" && result===null && (()=>{
             const first=card.answer.split('/')[0].trim().toLowerCase();
@@ -1877,6 +1878,7 @@ export default function App(){
               </motion.div>
             )}
           </AnimatePresence>
+      </div>
       </div>
     </div>
   );
