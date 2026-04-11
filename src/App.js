@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine, Cell } from "recharts";
-import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search } from "lucide-react";
+import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search, User } from "lucide-react";
 import packageInfo from "../package.json";
 import { cn } from "./lib/utils";
 import { useTheme } from "./lib/useTheme";
@@ -219,10 +219,14 @@ const SK_FILTER_CONJ="verbos-filter-conjugate";
 const SK_FILTER_PAL="verbos-filter-palavras";
 const SK_FILTER_FRA="verbos-filter-frases";
 const SK_LANG="verbos-lang";
+const SK_USER="verbos-username"; // "" = skipped, any string = name
 
 const STRINGS={
   en:{
-    home_title:"Verbos", home_sub:"Choose a topic to practice.",
+    home_title:"Flashcards", home_sub:"Choose a topic to practice.",
+    onboarding_title:"What's your name?", onboarding_sub:"We'll use it to greet you. You can skip this.",
+    onboarding_placeholder:"Your name", onboarding_continue:"Continue", onboarding_skip:"Skip",
+    name_label:"Name", name_placeholder:"Your name", name_save:"Save",
     settings_title:"Settings", settings_sub:"Appearance and global training filters.",
     theme:"Theme", dark:"Dark", light:"Light",
     language:"Language",
@@ -242,7 +246,10 @@ const STRINGS={
     history_empty:"No sessions yet. Play a round first.",
   },
   pt:{
-    home_title:"Verbos", home_sub:"Escolhe um tópico para praticar.",
+    home_title:"Flashcards", home_sub:"Escolhe um tópico para praticar.",
+    onboarding_title:"Qual é o teu nome?", onboarding_sub:"Vamos usá-lo para te cumprimentar. Podes saltar este passo.",
+    onboarding_placeholder:"O teu nome", onboarding_continue:"Continuar", onboarding_skip:"Saltar",
+    name_label:"Nome", name_placeholder:"O teu nome", name_save:"Guardar",
     settings_title:"Definições", settings_sub:"Aparência e filtros de treino.",
     theme:"Tema", dark:"Escuro", light:"Claro",
     language:"Idioma",
@@ -849,6 +856,9 @@ export default function App(){
   const [libraryMode,setLibraryMode]=useState(null); // "conjugation" | "palavras" | "frases"
   const [uiLang,setUiLang]=useState("en"); // "en" | "pt"
   const t=key=>STRINGS[uiLang]?.[key]??STRINGS.en[key]??key;
+  const [username,setUsername]=useState(null); // null=not yet asked, ""=skipped, string=name
+  const [nameEditVal,setNameEditVal]=useState(""); // for inline edit in settings
+  const [nameEditing,setNameEditing]=useState(false);
 
   useEffect(()=>{
     window.speechSynthesis?.getVoices();
@@ -861,6 +871,7 @@ export default function App(){
     const fp=sGet(SK_FILTER_PAL);if(fp&&typeof fp==="object")setPalFilter(f=>({...f,...fp}));
     const ff=sGet(SK_FILTER_FRA);if(ff&&typeof ff==="object")setFraFilter(f=>({...f,...ff}));
     const lg=sGet(SK_LANG);if(lg==="en"||lg==="pt")setUiLang(lg);
+    const un=sGet(SK_USER);if(un!==null)setUsername(un); // null means key absent → show onboarding
   },[]);
 
   useEffect(()=>{sSet(SK_MODE,gameMode);},[gameMode]);
@@ -868,6 +879,7 @@ export default function App(){
   useEffect(()=>{sSet(SK_FILTER_PAL,palFilter);},[palFilter]);
   useEffect(()=>{sSet(SK_FILTER_FRA,fraFilter);},[fraFilter]);
   useEffect(()=>{sSet(SK_LANG,uiLang);},[uiLang]);
+  useEffect(()=>{if(username!==null)sSet(SK_USER,username);},[username]);
 
   useEffect(()=>{
     const t=setTimeout(()=>setShowSplash(false),1300);
@@ -1143,8 +1155,43 @@ export default function App(){
           className="font-display text-[72px] leading-[1] tracking-tightest text-text"
           transition={{type:"spring",stiffness:260,damping:30}}
         >
-          Verbos
+          Flashcards
         </motion.h1>
+      </div>
+    );
+  }
+
+  // ─────────────────────── ONBOARDING ───────────────────────
+  if(username===null){
+    const [nameInput,setNameInput]=[nameEditVal,setNameEditVal]; // reuse state
+    const commit=(val)=>{setUsername(val.trim());setNameEditVal("");};
+    return(
+      <div className="fixed inset-0 bg-bg text-text flex flex-col items-center justify-center px-6">
+        <div className="w-full max-w-[480px] flex flex-col gap-6">
+          <FlagPT className="w-14 h-auto rounded-sm shadow-[0_0_0_1px_hsl(var(--border))]"/>
+          <div>
+            <h1 className="font-display text-[28px] tracking-tighter text-text">{t("onboarding_title")}</h1>
+            <p className="text-sm text-text-sub mt-2">{t("onboarding_sub")}</p>
+          </div>
+          <Input
+            value={nameInput}
+            onChange={e=>setNameInput(e.target.value)}
+            onKeyDown={e=>{if(e.key==="Enter"&&nameInput.trim())commit(nameInput);}}
+            placeholder={t("onboarding_placeholder")}
+            autoFocus
+            autoComplete="given-name"
+            autoCapitalize="words"
+            className="text-base"
+          />
+          <div className="flex flex-col gap-2">
+            <Button size="lg" className="w-full" disabled={!nameInput.trim()} onClick={()=>commit(nameInput)}>
+              {t("onboarding_continue")}
+            </Button>
+            <button onClick={()=>commit("")} className="text-sm text-text-sub hover:text-text transition-colors py-2">
+              {t("onboarding_skip")}
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -1159,7 +1206,7 @@ export default function App(){
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h1 className="font-display text-[28px] tracking-tighter text-text">{t("home_title")}</h1>
-                <p className="text-sm text-text-sub mt-1">{t("home_sub")}</p>
+                <p className="text-sm text-text-sub mt-1">{username?`Hey, ${username}!`:t("home_sub")}</p>
               </div>
               <button className="mt-1 h-9 w-9 rounded-full overflow-hidden shadow-[0_0_0_1px_hsl(var(--border))] hover:shadow-[0_0_0_2px_hsl(var(--muted))] transition-shadow shrink-0" title="Language: Portuguese">
                 <FlagPT className="h-full w-auto -translate-x-2"/>
@@ -1279,6 +1326,38 @@ export default function App(){
                   ><span className="text-sm leading-none">{flag}</span>{lang}</button>
                 ))}
               </div>
+            </div>
+
+            {/* Name */}
+            <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-md bg-secondary/5 border border-border">
+              <div className="flex items-center gap-2 text-sm text-text">
+                <User size={15}/>
+                <span>{t("name_label")}</span>
+              </div>
+              {nameEditing?(
+                <div className="flex items-center gap-2">
+                  <input
+                    value={nameEditVal}
+                    onChange={e=>setNameEditVal(e.target.value)}
+                    onKeyDown={e=>{
+                      if(e.key==="Enter"){setUsername(nameEditVal.trim());setNameEditing(false);}
+                      if(e.key==="Escape")setNameEditing(false);
+                    }}
+                    placeholder={t("name_placeholder")}
+                    autoFocus
+                    autoComplete="given-name"
+                    autoCapitalize="words"
+                    className="h-8 px-3 rounded-md border border-border bg-bg text-sm text-text font-mono-ui outline-none focus:border-primary w-36"
+                  />
+                  <button onClick={()=>{setUsername(nameEditVal.trim());setNameEditing(false);}}
+                    className="text-[11px] font-mono-ui text-primary hover:brightness-90 transition-colors"
+                  >{t("name_save")}</button>
+                </div>
+              ):(
+                <button onClick={()=>{setNameEditVal(username||"");setNameEditing(true);}}
+                  className="text-[11px] font-mono-ui text-text-sub hover:text-text transition-colors border border-border rounded-sm px-3 py-1 bg-surface"
+                >{username||"—"}</button>
+              )}
             </div>
 
             {/* Tense */}
