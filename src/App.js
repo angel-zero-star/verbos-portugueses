@@ -1455,7 +1455,7 @@ export default function App(){
           style={{paddingBottom:"max(16px,env(safe-area-inset-bottom))"}}
         >
           <div className="w-full max-w-[480px] pointer-events-auto flex gap-3">
-            <Button onClick={startGame} className="flex-1" size="lg">{t("play_again")}</Button>
+            <Button onClick={()=>startGame(gameMode,subcatRef.current)} className="flex-1" size="lg">{t("play_again")}</Button>
             <Button variant="ghost" onClick={()=>setScreen("menu")} size="lg">Menu</Button>
           </div>
         </div>
