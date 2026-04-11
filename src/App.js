@@ -229,7 +229,7 @@ const STRINGS={
     name_label:"Name", name_placeholder:"Your name", name_save:"Save",
     settings_title:"Settings", settings_sub:"Appearance and global training filters.",
     theme:"Theme", dark:"Dark", light:"Light",
-    language:"Language",
+    language:"UI Language",
     tense:"Tense", verb_type:"Verb Type",
     nav_play:"Play", nav_score:"Score", nav_settings:"Settings",
     check:"Check", next:"Next",
@@ -252,7 +252,7 @@ const STRINGS={
     name_label:"Nome", name_placeholder:"O teu nome", name_save:"Guardar",
     settings_title:"Definições", settings_sub:"Aparência e filtros de treino.",
     theme:"Tema", dark:"Escuro", light:"Claro",
-    language:"Idioma",
+    language:"Idioma UI",
     tense:"Tempo", verb_type:"Tipo de Verbo",
     nav_play:"Jogar", nav_score:"Pontuação", nav_settings:"Definições",
     check:"Verificar", next:"Seguinte",
@@ -1332,6 +1332,39 @@ export default function App(){
               <p className="text-sm text-text-sub mt-1">{t("settings_sub")}</p>
             </div>
 
+            {/* Name — top of list */}
+            <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-md bg-secondary/5 border border-border">
+              <div className="flex items-center gap-2 text-sm text-text">
+                <User size={15}/>
+                <span>{t("name_label")}</span>
+              </div>
+              {nameEditing?(
+                <div className="flex items-center gap-2">
+                  <input
+                    value={nameEditVal}
+                    onChange={e=>setNameEditVal(e.target.value)}
+                    onKeyDown={e=>{
+                      if(e.key==="Enter"){setUsername(nameEditVal.trim());setNameEditing(false);}
+                      if(e.key==="Escape")setNameEditing(false);
+                    }}
+                    placeholder={t("name_placeholder")}
+                    autoFocus
+                    autoComplete="given-name"
+                    autoCapitalize="words"
+                    style={{fontSize:"16px"}}
+                    className="h-8 px-3 rounded-md border border-border bg-bg text-text font-mono-ui outline-none focus:border-primary w-36"
+                  />
+                  <button onClick={()=>{setUsername(nameEditVal.trim());setNameEditing(false);}}
+                    className="text-[11px] font-mono-ui text-primary hover:brightness-90 transition-colors"
+                  >{t("name_save")}</button>
+                </div>
+              ):(
+                <button onClick={()=>{setNameEditVal(username||"");setNameEditing(true);}}
+                  className="text-[11px] font-mono-ui text-text-sub hover:text-text transition-colors border border-border rounded-sm px-3 py-1 bg-surface"
+                >{username||"—"}</button>
+              )}
+            </div>
+
             {/* Theme */}
             <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-md bg-secondary/5 border border-border">
               <div className="flex items-center gap-2 text-sm text-text">
@@ -1351,7 +1384,7 @@ export default function App(){
               </div>
             </div>
 
-            {/* Language */}
+            {/* UI Language */}
             <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-md bg-secondary/5 border border-border">
               <div className="flex items-center gap-2 text-sm text-text">
                 <Globe size={15}/>
@@ -1368,38 +1401,6 @@ export default function App(){
                   ><span className="text-sm leading-none">{flag}</span>{lang}</button>
                 ))}
               </div>
-            </div>
-
-            {/* Name */}
-            <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-md bg-secondary/5 border border-border">
-              <div className="flex items-center gap-2 text-sm text-text">
-                <User size={15}/>
-                <span>{t("name_label")}</span>
-              </div>
-              {nameEditing?(
-                <div className="flex items-center gap-2">
-                  <input
-                    value={nameEditVal}
-                    onChange={e=>setNameEditVal(e.target.value)}
-                    onKeyDown={e=>{
-                      if(e.key==="Enter"){setUsername(nameEditVal.trim());setNameEditing(false);}
-                      if(e.key==="Escape")setNameEditing(false);
-                    }}
-                    placeholder={t("name_placeholder")}
-                    autoFocus
-                    autoComplete="given-name"
-                    autoCapitalize="words"
-                    className="h-8 px-3 rounded-md border border-border bg-bg text-sm text-text font-mono-ui outline-none focus:border-primary w-36"
-                  />
-                  <button onClick={()=>{setUsername(nameEditVal.trim());setNameEditing(false);}}
-                    className="text-[11px] font-mono-ui text-primary hover:brightness-90 transition-colors"
-                  >{t("name_save")}</button>
-                </div>
-              ):(
-                <button onClick={()=>{setNameEditVal(username||"");setNameEditing(true);}}
-                  className="text-[11px] font-mono-ui text-text-sub hover:text-text transition-colors border border-border rounded-sm px-3 py-1 bg-surface"
-                >{username||"—"}</button>
-              )}
             </div>
 
             {/* Tense */}
