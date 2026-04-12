@@ -1783,11 +1783,12 @@ export default function App(){
           })()}
 
           {/* Main bar */}
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="popLayout">
             {result===null ? (
               /* Input state */
               <motion.div
                 key="input-bar"
+                layout
                 initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:8}}
                 transition={{duration:0.18}}
                 className="flex items-center gap-3 px-4 py-3 bg-surface/95 backdrop-blur border-t border-border"
@@ -1881,6 +1882,7 @@ export default function App(){
               /* Next state */
               <motion.div
                 key="next-bar"
+                layout
                 initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:8}}
                 transition={{duration:0.18}}
                 className="flex items-center gap-3 px-4 py-3 bg-surface/95 backdrop-blur border-t border-border"
