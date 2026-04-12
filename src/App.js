@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine, Cell } from "recharts";
 import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search, User, Mic, ArrowUp, Globe } from "lucide-react";
@@ -862,7 +862,7 @@ export default function App(){
   const [wrongOnes,setWrongOnes]=useState([]);
   const [history,setHistory]=useState([]);
   const inputRef=useRef(null);
-  const dummyInputRef=useRef(null);
+  const pillRef=useRef(null);
   const lastEnterRef=useRef(0);
   const subcatRef=useRef(null); // subcat of the current session
   const [keyboardOpen,setKeyboardOpen]=useState(false);
@@ -1063,6 +1063,7 @@ export default function App(){
       document.documentElement.style.setProperty("--vvh",`${h}px`);
       document.documentElement.style.setProperty("--keyboard-h",`${kh}px`);
       setKeyboardOpen(kh>150);
+      syncInputToPill();
     };
     update();
     window.addEventListener("resize",update);
@@ -1073,7 +1074,12 @@ export default function App(){
       vv?.removeEventListener("resize",update);
       vv?.removeEventListener("scroll",update);
     };
-  },[]);
+  },[syncInputToPill]);
+
+  // Re-sync input position when card/result changes (pill mounts/moves)
+  useEffect(()=>{
+    requestAnimationFrame(syncInputToPill);
+  },[idx,result,syncInputToPill]);
 
 
   const toggleMic=()=>{
@@ -1095,12 +1101,19 @@ export default function App(){
     recRef.current=rec;rec.start();setIsListening(true);
   };
 
-  // Always focus dummy first (keeps keyboard open / opens it without iOS scroll),
-  // then shift to real input after 60ms — gives AnimatePresence time to mount.
-  const focusInput=()=>{
-    dummyInputRef.current?.focus({preventScroll:true});
-    setTimeout(()=>inputRef.current?.focus({preventScroll:true}),60);
-  };
+  // Input lives at position:fixed top:0 (no iOS scroll), visually transformed into the pill.
+  // Direct focus is safe — iOS sees it at top:0.
+  const focusInput=()=>inputRef.current?.focus({preventScroll:true});
+
+  // Sync input position to pill — transform moves it visually without changing layout position
+  const syncInputToPill=useCallback(()=>{
+    const pill=pillRef.current, inp=inputRef.current;
+    if(!pill||!inp)return;
+    const r=pill.getBoundingClientRect();
+    inp.style.transform=`translate(${r.left+16}px,${r.top}px)`;
+    inp.style.width=`${r.width-32}px`;
+    inp.style.height=`${r.height}px`;
+  },[]);
 
   const card=cards[idx];
   const total=score.correct+score.wrong;
@@ -1616,10 +1629,22 @@ export default function App(){
 
   return (
     <>
-    {/* Dummy input at top — only opens keyboard without iOS scroll */}
-    <input ref={dummyInputRef} readOnly
-      className="fixed top-0 left-0 w-full opacity-0 pointer-events-none"
-      style={{fontSize:"16px",height:1,zIndex:0}} tabIndex={-1} />
+    {/* Real input — layout position top:0 prevents iOS scroll, transform moves it visually into the pill */}
+    <input
+      ref={inputRef}
+      value={input}
+      onChange={e=>setInput(e.target.value)}
+      onFocus={()=>setInputFocused(true)}
+      onBlur={()=>setInputFocused(false)}
+      placeholder={isListening&&!input ? "" : (isTextCard?t("placeholder_translation"):t("placeholder_conjugation"))}
+      lang="pt"
+      autoComplete="off"
+      autoCorrect="off"
+      autoCapitalize="off"
+      spellCheck={false}
+      className="fixed top-0 left-0 bg-transparent font-mono-ui text-base text-text placeholder:text-text-sub outline-none"
+      style={{fontSize:"16px",zIndex:30,caretColor:isListening&&!input?"transparent":undefined}}
+    />
 
     {/* ── Layer 1: Card — completely static ── */}
     <div className="fixed inset-0 bg-bg text-text overflow-hidden pointer-events-none" style={{zIndex:10}}>
@@ -1810,17 +1835,19 @@ export default function App(){
                   </motion.div>
                 </button>
 
-                {/* Visual input pill — tapping focuses hidden input */}
+                {/* Pill — visual chrome only, input is transformed into this from top:0 */}
                 <div
+                  ref={pillRef}
+                  onClick={focusInput}
                   className={cn(
-                    "flex-1 relative flex items-center h-11 rounded-2xl border bg-secondary/5 px-4 transition-colors",
+                    "flex-1 relative flex items-center h-11 rounded-2xl border bg-secondary/5 px-4 transition-colors cursor-text",
                     isListening&&!input ? "border-danger/40"
                       : inputFocused ? "border-primary"
                       : "border-border"
                   )}
                 >
                   {isListening && !input && (
-                    /* Waveform bars — overlaid on top of input */
+                    /* Waveform bars */
                     <div className="absolute inset-0 flex items-center gap-[3px] px-4 py-3 pointer-events-none">
                       {[0.7,1,0.7].map((amp,i)=>(
                         <motion.div
@@ -1839,27 +1866,9 @@ export default function App(){
                       ))}
                     </div>
                   )}
-                  <input
-                    ref={inputRef}
-                    value={input}
-                    onChange={e=>setInput(e.target.value)}
-                    onFocus={()=>setInputFocused(true)}
-                    onBlur={()=>setInputFocused(false)}
-                    placeholder={isListening&&!input ? "" : (isTextCard?t("placeholder_translation"):t("placeholder_conjugation"))}
-                    lang="pt"
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck={false}
-                    style={{fontSize:"16px"}}
-                    className={cn(
-                      "flex-1 bg-transparent font-mono-ui text-base text-text placeholder:text-text-sub outline-none min-w-0",
-                      isListening&&!input && "opacity-0"
-                    )}
-                  />
                   {input.length>0 && (
-                    <button onMouseDown={e=>e.preventDefault()} onClick={(e)=>{e.stopPropagation();setInput("");inputRef.current?.focus({preventScroll:true});}}
-                      className="ml-2 text-text-sub hover:text-text transition-colors shrink-0"
+                    <button onMouseDown={e=>e.preventDefault()} onClick={(e)=>{e.stopPropagation();setInput("");focusInput();}}
+                      className="absolute right-3 text-text-sub hover:text-text transition-colors shrink-0"
                     ><X size={15}/></button>
                   )}
                 </div>
