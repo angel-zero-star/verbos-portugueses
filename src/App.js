@@ -1051,6 +1051,16 @@ export default function App(){
     return()=>window.removeEventListener("keydown",handler);
   },[screen,result,check,next]);
 
+  // Sync input position to pill — transform moves it visually without changing layout position
+  const syncInputToPill=useCallback(()=>{
+    const pill=pillRef.current, inp=inputRef.current;
+    if(!pill||!inp)return;
+    const r=pill.getBoundingClientRect();
+    inp.style.transform=`translate(${r.left+16}px,${r.top}px)`;
+    inp.style.width=`${r.width-32}px`;
+    inp.style.height=`${r.height}px`;
+  },[]);
+
   // Track visual viewport so the play wrapper fits exactly inside the visible
   // area (shrinks when the keyboard opens). --vvh is consumed by the play
   // wrapper style below. No scroll lock — if content still doesn't fit on
@@ -1104,16 +1114,6 @@ export default function App(){
   // Input lives at position:fixed top:0 (no iOS scroll), visually transformed into the pill.
   // Direct focus is safe — iOS sees it at top:0.
   const focusInput=()=>inputRef.current?.focus({preventScroll:true});
-
-  // Sync input position to pill — transform moves it visually without changing layout position
-  const syncInputToPill=useCallback(()=>{
-    const pill=pillRef.current, inp=inputRef.current;
-    if(!pill||!inp)return;
-    const r=pill.getBoundingClientRect();
-    inp.style.transform=`translate(${r.left+16}px,${r.top}px)`;
-    inp.style.width=`${r.width-32}px`;
-    inp.style.height=`${r.height}px`;
-  },[]);
 
   const card=cards[idx];
   const total=score.correct+score.wrong;
