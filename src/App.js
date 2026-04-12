@@ -1095,11 +1095,11 @@ export default function App(){
     recRef.current=rec;rec.start();setIsListening(true);
   };
 
-  // Focus: if keyboard closed, open via dummy at top (no iOS scroll), then shift to real input.
-  // If keyboard already open, focus real input directly (viewport already adjusted).
+  // Always focus dummy first (keeps keyboard open / opens it without iOS scroll),
+  // then shift to real input after 60ms — gives AnimatePresence time to mount.
   const focusInput=()=>{
-    if(keyboardOpen){inputRef.current?.focus({preventScroll:true});}
-    else{dummyInputRef.current?.focus({preventScroll:true});setTimeout(()=>inputRef.current?.focus({preventScroll:true}),60);}
+    dummyInputRef.current?.focus({preventScroll:true});
+    setTimeout(()=>inputRef.current?.focus({preventScroll:true}),60);
   };
 
   const card=cards[idx];
