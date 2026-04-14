@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Settings Playground — Flashcards</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',system-ui,sans-serif;background:#0d0d10;color:#c9c9d4;min-height:100vh;display:flex;flex-direction:column;}
+  a{color:inherit;}
+
+  /* ── Layout ── */
+  .shell{display:flex;flex:1;min-height:100vh;}
+  .sidebar{width:280px;min-width:280px;border-right:1px solid #222228;padding:24px 20px;display:flex;flex-direction:column;gap:20px;overflow-y:auto;}
+  .main{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .preview-area{flex:1;display:flex;align-items:center;justify-content:center;padding:32px;background:#08080a;}
+  .prompt-area{border-top:1px solid #222228;padding:16px 20px;display:flex;gap:12px;align-items:flex-start;background:#0d0d10;}
+  .prompt-text{flex:1;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;line-height:1.6;color:#89899f;white-space:pre-wrap;min-height:48px;}
+  .copy-btn{padding:6px 14px;border-radius:6px;border:1px solid #2d2d3a;background:#111114;color:#c9c9d4;font-size:12px;cursor:pointer;white-space:nowrap;transition:background .15s;}
+  .copy-btn:hover{background:#1a1a22;}
+  .copy-btn.copied{color:#22c55e;border-color:#22c55e44;}
+
+  /* ── Sidebar controls ── */
+  .section-label{font-size:10px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.12em;color:#555566;margin-bottom:8px;}
+  .control-group{display:flex;flex-direction:column;gap:6px;}
+
+  /* pill-pair toggle */
+  .pill-pair{display:flex;gap:4px;padding:3px;border-radius:8px;background:#111114;border:1px solid #222228;}
+  .pill{flex:1;padding:5px 10px;border-radius:5px;border:none;background:transparent;color:#89899f;font-size:12px;font-family:'JetBrains Mono',monospace;letter-spacing:.06em;cursor:pointer;transition:all .15s;text-align:center;}
+  .pill.active{background:#1e1e28;border:1px solid #3a3a50;color:#f0f0f5;}
+
+  /* individual toggle pills for tense/type */
+  .toggle-pills{display:flex;gap:6px;flex-wrap:wrap;}
+  .tpill{padding:5px 12px;border-radius:20px;border:1px solid #2d2d3a;background:transparent;color:#89899f;font-size:11px;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .15s;}
+  .tpill.active{background:rgba(240,240,245,.1);border-color:rgba(240,240,245,.25);color:#f0f0f5;}
+
+  /* name input */
+  .name-input{width:100%;padding:7px 10px;border-radius:6px;border:1px solid #2d2d3a;background:#0a0a0b;color:#f0f0f5;font-size:13px;font-family:inherit;outline:none;}
+  .name-input:focus{border-color:#3b82f6;}
+
+  /* sidebar headings */
+  .sidebar-title{font-size:13px;font-weight:600;color:#f0f0f5;letter-spacing:-.01em;}
+  .sidebar-sub{font-size:11px;color:#555566;margin-top:2px;}
+  hr.divider{border:none;border-top:1px solid #1e1e28;margin:2px 0;}
+
+  /* ── Settings preview card ── */
+  .phone{width:375px;min-height:600px;border-radius:20px;overflow:hidden;position:relative;box-shadow:0 0 0 1px rgba(255,255,255,.06),0 32px 64px rgba(0,0,0,.6);}
+  .phone-screen{padding:0 0 80px;height:100%;overflow-y:auto;}
+
+  /* screen content */
+  .s-screen{padding:24px;display:flex;flex-direction:column;gap:16px;}
+  .s-title{font-size:22px;font-weight:700;letter-spacing:-.04em;line-height:1;}
+  .s-sub{font-size:13px;margin-top:4px;}
+
+  .s-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-radius:8px;border:1px solid;}
+  .s-row-left{display:flex;align-items:center;gap:8px;font-size:13px;}
+  .s-row-icon{width:16px;height:16px;opacity:.7;flex-shrink:0;}
+
+  /* segmented control (theme) */
+  .seg{display:flex;gap:3px;padding:3px;border-radius:6px;}
+  .seg-btn{padding:4px 10px;border-radius:4px;border:none;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .15s;}
+
+  /* lang pills */
+  .lang-pills{display:flex;gap:3px;padding:3px;border-radius:6px;}
+  .lang-btn{padding:4px 10px;border-radius:4px;border:none;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:.08em;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px;}
+
+  /* toggle pill groups */
+  .s-section-label{font-size:10px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px;}
+  .s-tpills{display:flex;gap:6px;flex-wrap:wrap;}
+  .s-tpill{padding:5px 12px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;border:1px solid;cursor:default;}
+
+  /* name inline row */
+  .s-name-val{font-size:11px;font-family:'JetBrains Mono',monospace;padding:4px 10px;border-radius:4px;border:1px solid;}
+
+  /* nav bar */
+  .s-nav{position:absolute;bottom:0;left:0;right:0;display:flex;border-top:1px solid;padding:8px 0 12px;}
+  .s-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-family:'JetBrains Mono',monospace;}
+  .s-nav-icon{width:20px;height:20px;}
+
+  /* presets */
+  .preset-row{display:flex;gap:6px;flex-wrap:wrap;}
+  .preset-btn{padding:4px 10px;border-radius:5px;border:1px solid #2d2d3a;background:transparent;color:#89899f;font-size:11px;cursor:pointer;transition:all .15s;}
+  .preset-btn:hover{border-color:#3b82f688;color:#c9c9d4;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div>
+      <div class="sidebar-title">Settings Playground</div>
+      <div class="sidebar-sub">Flashcards app · Live preview</div>
+    </div>
+
+    <hr class="divider"/>
+
+    <!-- Presets -->
+    <div class="control-group">
+      <div class="section-label">Presets</div>
+      <div class="preset-row">
+        <button class="preset-btn" onclick="applyPreset('default')">Default</button>
+        <button class="preset-btn" onclick="applyPreset('light-pt')">Light PT</button>
+        <button class="preset-btn" onclick="applyPreset('minimal')">Minimal</button>
+        <button class="preset-btn" onclick="applyPreset('heavy')">All On</button>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    <!-- Theme -->
+    <div class="control-group">
+      <div class="section-label">Theme</div>
+      <div class="pill-pair">
+        <button class="pill" id="pill-dark" onclick="setTheme('dark')">🌙 Dark</button>
+        <button class="pill" id="pill-light" onclick="setTheme('light')">☀️ Light</button>
+      </div>
+    </div>
+
+    <!-- Language -->
+    <div class="control-group">
+      <div class="section-label">UI Language</div>
+      <div class="pill-pair">
+        <button class="pill" id="pill-en" onclick="setLang('en')">🇬🇧 EN</button>
+        <button class="pill" id="pill-pt" onclick="setLang('pt')">🇵🇹 PT</button>
+      </div>
+    </div>
+
+    <!-- Name -->
+    <div class="control-group">
+      <div class="section-label">Username</div>
+      <input class="name-input" id="nameInput" type="text" placeholder="(empty = skipped)" oninput="state.name=this.value;updateAll()"/>
+    </div>
+
+    <hr class="divider"/>
+
+    <!-- Tense -->
+    <div class="control-group">
+      <div class="section-label">Active Tenses</div>
+      <div class="toggle-pills">
+        <button class="tpill" id="tp-presente" onclick="toggle('presente')">Presente</button>
+        <button class="tpill" id="tp-passado"  onclick="toggle('passado')">Passado</button>
+      </div>
+    </div>
+
+    <!-- Verb type -->
+    <div class="control-group">
+      <div class="section-label">Verb Types</div>
+      <div class="toggle-pills">
+        <button class="tpill" id="tp-irregular" onclick="toggle('irregular')">Irregular</button>
+        <button class="tpill" id="tp-regular"   onclick="toggle('regular')">Regular</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+    <div class="preview-area">
+      <div class="phone" id="phone">
+        <div class="phone-screen" id="phoneScreen"><!-- rendered by JS --></div>
+      </div>
+    </div>
+
+    <div class="prompt-area">
+      <div class="prompt-text" id="promptText"></div>
+      <button class="copy-btn" id="copyBtn" onclick="copyPrompt()">Copy prompt</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──
+const DEFAULTS = {
+  theme:'dark', lang:'en', name:'',
+  presente:true, passado:false,
+  irregular:true, regular:true,
+};
+const state = {...DEFAULTS};
+
+// ── Tokens per theme ──
+const TOKENS = {
+  dark:{
+    bg:'#0a0a0b', surface:'#111114', border:'#2d2d2e',
+    primary:'#3b82f6', text:'#f0f0f5', sub:'#89899f', muted:'#787891',
+    secondary:'rgba(240,240,245,',  // append opacity + )
+    navBg:'rgba(17,17,20,0.9)',
+  },
+  light:{
+    bg:'#fafafa', surface:'#ffffff', border:'#e4e4ee',
+    primary:'#1d63d3', text:'#0a0a0b', sub:'#6d6d7a', muted:'#676779',
+    secondary:'rgba(10,10,11,',
+    navBg:'rgba(250,250,250,0.9)',
+  },
+};
+
+function tok(){ return TOKENS[state.theme]; }
+
+// ── Translations ──
+const STR = {
+  en:{
+    settings:'Settings', settings_sub:'Appearance and global training filters.',
+    theme:'Theme', dark:'Dark', light:'Light',
+    language:'Language', name:'Name',
+    tense:'Tense', verb_type:'Verb Type',
+    irregular:'Irregular', regular:'Regular',
+    presente:'Presente', passado:'Passado',
+    nav_play:'Play', nav_score:'Score', nav_settings:'Settings',
+    name_empty:'—',
+  },
+  pt:{
+    settings:'Definições', settings_sub:'Aparência e filtros de treino.',
+    theme:'Tema', dark:'Escuro', light:'Claro',
+    language:'Idioma', name:'Nome',
+    tense:'Tempo', verb_type:'Tipo de Verbo',
+    irregular:'Irregular', regular:'Regular',
+    presente:'Presente', passado:'Passado',
+    nav_play:'Jogar', nav_score:'Pontuação', nav_settings:'Definições',
+    name_empty:'—',
+  },
+};
+function t(k){ return STR[state.lang][k] ?? k; }
+
+// ── Icons (inline SVG strings) ──
+const ICONS = {
+  sun:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>`,
+  moon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
+  globe:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+  user:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+  play:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
+  trophy:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>`,
+  settings:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
+};
+
+function icon(name, size=15, color='currentColor'){
+  return `<span style="width:${size}px;height:${size}px;display:inline-flex;align-items:center;justify-content:center;color:${color}">${ICONS[name]}</span>`;
+}
+
+// ── Render preview ──
+function renderPreview(){
+  const T = tok();
+  const sec = T.secondary;
+
+  // helper: row
+  function row(iconName, label, right){
+    return `<div class="s-row" style="background:${sec}0.05);border-color:${T.border}">
+      <div class="s-row-left" style="color:${T.text}">
+        ${icon(iconName,15,T.sub)} <span>${label}</span>
+      </div>
+      <div>${right}</div>
+    </div>`;
+  }
+
+  // segmented for theme
+  function seg(activeIs){
+    return ['dark','light'].map(v => {
+      const active = activeIs===v;
+      return `<div class="seg-btn" style="background:${active?sec+'0.15)':'transparent'};border:${active?`1px solid ${sec}0.25)`:'1px solid transparent'};color:${active?T.text:T.sub};font-size:11px;padding:4px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;letter-spacing:.08em;">
+        ${v==='dark'?t('dark'):t('light')}
+      </div>`;
+    }).join('');
+  }
+
+  // lang pills
+  function langPills(activeIs){
+    return [['en','🇬🇧'],['pt','🇵🇹']].map(([v,flag])=>{
+      const active = activeIs===v;
+      return `<div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:4px;background:${active?sec+'0.15)':'transparent'};border:${active?`1px solid ${sec}0.25)`:'1px solid transparent'};color:${active?T.text:T.sub};font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:.06em;">
+        <span>${flag}</span><span>${v}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // tense pills
+  function tpill(key, label, active){
+    return `<div style="padding:5px 12px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;border:1px solid ${active?sec+'0.25)':T.border};background:${active?sec+'0.1)':'transparent'};color:${active?T.text:T.sub};">${label}</div>`;
+  }
+
+  // name value chip
+  const nameVal = state.name || t('name_empty');
+  const nameChip = `<div style="font-size:11px;font-family:'JetBrains Mono',monospace;padding:4px 10px;border-radius:4px;border:1px solid ${T.border};background:${T.surface};color:${state.name?T.text:T.sub};">${nameVal}</div>`;
+
+  // nav item
+  function navItem(iconName, label, active){
+    const color = active ? T.text : T.muted;
+    return `<div class="s-nav-item" style="color:${color}">
+      <span style="width:20px;height:20px;display:block;">${ICONS[iconName]}</span>
+      <span style="font-size:9px">${label}</span>
+    </div>`;
+  }
+
+  const html = `
+    <div style="background:${T.bg};min-height:600px;position:relative;padding-bottom:80px;">
+      <div style="padding:24px 20px;display:flex;flex-direction:column;gap:16px;">
+
+        <div>
+          <div style="font-size:22px;font-weight:700;letter-spacing:-.04em;color:${T.text};">${t('settings')}</div>
+          <div style="font-size:12px;color:${T.sub};margin-top:4px;">${t('settings_sub')}</div>
+        </div>
+
+        ${row('sun', t('theme'),
+          `<div style="display:flex;gap:3px;padding:3px;border-radius:6px;background:${sec}0.05);border:1px solid ${T.border};">${seg(state.theme)}</div>`
+        )}
+
+        ${row('globe', t('language'),
+          `<div style="display:flex;gap:3px;padding:3px;border-radius:6px;background:${sec}0.05);border:1px solid ${T.border};">${langPills(state.lang)}</div>`
+        )}
+
+        ${row('user', t('name'), nameChip)}
+
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:10px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.12em;color:${T.sub};">${t('tense')}</div>
+          <div style="display:flex;gap:6px;">
+            ${tpill('presente', t('presente'), state.presente)}
+            ${tpill('passado', t('passado'), state.passado)}
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:10px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.12em;color:${T.sub};">${t('verb_type')}</div>
+          <div style="display:flex;gap:6px;">
+            ${tpill('irregular', t('irregular'), state.irregular)}
+            ${tpill('regular', t('regular'), state.regular)}
+          </div>
+        </div>
+      </div>
+
+      <div style="position:absolute;bottom:0;left:0;right:0;display:flex;border-top:1px solid ${T.border};padding:8px 0 12px;background:${T.navBg};backdrop-filter:blur(8px);">
+        ${navItem('play', t('nav_play'), false)}
+        ${navItem('trophy', t('nav_score'), false)}
+        ${navItem('settings', t('nav_settings'), true)}
+      </div>
+    </div>
+  `;
+
+  document.getElementById('phoneScreen').innerHTML = html;
+  document.getElementById('phone').style.background = tok().bg;
+}
+
+// ── Prompt ──
+function updatePrompt(){
+  const parts = [];
+  const d = DEFAULTS;
+
+  if(state.theme !== d.theme)
+    parts.push(`switch to ${state.theme} mode`);
+
+  if(state.lang !== d.lang)
+    parts.push(`set the UI language to ${state.lang === 'pt' ? 'Portuguese (PT)' : 'English'}`);
+
+  if(state.name)
+    parts.push(`set the username to "${state.name}"`);
+
+  const tenses = [state.presente && 'Presente', state.passado && 'Passado'].filter(Boolean);
+  const defaultTenses = [d.presente && 'Presente', d.passado && 'Passado'].filter(Boolean);
+  if(JSON.stringify(tenses) !== JSON.stringify(defaultTenses)){
+    if(tenses.length === 0) parts.push('disable all tenses (warning: no cards will appear)');
+    else parts.push(`enable only ${tenses.join(' and ')} tense${tenses.length>1?'s':''}`);
+  }
+
+  const types = [state.irregular && 'Irregular', state.regular && 'Regular'].filter(Boolean);
+  const defaultTypes = [d.irregular && 'Irregular', d.regular && 'Regular'].filter(Boolean);
+  if(JSON.stringify(types) !== JSON.stringify(defaultTypes)){
+    if(types.length === 0) parts.push('disable all verb types (warning: no cards will appear)');
+    else parts.push(`show only ${types.join(' and ')} verbs`);
+  }
+
+  const text = parts.length === 0
+    ? 'No changes from defaults. Adjust the controls to generate a settings configuration prompt.'
+    : `Update the app settings to ${parts.join(', ')}.`;
+
+  document.getElementById('promptText').textContent = text;
+}
+
+function updateAll(){
+  renderPreview();
+  updatePrompt();
+  syncSidebarUI();
+}
+
+// ── Sidebar sync ──
+function syncSidebarUI(){
+  // theme pills
+  document.getElementById('pill-dark').classList.toggle('active', state.theme==='dark');
+  document.getElementById('pill-light').classList.toggle('active', state.theme==='light');
+  // lang pills
+  document.getElementById('pill-en').classList.toggle('active', state.lang==='en');
+  document.getElementById('pill-pt').classList.toggle('active', state.lang==='pt');
+  // toggle pills
+  ['presente','passado','irregular','regular'].forEach(k=>{
+    document.getElementById('tp-'+k).classList.toggle('active', state[k]);
+  });
+}
+
+// ── Actions ──
+function setTheme(v){ state.theme=v; updateAll(); }
+function setLang(v){ state.lang=v; updateAll(); }
+function toggle(k){ state[k]=!state[k]; updateAll(); }
+
+const PRESETS = {
+  default: {...DEFAULTS},
+  'light-pt': {...DEFAULTS, theme:'light', lang:'pt', name:''},
+  minimal: {...DEFAULTS, passado:false, irregular:false},
+  heavy: {...DEFAULTS, presente:true, passado:true, irregular:true, regular:true, name:'Angelo'},
+};
+function applyPreset(name){
+  const p = PRESETS[name];
+  Object.assign(state, p);
+  document.getElementById('nameInput').value = state.name;
+  updateAll();
+}
+
+function copyPrompt(){
+  const text = document.getElementById('promptText').textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent='Copy prompt'; btn.classList.remove('copied'); }, 1800);
+  });
+}
+
+// ── Init ──
+updateAll();
+</script>
+</body>
+</html>

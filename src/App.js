@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine, Cell } from "recharts";
 import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search, User, Mic, ArrowUp, Globe } from "lucide-react";
@@ -862,7 +862,6 @@ export default function App(){
   const [wrongOnes,setWrongOnes]=useState([]);
   const [history,setHistory]=useState([]);
   const inputRef=useRef(null);
-  const pillRef=useRef(null);
   const lastEnterRef=useRef(0);
   const subcatRef=useRef(null); // subcat of the current session
   const [keyboardOpen,setKeyboardOpen]=useState(false);
@@ -954,7 +953,7 @@ export default function App(){
       if(pool.length===0){alert("No palavras match your filters!");return;}
       const picked=shuffle(pool).slice(0,10).map(p=>({mode:"palavras",en:p.en,answer:p.pt,cat:p.cat}));
       setCards(picked);setIdx(0);setInput("");setResult(null);setAccentNote(null);
-      setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");focusInput();
+      setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");inputRef.current?.focus({preventScroll:true});
       return;
     }
     if(gm==="frases"){
@@ -974,7 +973,7 @@ export default function App(){
         mode:"frases",subMode:"sentence",id:p.id,verb:p.verb,tense:p.tense,en:p.en,answer:p.pt,alternatives:p.alternatives,
       }):({mode:"frases",subMode:"expressao",en:p.en,answer:p.pt,alternatives:p.alternatives||[]}));
       setCards(picked);setIdx(0);setInput("");setResult(null);setAccentNote(null);
-      setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");focusInput();
+      setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");inputRef.current?.focus({preventScroll:true});
       return;
     }
     // Conjugation — subcat filters by semantic category; global type filter still applies
@@ -995,7 +994,7 @@ export default function App(){
     }
     if(gen.length===0){alert("No verbs match your filters!");return;}
     setCards(shuffle(gen).slice(0,10));setIdx(0);setInput("");setResult(null);setAccentNote(null);
-    setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");focusInput();
+    setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");inputRef.current?.focus({preventScroll:true});
   };
 
   const check=()=>{
@@ -1034,7 +1033,7 @@ export default function App(){
     else{setResult("wrong");setAccentNote(null);setScore(s=>({...s,wrong:s.wrong+1}));setWrongOnes(w=>[...w,c]);}
   };
 
-  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),mode:gameMode,subcat:subcatRef.current||"all",correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);focusInput();}};
+  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),mode:gameMode,subcat:subcatRef.current||"all",correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");setResult(null);setAccentNote(null);inputRef.current?.focus({preventScroll:true});}};
 
   // Single Enter handler — debounced to avoid double-fire (key repeat / fast double-press)
   useEffect(()=>{
@@ -1051,16 +1050,6 @@ export default function App(){
     return()=>window.removeEventListener("keydown",handler);
   },[screen,result,check,next]);
 
-  // Sync input position to pill — transform moves it visually without changing layout position
-  const syncInputToPill=useCallback(()=>{
-    const pill=pillRef.current, inp=inputRef.current;
-    if(!pill||!inp)return;
-    const r=pill.getBoundingClientRect();
-    inp.style.transform=`translate(${r.left+16}px,${r.top}px)`;
-    inp.style.width=`${r.width-32}px`;
-    inp.style.height=`${r.height}px`;
-  },[]);
-
   // Track visual viewport so the play wrapper fits exactly inside the visible
   // area (shrinks when the keyboard opens). --vvh is consumed by the play
   // wrapper style below. No scroll lock — if content still doesn't fit on
@@ -1073,7 +1062,6 @@ export default function App(){
       document.documentElement.style.setProperty("--vvh",`${h}px`);
       document.documentElement.style.setProperty("--keyboard-h",`${kh}px`);
       setKeyboardOpen(kh>150);
-      syncInputToPill();
     };
     update();
     window.addEventListener("resize",update);
@@ -1084,12 +1072,7 @@ export default function App(){
       vv?.removeEventListener("resize",update);
       vv?.removeEventListener("scroll",update);
     };
-  },[syncInputToPill]);
-
-  // Re-sync input position when card/result changes (pill mounts/moves)
-  useEffect(()=>{
-    requestAnimationFrame(syncInputToPill);
-  },[idx,result,syncInputToPill]);
+  },[]);
 
 
   const toggleMic=()=>{
@@ -1110,10 +1093,6 @@ export default function App(){
     rec.onend=()=>{setIsListening(false);setIsSpeaking(false);clearTimeout(speakTimeoutRef.current);};
     recRef.current=rec;rec.start();setIsListening(true);
   };
-
-  // Input lives at position:fixed top:0 (no iOS scroll), visually transformed into the pill.
-  // Direct focus is safe — iOS sees it at top:0.
-  const focusInput=()=>inputRef.current?.focus({preventScroll:true});
 
   const card=cards[idx];
   const total=score.correct+score.wrong;
@@ -1629,21 +1608,21 @@ export default function App(){
 
   return (
     <>
-    {/* Real input — layout position top:0 prevents iOS scroll, transform moves it visually into the pill */}
+    {/* ── Hidden real input — pinned to top so iOS doesn't scroll ── */}
     <input
       ref={inputRef}
       value={input}
       onChange={e=>setInput(e.target.value)}
       onFocus={()=>setInputFocused(true)}
       onBlur={()=>setInputFocused(false)}
-      placeholder={isListening&&!input ? "" : (isTextCard?t("placeholder_translation"):t("placeholder_conjugation"))}
       lang="pt"
       autoComplete="off"
       autoCorrect="off"
       autoCapitalize="off"
       spellCheck={false}
-      className="fixed top-0 left-0 bg-transparent font-mono-ui text-base text-text placeholder:text-text-sub outline-none"
-      style={{fontSize:"16px",zIndex:30,caretColor:isListening&&!input?"transparent":undefined}}
+      className="fixed top-0 left-0 w-full opacity-0 pointer-events-none"
+      style={{fontSize:"16px",height:1,zIndex:0}}
+      tabIndex={-1}
     />
 
     {/* ── Layer 1: Card — completely static ── */}
@@ -1808,12 +1787,11 @@ export default function App(){
           })()}
 
           {/* Main bar */}
-          <AnimatePresence mode="popLayout">
+          <AnimatePresence mode="wait">
             {result===null ? (
               /* Input state */
               <motion.div
                 key="input-bar"
-                layout
                 initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:8}}
                 transition={{duration:0.18}}
                 className="flex items-center gap-3 px-4 py-3 bg-surface/95 backdrop-blur border-t border-border"
@@ -1835,10 +1813,9 @@ export default function App(){
                   </motion.div>
                 </button>
 
-                {/* Pill — visual chrome only, input is transformed into this from top:0 */}
+                {/* Visual input pill — tapping focuses hidden input */}
                 <div
-                  ref={pillRef}
-                  onClick={focusInput}
+                  onClick={()=>inputRef.current?.focus({preventScroll:true})}
                   className={cn(
                     "flex-1 relative flex items-center h-11 rounded-2xl border bg-secondary/5 px-4 transition-colors cursor-text",
                     isListening&&!input ? "border-danger/40"
@@ -1846,9 +1823,9 @@ export default function App(){
                       : "border-border"
                   )}
                 >
-                  {isListening && !input && (
+                  {isListening && !input ? (
                     /* Waveform bars */
-                    <div className="absolute inset-0 flex items-center gap-[3px] px-4 py-3 pointer-events-none">
+                    <div className="flex items-center gap-[3px] flex-1 h-full py-3">
                       {[0.7,1,0.7].map((amp,i)=>(
                         <motion.div
                           key={i}
@@ -1865,10 +1842,14 @@ export default function App(){
                         />
                       ))}
                     </div>
+                  ) : input ? (
+                    <span className={cn("flex-1 text-base font-mono-ui text-text truncate", inputFocused && "cursor-blink")}>{input}</span>
+                  ) : (
+                    <span className={cn("flex-1 text-base font-mono-ui text-text-sub", inputFocused && "cursor-blink")}>{isTextCard?t("placeholder_translation"):t("placeholder_conjugation")}</span>
                   )}
                   {input.length>0 && (
-                    <button onMouseDown={e=>e.preventDefault()} onClick={(e)=>{e.stopPropagation();setInput("");focusInput();}}
-                      className="absolute right-3 text-text-sub hover:text-text transition-colors shrink-0"
+                    <button onMouseDown={e=>e.preventDefault()} onClick={(e)=>{e.stopPropagation();setInput("");inputRef.current?.focus({preventScroll:true});}}
+                      className="ml-2 text-text-sub hover:text-text transition-colors shrink-0"
                     ><X size={15}/></button>
                   )}
                 </div>
@@ -1891,7 +1872,6 @@ export default function App(){
               /* Next state */
               <motion.div
                 key="next-bar"
-                layout
                 initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:8}}
                 transition={{duration:0.18}}
                 className="flex items-center gap-3 px-4 py-3 bg-surface/95 backdrop-blur border-t border-border"

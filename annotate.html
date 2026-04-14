@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Annotate → Claude</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',system-ui,sans-serif;background:#0a0a0b;color:#f0f0f5;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* toolbar */
+.toolbar{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid #2d2d2e;background:#111114;flex-shrink:0;flex-wrap:wrap;}
+.toolbar-group{display:flex;gap:4px;align-items:center;}
+.sep{width:1px;height:24px;background:#2d2d2e;margin:0 4px;}
+.tool-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:6px;border:1px solid transparent;background:transparent;color:#89899f;cursor:pointer;font-size:16px;transition:all .15s;}
+.tool-btn:hover{background:#1e1e28;color:#f0f0f5;}
+.tool-btn.active{background:#1e1e28;border-color:#3a3a50;color:#f0f0f5;}
+.color-dot{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all .15s;}
+.color-dot.active{border-color:#fff;transform:scale(1.15);}
+.load-btn{padding:6px 14px;border-radius:6px;border:1px solid #3b82f6;background:#3b82f644;color:#3b82f6;font-size:12px;cursor:pointer;white-space:nowrap;transition:all .15s;}
+.load-btn:hover{background:#3b82f666;}
+.undo-btn{padding:6px 12px;border-radius:6px;border:1px solid #2d2d2e;background:transparent;color:#89899f;font-size:12px;cursor:pointer;transition:all .15s;}
+.undo-btn:hover{color:#f0f0f5;border-color:#555;}
+.label-input{padding:5px 10px;border-radius:6px;border:1px solid #2d2d2e;background:#0a0a0b;color:#f0f0f5;font-size:12px;width:160px;outline:none;}
+.label-input:focus{border-color:#3b82f6;}
+.size-slider{width:80px;accent-color:#3b82f6;}
+.toolbar-label{font-size:11px;color:#555566;font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+
+/* main */
+.main{display:flex;flex:1;min-height:0;}
+
+/* canvas area */
+.canvas-wrap{flex:1;position:relative;overflow:auto;background:#050507;display:flex;align-items:flex-start;justify-content:flex-start;}
+canvas{display:block;}
+.drop-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#555566;pointer-events:none;}
+.drop-hint svg{opacity:.3;}
+.drop-hint h2{font-size:20px;font-weight:600;color:#89899f;}
+.drop-hint p{font-size:13px;}
+
+/* sidebar */
+.sidebar{width:300px;min-width:300px;border-left:1px solid #2d2d2e;background:#111114;display:flex;flex-direction:column;overflow:hidden;}
+.sidebar-header{padding:12px 16px;border-bottom:1px solid #2d2d2e;font-size:11px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.1em;color:#555566;display:flex;align-items:center;justify-content:space-between;}
+.annotation-list{flex:1;overflow-y:auto;padding:8px;}
+.ann-item{padding:10px 12px;border-radius:8px;border:1px solid #1e1e28;background:#0a0a0b;margin-bottom:6px;cursor:pointer;transition:all .15s;}
+.ann-item:hover{border-color:#3a3a50;}
+.ann-item.selected{border-color:#3b82f644;background:#3b82f610;}
+.ann-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.ann-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.ann-type{font-size:10px;font-family:'JetBrains Mono',monospace;color:#555566;}
+.ann-label{font-size:12px;color:#f0f0f5;margin-top:2px;}
+.ann-label.empty{color:#555566;font-style:italic;}
+.ann-delete{margin-left:auto;color:#555566;background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;}
+.ann-delete:hover{color:#ef4444;}
+
+/* prompt box */
+.prompt-box{border-top:1px solid #2d2d2e;padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
+.prompt-textarea{width:100%;height:80px;resize:none;padding:8px;border-radius:6px;border:1px solid #2d2d2e;background:#0a0a0b;color:#f0f0f5;font-size:11px;font-family:'JetBrains Mono',monospace;outline:none;line-height:1.5;}
+.prompt-textarea:focus{border-color:#3b82f6;}
+.copy-btn{width:100%;padding:8px;border-radius:6px;border:none;background:#3b82f6;color:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;}
+.copy-btn:hover{background:#2563eb;}
+.copy-btn.ok{background:#22c55e;}
+
+input[type=file]{display:none;}
+</style>
+</head>
+<body>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <!-- Load -->
+  <label class="load-btn" for="fileInput">📂 Load screenshot</label>
+  <input type="file" id="fileInput" accept="image/*"/>
+  <button class="load-btn" onclick="pasteFromClipboard()" style="background:#1e1e28;border-color:#2d2d2e;color:#c9c9d4;">⌘V Paste</button>
+
+  <div class="sep"></div>
+
+  <!-- Tools -->
+  <div class="toolbar-group">
+    <span class="toolbar-label">Tool</span>
+    <button class="tool-btn active" id="tool-arrow"   onclick="setTool('arrow')"   title="Arrow">↗</button>
+    <button class="tool-btn"         id="tool-rect"    onclick="setTool('rect')"    title="Rectangle">▭</button>
+    <button class="tool-btn"         id="tool-circle"  onclick="setTool('circle')"  title="Circle">◯</button>
+    <button class="tool-btn"         id="tool-pen"     onclick="setTool('pen')"     title="Freehand">✏️</button>
+    <button class="tool-btn"         id="tool-text"    onclick="setTool('text')"    title="Text">T</button>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- Colors -->
+  <div class="toolbar-group">
+    <span class="toolbar-label">Color</span>
+    <div class="color-dot active" id="c-red"    style="background:#ef4444;" onclick="setColor('#ef4444','c-red')"></div>
+    <div class="color-dot"        id="c-amber"  style="background:#f59e0b;" onclick="setColor('#f59e0b','c-amber')"></div>
+    <div class="color-dot"        id="c-green"  style="background:#22c55e;" onclick="setColor('#22c55e','c-green')"></div>
+    <div class="color-dot"        id="c-blue"   style="background:#3b82f6;" onclick="setColor('#3b82f6','c-blue')"></div>
+    <div class="color-dot"        id="c-white"  style="background:#f0f0f5;" onclick="setColor('#f0f0f5','c-white')"></div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- Size -->
+  <div class="toolbar-group">
+    <span class="toolbar-label">Size</span>
+    <input class="size-slider" type="range" min="1" max="8" value="3" id="sizeSlider" oninput="strokeSize=+this.value"/>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- Label -->
+  <input class="label-input" id="labelInput" placeholder="Annotation label (optional)" onkeydown="if(event.key==='Enter')finishTextTool()"/>
+
+  <div class="sep"></div>
+  <button class="undo-btn" onclick="undo()">↩ Undo</button>
+  <button class="undo-btn" onclick="clearAll()">🗑 Clear</button>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="canvas-wrap" id="canvasWrap"
+    ondragover="event.preventDefault()"
+    ondrop="handleDrop(event)">
+    <canvas id="canvas"></canvas>
+    <div class="drop-hint" id="dropHint">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#89899f" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      <h2>Drop a screenshot here</h2>
+      <p>or use Load / ⌘V to paste from clipboard</p>
+    </div>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span>Annotations (<span id="annCount">0</span>)</span>
+      <span style="color:#3b82f6;cursor:pointer;font-size:10px;" onclick="generatePrompt()">Refresh ↺</span>
+    </div>
+    <div class="annotation-list" id="annList"></div>
+    <div class="prompt-box">
+      <textarea class="prompt-textarea" id="promptOut" placeholder="Your annotations will appear here as a prompt for Claude…" readonly></textarea>
+      <button class="copy-btn" id="copyBtn" onclick="copyPrompt()">Copy prompt for Claude</button>
+    </div>
+  </aside>
+</div>
+
+<script>
+// ── State ──
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let img = null;
+let tool = 'arrow';
+let color = '#ef4444';
+let strokeSize = 3;
+let annotations = []; // {type, color, label, ...coords}
+let drawing = false;
+let startX=0, startY=0, currX=0, currY=0;
+let penPoints = [];
+let selectedAnn = null;
+let history = []; // for undo
+
+// ── Tool / color setters ──
+function setTool(t){
+  tool=t;
+  document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tool-'+t).classList.add('active');
+  canvas.style.cursor = t==='text'?'text':t==='pen'?'crosshair':'crosshair';
+}
+function setColor(c, id){
+  color=c;
+  document.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── Image loading ──
+function loadImage(file){
+  if(!file||!file.type.startsWith('image/'))return;
+  const url=URL.createObjectURL(file);
+  const i=new Image();
+  i.onload=()=>{
+    img=i;
+    canvas.width=i.naturalWidth;
+    canvas.height=i.naturalHeight;
+    document.getElementById('dropHint').style.display='none';
+    redraw();
+  };
+  i.src=url;
+}
+document.getElementById('fileInput').addEventListener('change',e=>loadImage(e.target.files[0]));
+function handleDrop(e){e.preventDefault();loadImage(e.dataTransfer.files[0]);}
+async function pasteFromClipboard(){
+  try{
+    const items=await navigator.clipboard.read();
+    for(const item of items){
+      for(const type of item.types){
+        if(type.startsWith('image/')){
+          const blob=await item.getType(type);
+          loadImage(blob);return;
+        }
+      }
+    }
+  }catch(err){alert('Clipboard paste failed. Try dragging the image in.');}
+}
+
+// ── Canvas coords ──
+function getXY(e){
+  const r=canvas.getBoundingClientRect();
+  const scaleX=canvas.width/r.width, scaleY=canvas.height/r.height;
+  return{x:(e.clientX-r.left)*scaleX, y:(e.clientY-r.top)*scaleY};
+}
+
+// ── Draw ──
+canvas.addEventListener('mousedown',e=>{
+  if(!img)return;
+  const {x,y}=getXY(e);
+  drawing=true; startX=x; startY=y; currX=x; currY=y;
+  if(tool==='pen') penPoints=[{x,y}];
+  if(tool==='text'){
+    const label=document.getElementById('labelInput').value||prompt('Annotation text:','');
+    if(label){
+      pushAnnotation({type:'text',color,label,x,y,size:strokeSize});
+    }
+    drawing=false;
+    return;
+  }
+});
+canvas.addEventListener('mousemove',e=>{
+  if(!drawing||!img)return;
+  const {x,y}=getXY(e);
+  currX=x; currY=y;
+  if(tool==='pen') penPoints.push({x,y});
+  redraw();
+  drawPreview();
+});
+canvas.addEventListener('mouseup',e=>{
+  if(!drawing||!img)return;
+  drawing=false;
+  const label=document.getElementById('labelInput').value||'';
+  const {x,y}=getXY(e);
+  if(tool==='arrow') pushAnnotation({type:'arrow',color,label,x1:startX,y1:startY,x2:x,y2:y,size:strokeSize});
+  else if(tool==='rect') pushAnnotation({type:'rect',color,label,x:Math.min(startX,x),y:Math.min(startY,y),w:Math.abs(x-startX),h:Math.abs(y-startY),size:strokeSize});
+  else if(tool==='circle'){
+    const cx=(startX+x)/2, cy=(startY+y)/2, rx=Math.abs(x-startX)/2, ry=Math.abs(y-startY)/2;
+    pushAnnotation({type:'circle',color,label,cx,cy,rx,ry,size:strokeSize});
+  }
+  else if(tool==='pen') pushAnnotation({type:'pen',color,label,pts:[...penPoints],size:strokeSize});
+  redraw();
+});
+
+function pushAnnotation(ann){
+  history.push([...annotations]);
+  annotations.push(ann);
+  renderList();
+  generatePrompt();
+}
+
+function drawPreview(){
+  // draw shape in progress
+  ctx.save();
+  ctx.strokeStyle=color; ctx.lineWidth=strokeSize*2;
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.setLineDash([6,4]);
+  if(tool==='arrow') drawArrow(ctx,startX,startY,currX,currY);
+  else if(tool==='rect'){ctx.strokeRect(Math.min(startX,currX),Math.min(startY,currY),Math.abs(currX-startX),Math.abs(currY-startY));}
+  else if(tool==='circle'){
+    ctx.beginPath();
+    ctx.ellipse((startX+currX)/2,(startY+currY)/2,Math.abs(currX-startX)/2,Math.abs(currY-startY)/2,0,0,Math.PI*2);
+    ctx.stroke();
+  }
+  else if(tool==='pen'&&penPoints.length>1){
+    ctx.beginPath(); ctx.moveTo(penPoints[0].x,penPoints[0].y);
+    penPoints.forEach(p=>ctx.lineTo(p.x,p.y)); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawArrow(ctx,x1,y1,x2,y2){
+  const hw=14*strokeSize/3, hl=20*strokeSize/3;
+  const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
+  if(len<1)return;
+  const ux=dx/len, uy=dy/len;
+  const ax=x2-ux*hl, ay=y2-uy*hl;
+  const px=-uy, py=ux;
+  ctx.beginPath();
+  ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(ax+px*hw,ay+py*hw);
+  ctx.lineTo(ax-px*hw,ay-py*hw);
+  ctx.closePath(); ctx.fillStyle=color; ctx.fill();
+}
+
+function redraw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(img) ctx.drawImage(img,0,0);
+  annotations.forEach((ann,i)=>drawAnnotation(ann,i));
+}
+
+function drawAnnotation(ann, idx){
+  ctx.save();
+  ctx.strokeStyle=ann.color; ctx.fillStyle=ann.color;
+  ctx.lineWidth=ann.size*2; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.setLineDash([]);
+
+  if(ann.type==='arrow') drawArrow(ctx,ann.x1,ann.y1,ann.x2,ann.y2);
+  else if(ann.type==='rect') ctx.strokeRect(ann.x,ann.y,ann.w,ann.h);
+  else if(ann.type==='circle'){
+    ctx.beginPath(); ctx.ellipse(ann.cx,ann.cy,ann.rx,ann.ry,0,0,Math.PI*2); ctx.stroke();
+  }
+  else if(ann.type==='pen'&&ann.pts.length>1){
+    ctx.beginPath(); ctx.moveTo(ann.pts[0].x,ann.pts[0].y);
+    ann.pts.forEach(p=>ctx.lineTo(p.x,p.y)); ctx.stroke();
+  }
+  else if(ann.type==='text'){
+    ctx.font=`bold ${20+ann.size*3}px Inter,system-ui,sans-serif`;
+    ctx.fillText(ann.label,ann.x,ann.y);
+  }
+
+  // Number badge
+  const badgeX = ann.type==='arrow'?ann.x2:ann.type==='rect'?ann.x+ann.w:ann.type==='circle'?ann.cx+ann.rx:ann.type==='pen'?ann.pts[ann.pts.length-1].x:ann.x;
+  const badgeY = ann.type==='arrow'?ann.y2:ann.type==='rect'?ann.y:ann.type==='circle'?ann.cy-ann.ry:ann.type==='pen'?ann.pts[ann.pts.length-1].y:ann.y-20;
+  ctx.fillStyle=ann.color;
+  ctx.beginPath(); ctx.arc(badgeX,badgeY,14,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#000';
+  ctx.font='bold 14px Inter,system-ui,sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(idx+1,badgeX,badgeY);
+
+  // Label
+  if(ann.label&&ann.type!=='text'){
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.font='bold 13px Inter,system-ui,sans-serif';
+    const tw=ctx.measureText(ann.label).width;
+    const lx=badgeX+18, ly=badgeY-10;
+    ctx.fillStyle='rgba(0,0,0,0.75)';
+    ctx.fillRect(lx-4,ly-2,tw+8,18);
+    ctx.fillStyle=ann.color;
+    ctx.fillText(ann.label,lx,ly);
+  }
+  ctx.restore();
+}
+
+// ── List ──
+function renderList(){
+  const list=document.getElementById('annList');
+  document.getElementById('annCount').textContent=annotations.length;
+  list.innerHTML=annotations.map((ann,i)=>`
+    <div class="ann-item" id="ann-${i}" onclick="selectAnn(${i})">
+      <div class="ann-row">
+        <div class="ann-dot" style="background:${ann.color}"></div>
+        <span class="ann-type">${i+1} · ${ann.type.toUpperCase()}</span>
+        <button class="ann-delete" onclick="event.stopPropagation();deleteAnn(${i})">✕</button>
+      </div>
+      <div class="ann-label ${ann.label?'':'empty'}">${ann.label||'(no label)'}</div>
+    </div>
+  `).join('');
+}
+
+function selectAnn(i){
+  selectedAnn=i;
+  document.querySelectorAll('.ann-item').forEach(el=>el.classList.remove('selected'));
+  document.getElementById('ann-'+i)?.classList.add('selected');
+}
+
+function deleteAnn(i){
+  history.push([...annotations]);
+  annotations.splice(i,1);
+  renderList(); generatePrompt(); redraw();
+}
+
+function undo(){
+  if(history.length===0)return;
+  annotations=history.pop();
+  renderList(); generatePrompt(); redraw();
+}
+
+function clearAll(){
+  if(!annotations.length)return;
+  history.push([...annotations]);
+  annotations=[];
+  renderList(); generatePrompt(); redraw();
+}
+
+// ── Prompt ──
+function generatePrompt(){
+  if(!annotations.length){
+    document.getElementById('promptOut').value='No annotations yet. Draw on the screenshot to describe the changes you want.';
+    return;
+  }
+  const lines=annotations.map((ann,i)=>{
+    const pos=getPositionDescription(ann);
+    const label=ann.label?`"${ann.label}"`:'(unlabelled)';
+    return `${i+1}. [${ann.type.toUpperCase()}] at ${pos} — ${label}`;
+  });
+  const prompt=`I've annotated the Settings screen with ${annotations.length} change request${annotations.length>1?'s':''}:\n\n${lines.join('\n')}\n\nPlease implement these changes in the app.`;
+  document.getElementById('promptOut').value=prompt;
+}
+
+function getPositionDescription(ann){
+  const W=canvas.width||375, H=canvas.height||800;
+  const cx = ann.type==='arrow'?(ann.x1+ann.x2)/2:ann.type==='rect'?ann.x+ann.w/2:ann.type==='circle'?ann.cx:ann.type==='pen'?ann.pts[Math.floor(ann.pts.length/2)].x:ann.x;
+  const cy = ann.type==='arrow'?(ann.y1+ann.y2)/2:ann.type==='rect'?ann.y+ann.h/2:ann.type==='circle'?ann.cy:ann.type==='pen'?ann.pts[Math.floor(ann.pts.length/2)].y:ann.y;
+  const hz=cx<W*.33?'left':cx<W*.66?'center':'right';
+  const vt=cy<H*.25?'top':cy<H*.5?'upper':cy<H*.75?'lower':'bottom';
+  return `${vt}-${hz}`;
+}
+
+function copyPrompt(){
+  const text=document.getElementById('promptOut').value;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn=document.getElementById('copyBtn');
+    btn.textContent='✓ Copied!'; btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='Copy prompt for Claude';btn.classList.remove('ok');},2000);
+  });
+}
+
+// touch support (basic)
+canvas.addEventListener('touchstart',e=>{e.preventDefault();canvas.dispatchEvent(new MouseEvent('mousedown',{clientX:e.touches[0].clientX,clientY:e.touches[0].clientY}));});
+canvas.addEventListener('touchmove',e=>{e.preventDefault();canvas.dispatchEvent(new MouseEvent('mousemove',{clientX:e.touches[0].clientX,clientY:e.touches[0].clientY}));});
+canvas.addEventListener('touchend',e=>{e.preventDefault();canvas.dispatchEvent(new MouseEvent('mouseup',{}));});
+
+setTool('arrow');
+</script>
+</body>
+</html>
