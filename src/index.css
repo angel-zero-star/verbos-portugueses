@@ -76,6 +76,16 @@
     width:2px;
     height:1.1em;
     background:currentColor;
+    margin-right:1px;
+    vertical-align:text-bottom;
+    animation:blink-cursor 1s step-end infinite;
+  }
+  .cursor-blink-end::after {
+    content:"";
+    display:inline-block;
+    width:2px;
+    height:1.1em;
+    background:currentColor;
     margin-left:1px;
     vertical-align:text-bottom;
     animation:blink-cursor 1s step-end infinite;

@@ -1843,7 +1843,7 @@ export default function App(){
                       ))}
                     </div>
                   ) : input ? (
-                    <span className={cn("flex-1 text-base font-mono-ui text-text truncate", inputFocused && "cursor-blink")}>{input}</span>
+                    <span className={cn("flex-1 text-base font-mono-ui text-text truncate", inputFocused && "cursor-blink-end")}>{input}</span>
                   ) : (
                     <span className={cn("flex-1 text-base font-mono-ui text-text-sub", inputFocused && "cursor-blink")}>{isTextCard?t("placeholder_translation"):t("placeholder_conjugation")}</span>
                   )}
