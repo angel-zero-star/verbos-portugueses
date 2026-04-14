@@ -1615,6 +1615,7 @@ export default function App(){
       onChange={e=>setInput(e.target.value)}
       onFocus={()=>setInputFocused(true)}
       onBlur={()=>setInputFocused(false)}
+      enterKeyHint="go"
       lang="pt"
       autoComplete="off"
       autoCorrect="off"
