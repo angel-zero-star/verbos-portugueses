@@ -1607,11 +1607,30 @@ export default function App(){
   const isTextCard = card.mode!=="conjugation"; // palavras + frases both prompt English → type PT
 
   return (
-    <div className="fixed inset-0 bg-bg text-text overflow-y-auto" style={{zIndex:10}}>
+    <>
+    {/* ── Hidden real input — pinned to top so iOS doesn't scroll ── */}
+    <input
+      ref={inputRef}
+      value={input}
+      onChange={e=>setInput(e.target.value)}
+      onFocus={()=>setInputFocused(true)}
+      onBlur={()=>setInputFocused(false)}
+      lang="pt"
+      autoComplete="off"
+      autoCorrect="off"
+      autoCapitalize="off"
+      spellCheck={false}
+      className="fixed top-0 left-0 w-full opacity-0 pointer-events-none"
+      style={{fontSize:"16px",height:1,zIndex:0}}
+      tabIndex={-1}
+    />
+
+    {/* ── Layer 1: Card — completely static ── */}
+    <div className="fixed inset-0 bg-bg text-text overflow-hidden pointer-events-none" style={{zIndex:10}}>
       <TopBar/>
-      <div className="px-6 pt-6 pb-6">
-        <div className="max-w-[480px] mx-auto flex flex-col gap-4">
-        {/* Progress bar */}
+      <div className="px-6 pt-6">
+        <div className="max-w-[480px] mx-auto flex flex-col gap-4 pointer-events-auto">
+        {/* Progress bar top bar — Figma design */}
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 font-mono-ui text-xs tracking-[0.04em] font-medium">
@@ -1638,136 +1657,9 @@ export default function App(){
           </div>
         </div>
 
-        {/* ── Input bar — above card, near top so iOS won't scroll ── */}
-        <AnimatePresence mode="wait">
-          {result===null ? (
-            <motion.div
-              key="input-bar"
-              initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}}
-              transition={{duration:0.18}}
-              className="flex items-center gap-3"
-            >
-              {/* Mic */}
-              <button
-                onMouseDown={e=>e.preventDefault()}
-                onClick={toggleMic}
-                className={cn(
-                  "h-11 w-11 shrink-0 rounded-full border flex items-center justify-center transition-colors",
-                  isListening
-                    ? "bg-danger/10 border-danger/40 text-danger"
-                    : "bg-secondary/5 border-border text-text-sub hover:text-text"
-                )}
-              >
-                <motion.div animate={isListening?{scale:[1,1.15,1]}:{scale:1}} transition={isListening?{repeat:Infinity,duration:0.8}:{}}>
-                  <Mic size={18}/>
-                </motion.div>
-              </button>
-
-              {/* Input pill — real native input */}
-              <div
-                className={cn(
-                  "flex-1 relative flex items-center h-11 rounded-2xl border bg-secondary/5 px-4 transition-colors",
-                  isListening&&!input ? "border-danger/40"
-                    : inputFocused ? "border-primary"
-                    : "border-border"
-                )}
-              >
-                {isListening && !input && (
-                  <div className="absolute inset-0 flex items-center gap-[3px] px-4 py-3 pointer-events-none">
-                    {[0.7,1,0.7].map((amp,i)=>(
-                      <motion.div
-                        key={i}
-                        className="w-[3px] rounded-full bg-danger/60 origin-center"
-                        animate={isSpeaking
-                          ? {scaleY:[amp*0.4,amp,amp*0.3,amp*0.9,amp*0.4]}
-                          : {scaleY:0.15}
-                        }
-                        transition={isSpeaking
-                          ? {duration:0.7+i*0.07,repeat:Infinity,ease:"easeInOut",delay:i*0.08}
-                          : {duration:0.3}
-                        }
-                        style={{height:"100%"}}
-                      />
-                    ))}
-                  </div>
-                )}
-                <input
-                  ref={inputRef}
-                  value={input}
-                  onChange={e=>setInput(e.target.value)}
-                  onFocus={()=>setInputFocused(true)}
-                  onBlur={()=>setInputFocused(false)}
-                  placeholder={isListening&&!input ? "" : (isTextCard?t("placeholder_translation"):t("placeholder_conjugation"))}
-                  lang="pt"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  style={{fontSize:"16px"}}
-                  className={cn(
-                    "flex-1 bg-transparent font-mono-ui text-base text-text placeholder:text-text-sub outline-none min-w-0",
-                    isListening&&!input && "opacity-0"
-                  )}
-                />
-                {input.length>0 && (
-                  <button onMouseDown={e=>e.preventDefault()} onClick={(e)=>{e.stopPropagation();setInput("");inputRef.current?.focus({preventScroll:true});}}
-                    className="ml-2 text-text-sub hover:text-text transition-colors shrink-0"
-                  ><X size={15}/></button>
-                )}
-              </div>
-
-              {/* Submit */}
-              <button
-                onClick={check}
-                disabled={!input.trim()}
-                className={cn(
-                  "h-11 w-11 shrink-0 rounded-full flex items-center justify-center transition-all",
-                  input.trim()
-                    ? "bg-primary text-white hover:brightness-90 active:scale-95"
-                    : "bg-secondary/10 text-text-sub cursor-not-allowed"
-                )}
-              >
-                <ArrowUp size={18} strokeWidth={2.5}/>
-              </button>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="next-bar"
-              initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}}
-              transition={{duration:0.18}}
-              className="flex items-center gap-3"
-            >
-              <Button onClick={next} size="lg" className="w-full">
-                {t("next")} <ArrowRight size={16}/>
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Article picker chips */}
-        {card.mode==="palavras" && result===null && (()=>{
-          const first=card.answer.split('/')[0].trim().toLowerCase();
-          const isPlural=first.startsWith('os ')||first.startsWith('as ');
-          const isSingular=first.startsWith('o ')||first.startsWith('a ');
-          if(!isPlural&&!isSingular)return null;
-          const arts=isPlural?['Os','As']:['O','A'];
-          const pick=(art)=>{
-            const rest=input.trim().replace(/^(os|as|o|a)\s+/i,'');
-            setInput(art+' '+rest);
-            setTimeout(()=>inputRef.current?.focus({preventScroll:true}),0);
-          };
-          return(
-            <div className="flex gap-2">
-              {arts.map(art=>(
-                <button key={art} onMouseDown={e=>{e.preventDefault();pick(art);}}
-                  className="h-8 px-4 rounded-full border border-border bg-surface/90 backdrop-blur text-sm font-mono-ui text-text-sub hover:text-text transition-colors shadow-sm"
-                >{art}</button>
-              ))}
-            </div>
-          );
-        })()}
-
-        {/* Card */}
+        {/* Card. mode="popLayout" so the new card mounts IMMEDIATELY (within
+            the user-gesture window) while the old card animates out as an
+            overlay — required so autoFocus can open the iOS keyboard. */}
         <AnimatePresence mode="popLayout">
           <motion.div
             key={idx}
@@ -1864,6 +1756,136 @@ export default function App(){
         </div>
       </div>
     </div>
+
+    {/* ── Layer 2: Input bar — separate fixed container ── */}
+    <div
+      className="fixed left-0 right-0 flex justify-center"
+      style={{bottom:"var(--keyboard-h,0px)",zIndex:20}}
+    >
+      <div className="w-full max-w-[480px]">
+          {/* Article picker chips — above the bar */}
+          {card.mode==="palavras" && result===null && (()=>{
+            const first=card.answer.split('/')[0].trim().toLowerCase();
+            const isPlural=first.startsWith('os ')||first.startsWith('as ');
+            const isSingular=first.startsWith('o ')||first.startsWith('a ');
+            if(!isPlural&&!isSingular)return null;
+            const arts=isPlural?['Os','As']:['O','A'];
+            const pick=(art)=>{
+              const rest=input.trim().replace(/^(os|as|o|a)\s+/i,'');
+              setInput(art+' '+rest);
+              setTimeout(()=>inputRef.current?.focus({preventScroll:true}),0);
+            };
+            return(
+              <div className="flex gap-2 px-4 pb-2">
+                {arts.map(art=>(
+                  <button key={art} onMouseDown={e=>{e.preventDefault();pick(art);}}
+                    className="h-8 px-4 rounded-full border border-border bg-surface/90 backdrop-blur text-sm font-mono-ui text-text-sub hover:text-text transition-colors shadow-sm"
+                  >{art}</button>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* Main bar */}
+          <AnimatePresence mode="wait">
+            {result===null ? (
+              /* Input state */
+              <motion.div
+                key="input-bar"
+                initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:8}}
+                transition={{duration:0.18}}
+                className="flex items-center gap-3 px-4 py-3 bg-surface/95 backdrop-blur border-t border-border"
+                style={{paddingBottom:"max(12px,env(safe-area-inset-bottom))"}}
+              >
+                {/* Mic */}
+                <button
+                  onMouseDown={e=>e.preventDefault()}
+                  onClick={toggleMic}
+                  className={cn(
+                    "h-11 w-11 shrink-0 rounded-full border flex items-center justify-center transition-colors",
+                    isListening
+                      ? "bg-danger/10 border-danger/40 text-danger"
+                      : "bg-secondary/5 border-border text-text-sub hover:text-text"
+                  )}
+                >
+                  <motion.div animate={isListening?{scale:[1,1.15,1]}:{scale:1}} transition={isListening?{repeat:Infinity,duration:0.8}:{}}>
+                    <Mic size={18}/>
+                  </motion.div>
+                </button>
+
+                {/* Visual input pill — tapping focuses hidden input */}
+                <div
+                  onClick={()=>inputRef.current?.focus({preventScroll:true})}
+                  className={cn(
+                    "flex-1 relative flex items-center h-11 rounded-2xl border bg-secondary/5 px-4 transition-colors cursor-text",
+                    isListening&&!input ? "border-danger/40"
+                      : inputFocused ? "border-primary"
+                      : "border-border"
+                  )}
+                >
+                  {isListening && !input ? (
+                    /* Waveform bars */
+                    <div className="flex items-center gap-[3px] flex-1 h-full py-3">
+                      {[0.7,1,0.7].map((amp,i)=>(
+                        <motion.div
+                          key={i}
+                          className="w-[3px] rounded-full bg-danger/60 origin-center"
+                          animate={isSpeaking
+                            ? {scaleY:[amp*0.4,amp,amp*0.3,amp*0.9,amp*0.4]}
+                            : {scaleY:0.15}
+                          }
+                          transition={isSpeaking
+                            ? {duration:0.7+i*0.07,repeat:Infinity,ease:"easeInOut",delay:i*0.08}
+                            : {duration:0.3}
+                          }
+                          style={{height:"100%"}}
+                        />
+                      ))}
+                    </div>
+                  ) : input ? (
+                    <span className={cn("flex-1 text-base font-mono-ui text-text truncate", inputFocused && "cursor-blink")}>{input}</span>
+                  ) : (
+                    <span className={cn("flex-1 text-base font-mono-ui text-text-sub", inputFocused && "cursor-blink")}>{isTextCard?t("placeholder_translation"):t("placeholder_conjugation")}</span>
+                  )}
+                  {input.length>0 && (
+                    <button onMouseDown={e=>e.preventDefault()} onClick={(e)=>{e.stopPropagation();setInput("");inputRef.current?.focus({preventScroll:true});}}
+                      className="ml-2 text-text-sub hover:text-text transition-colors shrink-0"
+                    ><X size={15}/></button>
+                  )}
+                </div>
+
+                {/* Submit */}
+                <button
+                  onClick={check}
+                  disabled={!input.trim()}
+                  className={cn(
+                    "h-11 w-11 shrink-0 rounded-full flex items-center justify-center transition-all",
+                    input.trim()
+                      ? "bg-primary text-white hover:brightness-90 active:scale-95"
+                      : "bg-secondary/10 text-text-sub cursor-not-allowed"
+                  )}
+                >
+                  <ArrowUp size={18} strokeWidth={2.5}/>
+                </button>
+              </motion.div>
+            ) : (
+              /* Next state */
+              <motion.div
+                key="next-bar"
+                initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:8}}
+                transition={{duration:0.18}}
+                className="flex items-center gap-3 px-4 py-3 bg-surface/95 backdrop-blur border-t border-border"
+                style={{paddingBottom:"max(12px,env(safe-area-inset-bottom))"}}
+              >
+                <Button onClick={next} size="lg" className="w-full">
+                  {t("next")} <ArrowRight size={16}/>
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+      </div>
+    </div>
+    </>
   );
 }
 
