@@ -180,6 +180,9 @@ const ALL_VERBS = [
   { id:"surfar", verb:"surfar", transl:"to surf", prep:"—", type:"regular-ar", presente:{eu:"surfo",tu:"surfas","ele/ela":"surfa",nós:"surfamos","eles(as)/vocês":"surfam"}, passado:{eu:"surfei",tu:"surfaste","ele/ela":"surfou",nós:"surfámos","eles(as)/vocês":"surfaram"}},
   { id:"vender", verb:"vender", transl:"to sell", prep:"—", type:"regular-er", presente:{eu:"vendo",tu:"vendes","ele/ela":"vende",nós:"vendemos","eles(as)/vocês":"vendem"}, passado:{eu:"vendi",tu:"vendeste","ele/ela":"vendeu",nós:"vendemos","eles(as)/vocês":"venderam"}},
   { id:"escolher", verb:"escolher", transl:"to choose", prep:"—", type:"regular-er", presente:{eu:"escolho",tu:"escolhes","ele/ela":"escolhe",nós:"escolhemos","eles(as)/vocês":"escolhem"}, passado:{eu:"escolhi",tu:"escolheste","ele/ela":"escolheu",nós:"escolhemos","eles(as)/vocês":"escolheram"}},
+  { id:"abraçar", verb:"abraçar", transl:"to hug", prep:"—", type:"regular-ar", presente:{eu:"abraço",tu:"abraças","ele/ela":"abraça",nós:"abraçamos","eles(as)/vocês":"abraçam"}, passado:{eu:"abracei",tu:"abraçaste","ele/ela":"abraçou",nós:"abraçámos","eles(as)/vocês":"abraçaram"}},
+  { id:"acrescentar", verb:"acrescentar", transl:"to add", prep:"—", type:"regular-ar", presente:{eu:"acrescento",tu:"acrescentas","ele/ela":"acrescenta",nós:"acrescentamos","eles(as)/vocês":"acrescentam"}, passado:{eu:"acrescentei",tu:"acrescentaste","ele/ela":"acrescentou",nós:"acrescentámos","eles(as)/vocês":"acrescentaram"}},
+  { id:"acabar", verb:"acabar", transl:"to finish", prep:"—", type:"regular-ar", presente:{eu:"acabo",tu:"acabas","ele/ela":"acaba",nós:"acabamos","eles(as)/vocês":"acabam"}, passado:{eu:"acabei",tu:"acabaste","ele/ela":"acabou",nós:"acabámos","eles(as)/vocês":"acabaram"}},
 ];
 
 // Category tagging — applied to every verb in ALL_VERBS.
@@ -217,6 +220,7 @@ const SK_FILTERS="verbos-filters";
 const SK_MODE="verbos-mode";
 const SK_FILTER_CONJ="verbos-filter-conjugate";
 const SK_FILTER_PAL="verbos-filter-palavras";
+const SK_FILTER_ADJ="verbos-filter-adjetivos";
 const SK_FILTER_FRA="verbos-filter-frases";
 const SK_LANG="verbos-lang";
 const SK_USER="verbos-username"; // "" = skipped, any string = name
@@ -236,8 +240,10 @@ const STRINGS={
     correct_label:"Correto!", accent_warn:"Watch the accent:", near_warn:"Small typo — correct form:", also:"Also:",
     conjugations:"Conjugations",
     all_verbs:"All Verbs", modal:"Modal", state:"State", movement:"Movement", action:"Action",
+    body_health:"Body & Health",
     people_jobs:"People & Jobs", food_drink:"Food & Drink",
-    home_objects:"Home & Objects", nature_world:"Nature & World", adjetivos:"Adjetivos",
+    home_objects:"Home & Objects", nature_world:"Nature & World",
+    adjetivos_label:"Adjectives", adj_hair:"Hair", adj_personality:"Personality", adj_general:"General",
     expressions:"Expressions", verb_sentences:"Verb Sentences",
     sessions:"sessions", avg:"avg",
     verbs_label:"Verbs", palavras_label:"Palavras", frases_label:"Frases",
@@ -259,8 +265,10 @@ const STRINGS={
     correct_label:"Correto!", accent_warn:"Atenção ao acento:", near_warn:"Pequeno erro — forma correta:", also:"Também:",
     conjugations:"Conjugações",
     all_verbs:"Todos", modal:"Modal", state:"Estado", movement:"Movimento", action:"Ação",
+    body_health:"Corpo e Saúde",
     people_jobs:"Pessoas e Profissões", food_drink:"Comida e Bebida",
-    home_objects:"Casa e Objetos", nature_world:"Natureza e Mundo", adjetivos:"Adjetivos",
+    home_objects:"Casa e Objetos", nature_world:"Natureza e Mundo",
+    adjetivos_label:"Adjetivos", adj_hair:"Cabelo", adj_personality:"Personalidade", adj_general:"Geral",
     expressions:"Expressões", verb_sentences:"Frases com Verbos",
     sessions:"sessões", avg:"méd",
     verbs_label:"Verbos", palavras_label:"Palavras", frases_label:"Frases",
@@ -563,11 +571,16 @@ const MENU_SECTIONS=[
     {key:"action",   tk:"action"},
   ]},
   {mode:"palavras",tk:"palavras_label",icon:BookOpen,subcats:[
+    {key:"corpo",    tk:"body_health"},
     {key:"people",   tk:"people_jobs"},
     {key:"food",     tk:"food_drink"},
     {key:"home",     tk:"home_objects"},
     {key:"nature",   tk:"nature_world"},
-    {key:"adjetivo", tk:"adjetivos"},
+  ]},
+  {mode:"adjetivos",tk:"adjetivos_label",icon:User,subcats:[
+    {key:"adj-hair",        tk:"adj_hair"},
+    {key:"adj-personality", tk:"adj_personality"},
+    {key:"adj-general",     tk:"adj_general"},
   ]},
   {mode:"frases",tk:"frases_label",icon:MessageCircle,subcats:[
     {key:"expressoes",tk:"expressions"},
@@ -577,11 +590,16 @@ const MENU_SECTIONS=[
 
 // ── Library browse screen — per mode, shows all items grouped ──
 const PAL_GROUPS=[
+  {key:"corpo",    tk:"body_health"},
   {key:"people",   tk:"people_jobs"},
   {key:"food",     tk:"food_drink"},
   {key:"home",     tk:"home_objects"},
   {key:"nature",   tk:"nature_world"},
-  {key:"adjetivo", tk:"adjetivos"},
+];
+const ADJ_GROUPS=[
+  {key:"adj-hair",        tk:"adj_hair"},
+  {key:"adj-personality", tk:"adj_personality"},
+  {key:"adj-general",     tk:"adj_general"},
 ];
 
 const VERB_PRONOUN_KEYS=["eu","tu","ele/ela","nós","eles(as)/vocês"];
@@ -642,7 +660,7 @@ function VerbCard({v,tenses,note}){
 }
 
 function LibraryScreen({mode,onBack,conjFilter,t=k=>k}){
-  const modeLabel=t(mode==="conjugation"?"verbs_label":mode==="palavras"?"palavras_label":"frases_label");
+  const modeLabel=t(mode==="conjugation"?"verbs_label":mode==="palavras"?"palavras_label":mode==="adjetivos"?"adjetivos_label":"frases_label");
   const [search,setSearch]=useState("");
   const [searchOpen,setSearchOpen]=useState(false);
   const searchRef=useRef(null);
@@ -698,6 +716,14 @@ function LibraryScreen({mode,onBack,conjFilter,t=k=>k}){
           <div className="max-w-[480px] mx-auto px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
             <LibPill active={palCat==="all"} onClick={()=>setPalCat("all")}>{t("all")}</LibPill>
             {PAL_GROUPS.map(g=>(
+              <LibPill key={g.key} active={palCat===g.key} onClick={()=>setPalCat(g.key)}>{t(g.tk)}</LibPill>
+            ))}
+          </div>
+        )}
+        {mode==="adjetivos"&&(
+          <div className="max-w-[480px] mx-auto px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
+            <LibPill active={palCat==="all"} onClick={()=>setPalCat("all")}>{t("all")}</LibPill>
+            {ADJ_GROUPS.map(g=>(
               <LibPill key={g.key} active={palCat===g.key} onClick={()=>setPalCat(g.key)}>{t(g.tk)}</LibPill>
             ))}
           </div>
@@ -767,14 +793,38 @@ function LibraryScreen({mode,onBack,conjFilter,t=k=>k}){
           {mode==="palavras"&&PAL_GROUPS
             .filter(g=>palCat==="all"||g.key===palCat)
             .map(g=>{
-              const allWords=g.key==="adjetivo"
-                ?PALAVRAS.filter(p=>p.cat==="adjetivo")
-                :PALAVRAS.filter(p=>p.ctx===g.key);
+              const allWords=PALAVRAS.filter(p=>p.ctx===g.key);
               const words=allWords.filter(p=>!q||p.en.toLowerCase().includes(q)||p.pt.toLowerCase().includes(q));
               if(!words.length)return null;
               return(
                 <div key={g.key} className="flex flex-col gap-2">
-                  <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">{g.label}</span>
+                  <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">{t(g.tk)}</span>
+                  <Card className="overflow-hidden divide-y divide-border">
+                    {words.map((p,i)=>(
+                      <div key={i} className="flex items-center justify-between px-4 py-3 gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs text-text-sub italic">{p.en}</div>
+                          <div className="text-base font-mono-ui text-text">{p.pt}</div>
+                        </div>
+                        <AudioBtn text={p.pt}/>
+                      </div>
+                    ))}
+                  </Card>
+                </div>
+              );
+            })
+          }
+
+          {/* ── Adjetivos ── */}
+          {mode==="adjetivos"&&ADJ_GROUPS
+            .filter(g=>palCat==="all"||g.key===palCat)
+            .map(g=>{
+              const allWords=PALAVRAS.filter(p=>p.ctx===g.key);
+              const words=allWords.filter(p=>!q||p.en.toLowerCase().includes(q)||p.pt.toLowerCase().includes(q));
+              if(!words.length)return null;
+              return(
+                <div key={g.key} className="flex flex-col gap-2">
+                  <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">{t(g.tk)}</span>
                   <Card className="overflow-hidden divide-y divide-border">
                     {words.map((p,i)=>(
                       <div key={i} className="flex items-center justify-between px-4 py-3 gap-3">
@@ -870,10 +920,11 @@ export default function App(){
 
   // Per-mode category filters (multi-select). All ON by default.
   const [conjFilter,setConjFilter]=useState({irregular:true,regular:true,modal:true,movement:true,state:true,action:true,presente:true,passado:false});
-  const [palFilter,setPalFilter]=useState({substantivo:true,adjetivo:true,people:true,food:true,home:true,nature:true});
+  const [palFilter,setPalFilter]=useState({substantivo:true,corpo:true,people:true,food:true,home:true,nature:true});
+  const [adjFilter,setAdjFilter]=useState({"adj-hair":true,"adj-personality":true,"adj-general":true});
   const [fraFilter,setFraFilter]=useState({frases:true,expressoes:true});
-  const [filterSheet,setFilterSheet]=useState(null); // null | "conjugation" | "palavras" | "frases"
-  const [libraryMode,setLibraryMode]=useState(null); // "conjugation" | "palavras" | "frases"
+  const [filterSheet,setFilterSheet]=useState(null); // null | "conjugation" | "palavras" | "adjetivos" | "frases"
+  const [libraryMode,setLibraryMode]=useState(null); // "conjugation" | "palavras" | "adjetivos" | "frases"
   const [uiLang,setUiLang]=useState("en"); // "en" | "pt"
   const t=key=>STRINGS[uiLang]?.[key]??STRINGS.en[key]??key;
   const [username,setUsername]=useState(null); // null=not yet asked, ""=skipped, string=name
@@ -885,10 +936,11 @@ export default function App(){
     sDel(SK_CONF); sDel(SK_FILTERS); // clean up legacy per-verb config
     const h=sGet(SK_HIST);if(h&&Array.isArray(h))setHistory(h);
     const m=sGet(SK_MODE);
-    if(m==="conjugation"||m==="palavras"||m==="frases")setGameMode(m);
+    if(m==="conjugation"||m==="palavras"||m==="frases"||m==="adjetivos")setGameMode(m);
     else if(m==="sentences")setGameMode("frases"); // migrate old key
     const fc=sGet(SK_FILTER_CONJ);if(fc&&typeof fc==="object")setConjFilter(f=>({...f,...fc}));
     const fp=sGet(SK_FILTER_PAL);if(fp&&typeof fp==="object")setPalFilter(f=>({...f,...fp}));
+    const fa=sGet(SK_FILTER_ADJ);if(fa&&typeof fa==="object")setAdjFilter(f=>({...f,...fa}));
     const ff=sGet(SK_FILTER_FRA);if(ff&&typeof ff==="object")setFraFilter(f=>({...f,...ff}));
     const lg=sGet(SK_LANG);if(lg==="en"||lg==="pt")setUiLang(lg);
     const un=sGet(SK_USER);if(un!==null)setUsername(un); // null means key absent → show onboarding
@@ -897,6 +949,7 @@ export default function App(){
   useEffect(()=>{sSet(SK_MODE,gameMode);},[gameMode]);
   useEffect(()=>{sSet(SK_FILTER_CONJ,conjFilter);},[conjFilter]);
   useEffect(()=>{sSet(SK_FILTER_PAL,palFilter);},[palFilter]);
+  useEffect(()=>{sSet(SK_FILTER_ADJ,adjFilter);},[adjFilter]);
   useEffect(()=>{sSet(SK_FILTER_FRA,fraFilter);},[fraFilter]);
   useEffect(()=>{sSet(SK_LANG,uiLang);},[uiLang]);
   useEffect(()=>{if(username!==null)sSet(SK_USER,username);},[username]);
@@ -913,15 +966,20 @@ export default function App(){
     const active=keys.length?keys:CONJUGATE_CAT_KEYS;
     return ALL_VERBS.filter(v=>v.categories.some(c=>active.includes(c)));
   };
-  const CTX_KEYS=["people","food","home","nature"];
+  const CTX_KEYS=["corpo","people","food","home","nature"];
   const activePalavras=()=>{
-    const activeCats=["substantivo","adjetivo"].filter(k=>palFilter[k]);
-    const cats=activeCats.length?activeCats:["substantivo","adjetivo"];
     const activeCtx=CTX_KEYS.filter(k=>palFilter[k]);
     return PALAVRAS.filter(p=>{
-      if(!cats.includes(p.cat))return false;
-      if(p.cat==="adjetivo")return true;
+      if(p.cat!=="substantivo")return false;
       return activeCtx.length===0||activeCtx.length===CTX_KEYS.length||activeCtx.includes(p.ctx);
+    });
+  };
+  const ADJ_CTX_KEYS=["adj-hair","adj-personality","adj-general"];
+  const activeAdjetivos=()=>{
+    const activeCtx=ADJ_CTX_KEYS.filter(k=>adjFilter[k]);
+    return PALAVRAS.filter(p=>{
+      if(p.cat!=="adjetivo")return false;
+      return activeCtx.length===0||activeCtx.length===ADJ_CTX_KEYS.length||activeCtx.includes(p.ctx);
     });
   };
   const activeFrases=()=>{
@@ -947,11 +1005,20 @@ export default function App(){
     setGameMode(gm);
     if(gm==="palavras"){
       let pool;
-      if(!subcat||subcat==="all")       pool=PALAVRAS;
-      else if(subcat==="adjetivo")      pool=PALAVRAS.filter(p=>p.cat==="adjetivo");
-      else                              pool=PALAVRAS.filter(p=>p.ctx===subcat);
+      if(!subcat||subcat==="all") pool=PALAVRAS.filter(p=>p.cat==="substantivo");
+      else                        pool=PALAVRAS.filter(p=>p.ctx===subcat);
       if(pool.length===0){alert("No palavras match your filters!");return;}
       const picked=shuffle(pool).slice(0,10).map(p=>({mode:"palavras",en:p.en,answer:p.pt,cat:p.cat}));
+      setCards(picked);setIdx(0);setInput("");setResult(null);setAccentNote(null);
+      setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");inputRef.current?.focus({preventScroll:true});
+      return;
+    }
+    if(gm==="adjetivos"){
+      let pool;
+      if(!subcat||subcat==="all") pool=PALAVRAS.filter(p=>p.cat==="adjetivo");
+      else                        pool=PALAVRAS.filter(p=>p.ctx===subcat);
+      if(pool.length===0){alert("No adjetivos match your filters!");return;}
+      const picked=shuffle(pool).slice(0,10).map(p=>({mode:"adjetivos",en:p.en,answer:p.pt,cat:p.cat}));
       setCards(picked);setIdx(0);setInput("");setResult(null);setAccentNote(null);
       setScore({correct:0,wrong:0,accentMisses:0});setWrongOnes([]);setScreen("play");inputRef.current?.focus({preventScroll:true});
       return;
@@ -1129,7 +1196,7 @@ export default function App(){
           />
           <Bar dataKey="score" radius={[4,4,0,0]} isAnimationActive={true} animationDuration={600}>
             {chartData.map((d,i)=>(
-              <Cell key={i} fill={d.mode==="frases"||d.mode==="sentences"?"hsl(var(--warn))":d.mode==="palavras"?"hsl(var(--accent))":"hsl(var(--primary))"}/>
+              <Cell key={i} fill={d.mode==="frases"||d.mode==="sentences"?"hsl(var(--warn))":d.mode==="palavras"||d.mode==="adjetivos"?"hsl(var(--accent))":"hsl(var(--primary))"}/>
             ))}
           </Bar>
           <ReferenceLine y={75} stroke="hsl(var(--border))" strokeDasharray="3 3" strokeWidth={1}/>
@@ -1602,7 +1669,7 @@ export default function App(){
 
   // ─────────────────────── PLAY ───────────────────────
   const hasTense=card.mode==="conjugation" || (card.mode==="frases" && card.subMode==="sentence");
-  const tenseLabel=!hasTense?(card.mode==="palavras"?(card.cat==="adjetivo"?"Adjetivo":"Substantivo"):"Expressão"):(card.tense==="presente"?"Presente":"Passado");
+  const tenseLabel=!hasTense?(card.mode==="adjetivos"?"Adjetivo":card.mode==="palavras"?"Substantivo":"Expressão"):(card.tense==="presente"?"Presente":"Passado");
   const tenseVariant=!hasTense?"presente":(card.tense==="presente"?"presente":"passado");
   const isTextCard = card.mode!=="conjugation"; // palavras + frases both prompt English → type PT
 
