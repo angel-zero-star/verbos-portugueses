@@ -1067,8 +1067,8 @@ export default function App(){
   const check=()=>{
     if(!input.trim())return;
     const c=cards[idx];
-    // Palavras + Frases/expressao: simple slash-tolerant, accent-tolerant match.
-    if(c.mode==="palavras" || (c.mode==="frases" && c.subMode==="expressao")){
+    // Palavras + Adjetivos + Frases/expressao: simple slash-tolerant, accent-tolerant match.
+    if(c.mode==="palavras" || c.mode==="adjetivos" || (c.mode==="frases" && c.subMode==="expressao")){
       const allAns=[c.answer,...(c.alternatives||[])];
       let r="wrong";
       for(const ans of allAns){const cr=cmpMulti(input,ans);if(cr==="exact"){r="exact";break;}if(cr==="accent")r="accent";else if(cr==="near"&&r==="wrong")r="near";}
