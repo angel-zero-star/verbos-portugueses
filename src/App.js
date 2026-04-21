@@ -1685,9 +1685,9 @@ export default function App(){
                 <h3 className="text-[10px] font-mono-ui text-text uppercase tracking-[0.15em] mb-3">Review these</h3>
                 <div className="flex flex-col gap-2 max-h-[260px] overflow-y-auto no-scrollbar">
                   {wrongOnes.map((w,i)=>(
-                    (w.mode==="frases" || w.mode==="palavras" || w.mode==="sentences") ? (
+                    (w.mode==="frases" || w.mode==="palavras" || w.mode==="adjetivos" || w.mode==="sentences") ? (
                       <div key={i} className="flex flex-col gap-1 px-3 py-3 rounded-md bg-danger/5 border border-danger/20">
-                        <div className="text-[11px] text-text-sub font-mono-ui uppercase tracking-[0.1em]">{w.mode==="palavras"?w.cat:w.subMode==="expressao"?"expressão":w.verb}</div>
+                        <div className="text-[11px] text-text-sub font-mono-ui uppercase tracking-[0.1em]">{w.mode==="palavras"||w.mode==="adjetivos"?w.ctx:w.subMode==="expressao"?"expressão":w.verb}</div>
                         <div className="text-sm text-text italic">{w.en}</div>
                         {w.userAnswer && (
                           <div className="text-[12px] text-danger line-through truncate">{w.userAnswer}</div>
