@@ -16,6 +16,7 @@ module.exports = {
         muted: 'hsl(var(--muted) / <alpha-value>)',
         text: 'hsl(var(--text) / <alpha-value>)',
         'text-sub': 'hsl(var(--text-sub) / <alpha-value>)',
+        shadow: 'hsl(var(--shadow) / <alpha-value>)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

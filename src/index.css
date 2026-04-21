@@ -7,17 +7,18 @@
 @layer base {
   :root {
     /* light mode */
-    --bg: 0 0% 98%;
-    --surface: 0 0% 100%;
-    --border: 240 10% 90%;
-    --primary: 217 76% 47%;        /* #1D63D3 blue — darkened for 4.5:1 white text on button */
-    --secondary: 240 10% 10%;      /* near-black, use with /10 /20 for Linear-like transparency */
-    --accent: 142 71% 45%;         /* #22C55E green — correct */
-    --danger: 0 84% 60%;           /* #EF4444 red — wrong */
-    --warn: 38 92% 50%;            /* #F59E0B amber — accent miss */
-    --muted: 240 8% 44%;           /* #676779 — 5.5:1 on white */
-    --text: 240 10% 10%;
-    --text-sub: 240 7% 45%;        /* #6D6D7A — 5.0:1 on white */
+    --bg: 35 46% 93%;            /* #f5eee4 warm muted cream */
+    --surface: 38 41% 88%;       /* #ede4d4 warm beige */
+    --border: 38 35% 79%;        /* #dcceb6 warm tan */
+    --shadow: 0 0% 3%;           /* near-black — use with /0.2 opacity */
+    --primary: 217 76% 47%;      /* #1D63D3 blue */
+    --secondary: 38 25% 18%;     /* warm dark brown — /10 /25 overlays */
+    --accent: 142 71% 45%;       /* #22C55E green — correct */
+    --danger: 0 84% 60%;         /* #EF4444 red — wrong */
+    --warn: 38 92% 50%;          /* #F59E0B amber */
+    --muted: 38 24% 63%;         /* #b8a78a warm tan */
+    --text: 240 10% 10%;         /* near-black */
+    --text-sub: 38 24% 63%;      /* #b8a78a warm tan */
   }
 
   .dark {
@@ -32,6 +33,7 @@
     --muted: 240 10% 52%;          /* #787891 — 4.6:1 on dark bg */
     --text: 240 20% 95%;           /* #F0F0F5 */
     --text-sub: 240 10% 58%;       /* #89899F — 5.8:1 on dark bg */
+    --shadow: 0 0% 0%;
   }
 
   * {
