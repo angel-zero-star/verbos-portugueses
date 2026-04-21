@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine, Cell } from "recharts";
-import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search, User, Mic, ArrowUp, Globe } from "lucide-react";
+import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search, User, Mic, ArrowUp, Globe, Star, CircleCheck } from "lucide-react";
 import packageInfo from "../package.json";
 import { cn } from "./lib/utils";
 import { useTheme } from "./lib/useTheme";
@@ -462,7 +462,7 @@ function FilterSheet({open, onClose, title, rows, selected, onToggle, count, cou
             className="fixed left-0 right-0 bottom-0 z-50 flex justify-center"
             style={{paddingBottom:"max(16px,env(safe-area-inset-bottom))"}}
           >
-            <div className="w-full max-w-[480px] mx-4 bg-surface border border-secondary/25 rounded-lg shadow-[0_4px_8px_0_rgba(0,0,0,0.4)] p-6 flex flex-col gap-4">
+            <div className="w-full max-w-[480px] mx-4 bg-surface border border-secondary/25 rounded-lg shadow-[0_5px_13px_0_hsl(var(--shadow)/0.2)] p-6 flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-display text-lg text-text tracking-tight">{title}</h3>
                 <button
@@ -533,12 +533,49 @@ function ProgressRing({pct,mastered,size=40}){
 
 // Portuguese flag (simple SVG)
 function FlagPT({className}){
+  // Quina: small blue shield with 5 white dots
+  const Q=({x,y})=>(
+    <g>
+      <rect x={x} y={y} width={9} height={7.5} rx="1" fill="#003399"/>
+      <circle cx={x+2.7} cy={y+2.4} r="1.05" fill="white"/>
+      <circle cx={x+6.3} cy={y+2.4} r="1.05" fill="white"/>
+      <circle cx={x+2.7} cy={y+5.2} r="1.05" fill="white"/>
+      <circle cx={x+6.3} cy={y+5.2} r="1.05" fill="white"/>
+      <circle cx={x+4.5} cy={y+3.8} r="1.05" fill="white"/>
+    </g>
+  );
   return (
-    <svg viewBox="0 0 60 40" className={className} aria-label="Portugal">
-      <rect width="24" height="40" fill="#046A38"/>
-      <rect x="24" width="36" height="40" fill="#DA291C"/>
-      <circle cx="24" cy="20" r="8" fill="#FFE900" stroke="#000" strokeWidth="0.5"/>
-      <circle cx="24" cy="20" r="5" fill="#DA291C" stroke="#000" strokeWidth="0.5"/>
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" className={className} aria-label="Portugal">
+      <defs>
+        <clipPath id="pt-c">
+          <circle cx="100" cy="100" r="100"/>
+        </clipPath>
+      </defs>
+      <g clipPath="url(#pt-c)">
+        {/* Green stripe */}
+        <rect x="0" y="0" width="76" height="200" fill="#006600"/>
+        {/* Red stripe */}
+        <rect x="76" y="0" width="124" height="200" fill="#DC0000"/>
+        {/* Armillary sphere – outer ring */}
+        <circle cx="76" cy="100" r="35" fill="none" stroke="#F5C518" strokeWidth="5"/>
+        {/* Diagonal band 1 */}
+        <ellipse cx="76" cy="100" rx="35" ry="13" fill="none" stroke="#F5C518" strokeWidth="4.5" transform="rotate(-32 76 100)"/>
+        {/* Diagonal band 2 */}
+        <ellipse cx="76" cy="100" rx="35" ry="13" fill="none" stroke="#F5C518" strokeWidth="4.5" transform="rotate(32 76 100)"/>
+        {/* Vertical meridian */}
+        <ellipse cx="76" cy="100" rx="10" ry="35" fill="none" stroke="#F5C518" strokeWidth="4"/>
+        {/* Horizontal equator */}
+        <rect x="41" y="97" width="70" height="6" fill="#F5C518"/>
+        {/* Shield */}
+        <path d="M60,83 L92,83 L92,113 Q92,129 76,136 Q60,129 60,113 Z" fill="white"/>
+        <path d="M60,83 L92,83 L92,113 Q92,129 76,136 Q60,129 60,113 Z" fill="none" stroke="#DC0000" strokeWidth="2.5"/>
+        {/* 5 Quinas: top, left, center, right, bottom */}
+        <Q x={71}   y={85}/>
+        <Q x={61}   y={96.5}/>
+        <Q x={71}   y={96.5}/>
+        <Q x={81}   y={96.5}/>
+        <Q x={71}   y={108}/>
+      </g>
     </svg>
   );
 }
@@ -660,6 +697,7 @@ function VerbCard({v,tenses,note}){
 }
 
 function LibraryScreen({mode,onBack,conjFilter,t=k=>k}){
+  useEffect(()=>{window.scrollTo(0,0);},[]);
   const modeLabel=t(mode==="conjugation"?"verbs_label":mode==="palavras"?"palavras_label":mode==="adjetivos"?"adjetivos_label":"frases_label");
   const [search,setSearch]=useState("");
   const [searchOpen,setSearchOpen]=useState(false);
@@ -1065,7 +1103,7 @@ export default function App(){
   };
 
   const check=()=>{
-    if(!input.trim())return;
+    if(!input.trim()){setResult("wrong");setAccentNote(null);setScore(s=>({...s,wrong:s.wrong+1}));setWrongOnes(w=>[...w,cards[idx]]);return;}
     const c=cards[idx];
     // Palavras + Adjetivos + Frases/expressao: simple slash-tolerant, accent-tolerant match.
     if(c.mode==="palavras" || c.mode==="adjetivos" || (c.mode==="frases" && c.subMode==="expressao")){
@@ -1160,6 +1198,12 @@ export default function App(){
     rec.onend=()=>{setIsListening(false);setIsSpeaking(false);clearTimeout(speakTimeoutRef.current);};
     recRef.current=rec;rec.start();setIsListening(true);
   };
+
+  // Auto-speak the correct answer after every verification
+  useEffect(()=>{
+    if(!result||!cards[idx])return;
+    speak(cards[idx].answer.split('/')[0].trim());
+  },[result]); // eslint-disable-line
 
   const card=cards[idx];
   const total=score.correct+score.wrong;
@@ -1259,7 +1303,7 @@ export default function App(){
           layoutId="brand-flag"
           transition={{type:"spring",stiffness:260,damping:30}}
         >
-          <FlagPT className="w-24 h-auto rounded-sm shadow-[0_0_0_1px_hsl(var(--border))]"/>
+          <FlagPT className="w-24 h-24"/>
         </motion.div>
         <motion.h1
           layoutId="brand-title"
@@ -1279,7 +1323,7 @@ export default function App(){
     return(
       <div className="fixed inset-0 bg-bg text-text flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-[480px] flex flex-col gap-6">
-          <FlagPT className="w-14 h-auto rounded-sm shadow-[0_0_0_1px_hsl(var(--border))]"/>
+          <FlagPT className="w-14 h-14"/>
           <div>
             <h1 className="font-display text-[28px] tracking-tighter text-text">{t("onboarding_title")}</h1>
             <p className="text-sm text-text-sub mt-2">{t("onboarding_sub")}</p>
@@ -1314,14 +1358,12 @@ export default function App(){
         <TopBar/>
         <AnimatePresence mode="wait">
           <Screen key="menu">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col items-center gap-4 py-4 text-center">
+              <FlagPT className="h-16 w-16"/>
               <div>
                 <h1 className="font-display text-[28px] tracking-tighter text-text">{t("home_title")}</h1>
                 <p className="text-sm text-text-sub mt-1">{username?`Hey, ${username}!`:t("home_sub")}</p>
               </div>
-              <button className="mt-1 h-9 w-9 rounded-full overflow-hidden shadow-[0_0_0_1px_hsl(var(--border))] hover:shadow-[0_0_0_2px_hsl(var(--muted))] transition-shadow shrink-0" title="Language: Portuguese">
-                <FlagPT className="h-full w-auto -translate-x-2"/>
-              </button>
             </div>
 
             {MENU_SECTIONS.map((section,si)=>{
@@ -1480,7 +1522,7 @@ export default function App(){
             {/* Tense */}
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">{t("tense")}</span>
-              <Card className="overflow-hidden divide-y divide-border">
+              <Card className="overflow-hidden divide-y divide-border shadow-none">
                 {[{key:"presente",label:"Presente"},{key:"passado",label:"Passado"}].map(({key,label})=>(
                   <div key={key} className="flex items-center justify-between px-4 py-3">
                     <span className="text-sm text-text">{label}</span>
@@ -1493,7 +1535,7 @@ export default function App(){
             {/* Verb Type */}
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">{t("verb_type")}</span>
-              <Card className="overflow-hidden divide-y divide-border">
+              <Card className="overflow-hidden divide-y divide-border shadow-none">
                 {[{key:"irregular",label:t("irregular")},{key:"regular",label:t("regular")}].map(({key,label})=>(
                   <div key={key} className="flex items-center justify-between px-4 py-3">
                     <span className="text-sm text-text">{label}</span>
@@ -1528,6 +1570,24 @@ export default function App(){
 
             {history.length>0 && (
               <>
+                <div className="grid grid-cols-2 gap-3">
+                  <Card className="p-4 flex flex-col gap-1 shadow-none">
+                    <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">Total stars</span>
+                    <div className="flex items-center gap-2">
+                      <Star size={18} className="text-warn" fill="currentColor" strokeWidth={0}/>
+                      <span className="font-display text-[28px] leading-none text-text">
+                        {history.reduce((s,h)=>s+h.correct,0)}
+                      </span>
+                    </div>
+                  </Card>
+                  <Card className="p-4 flex flex-col gap-1 shadow-none">
+                    <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">Avg score</span>
+                    <span className="font-display text-[28px] leading-none text-text">
+                      {Math.round(history.reduce((s,h)=>s+h.pct,0)/history.length)}%
+                    </span>
+                  </Card>
+                </div>
+
                 <Card className="p-4">
                   <Chart/>
                 </Card>
@@ -1605,7 +1665,12 @@ export default function App(){
               <div className="font-display text-[88px] leading-none text-text tabular-nums">
                 <AnimatedNumber value={pct}/>%
               </div>
-              <p className="mt-3 text-sm text-text-sub">
+              <div className="mt-3 flex items-center justify-center gap-1">
+                <Star size={16} className="text-warn" fill="currentColor" strokeWidth={0}/>
+                <span className="font-mono-ui font-medium text-sm text-text">{score.correct}</span>
+                <span className="text-text-sub text-sm font-mono-ui">/ {cards.length}</span>
+              </div>
+              <p className="mt-2 text-sm text-text-sub">
                 <span className="text-accent font-semibold">{score.correct}</span> correct
                 {" · "}
                 <span className="text-danger font-semibold">{score.wrong}</span> wrong
@@ -1675,39 +1740,26 @@ export default function App(){
 
   return (
     <>
-    {/* ── Hidden real input — pinned to top so iOS doesn't scroll ── */}
-    <input
-      ref={inputRef}
-      value={input}
-      onChange={e=>setInput(e.target.value)}
-      onFocus={()=>setInputFocused(true)}
-      onBlur={()=>setInputFocused(false)}
-      enterKeyHint="go"
-      lang="pt"
-      autoComplete="off"
-      autoCorrect="off"
-      autoCapitalize="off"
-      spellCheck={false}
-      className="fixed top-0 left-0 w-full opacity-0 pointer-events-none"
-      style={{fontSize:"16px",height:1,zIndex:0}}
-      tabIndex={-1}
-    />
-
-    {/* ── Layer 1: Card — completely static ── */}
-    <div className="fixed inset-0 bg-bg text-text overflow-hidden pointer-events-none" style={{zIndex:10}}>
-      <TopBar/>
-      <div className="px-6 pt-6">
-        <div className="max-w-[480px] mx-auto flex flex-col gap-4 pointer-events-auto">
-        {/* Progress bar top bar — Figma design */}
-        <div className="flex flex-col gap-3">
+    {/* ── Play screen ── */}
+    <div
+      className="fixed top-0 left-0 right-0 bg-bg text-text flex flex-col overflow-hidden"
+      style={{height:"var(--vvh,100vh)",zIndex:10}}
+    >
+      {/* Progress bar */}
+      <div className="shrink-0 px-6 pt-6 pb-4">
+        <div className="max-w-[480px] mx-auto flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 font-mono-ui text-xs tracking-[0.04em] font-medium">
-              <p className="tabular-nums">
-                <span className="text-text">{idx+1}</span>
-                <span className="text-text-sub"> / {cards.length}</span>
-              </p>
-              <span className="text-accent tabular-nums">({score.correct})</span>
-            </div>
+            {/* Star + score */}
+            <motion.div
+              key={score.correct}
+              className="relative flex items-center justify-center w-8 h-8"
+              initial={{scale: score.correct > 0 ? 1.5 : 1}}
+              animate={{scale: 1}}
+              transition={{type:"spring",stiffness:500,damping:14}}
+            >
+              <Star size={30} className="text-warn" fill="currentColor" strokeWidth={0}/>
+              <span className="absolute font-mono-ui font-medium text-[12px] text-text leading-none">{score.correct}</span>
+            </motion.div>
             <button
               onClick={()=>setScreen("menu")}
               className="h-6 w-6 text-text-sub hover:text-danger transition-colors flex items-center justify-center"
@@ -1724,233 +1776,215 @@ export default function App(){
             />
           </div>
         </div>
-
-        {/* Card. mode="popLayout" so the new card mounts IMMEDIATELY (within
-            the user-gesture window) while the old card animates out as an
-            overlay — required so autoFocus can open the iOS keyboard. */}
-        <AnimatePresence mode="popLayout">
-          <motion.div
-            key={idx}
-            initial={{opacity:0,x:120,rotate:4}}
-            animate={{
-              opacity:1,
-              rotate:0,
-              x: result==="wrong" ? [0,8,-8,6,-6,0] : 0,
-            }}
-            exit={{opacity:0,x:-120,rotate:-4}}
-            transition={{
-              opacity:{duration:0.3,ease:"easeOut"},
-              rotate:{duration:0.4,ease:[0.25,0.1,0.25,1]},
-              x: result==="wrong"
-                ? {duration:0.4,ease:"easeOut"}
-                : {duration:0.4,ease:[0.25,0.1,0.25,1]},
-            }}
-          >
-            <Card className="p-7 flex flex-col gap-5">
-              <div className="flex items-center justify-between">
-                <Badge variant={tenseVariant}>{tenseLabel}</Badge>
-                <span className="text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.12em]">
-                  {card.mode==="conjugation"
-                    ? (card.type==="irregular"?"Irregular":"Regular")
-                    : card.mode==="palavras"
-                      ? "Palavra"
-                      : (card.subMode==="sentence" ? card.verb : "Frase")}
-                </span>
-              </div>
-
-              {isTextCard ? (
-                <div className="text-center py-2">
-                  <div className="font-display text-[26px] leading-[1.15] tracking-tighter text-text">
-                    {card.en}
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="text-center py-2">
-                    <div className="font-display text-[44px] leading-[1] tracking-tightest text-text">
-                      {card.transl}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-base font-mono-ui text-primary italic">{card.pronoun}</span>
-                    {result===null && <span className="text-text-sub text-base tracking-[4px]">· · ·</span>}
-                  </div>
-                </>
-              )}
-
-              {/* Feedback (shown inside card after validation) */}
-              <AnimatePresence>
-                {result==="correct" && (
-                  <motion.div initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{duration:0.2}} className="flex flex-col gap-3">
-                    <div className="flex items-center justify-center gap-2 text-accent">
-                      <Check size={18} strokeWidth={3}/>
-                      <span className="text-base font-semibold">{t("correct_label")}</span>
-                      {card.mode!=="conjugation" && <AudioBtn text={card.answer}/>}
-                    </div>
-                    {accentNote && (
-                      <div className="text-center text-xs text-warn bg-warn/10 border border-warn/30 rounded-md py-2 px-3">
-                        {accentNote.type==="accent"?t("accent_warn"):t("near_warn")} <strong className="font-mono-ui">{accentNote.form}</strong>
-                      </div>
-                    )}
-                    {card.alternatives?.length>0 && (
-                      <div className="text-xs text-text-sub bg-secondary/5 border border-border rounded-md py-2 px-3">
-                        <span className="font-mono-ui uppercase tracking-wider text-[10px]">{t("also")} </span>
-                        {card.alternatives.join(" · ")}
-                      </div>
-                    )}
-                    {card.mode==="conjugation" && <ConjugationTable card={card}/>}
-                  </motion.div>
-                )}
-                {result==="wrong" && (
-                  <motion.div initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{duration:0.2}} className="flex flex-col gap-3">
-                    <div className="flex items-center justify-center gap-2 text-danger">
-                      <X size={16} strokeWidth={3}/>
-                      <strong className="font-mono-ui">{card.answer}</strong>
-                      {card.mode!=="conjugation" && <AudioBtn text={card.answer}/>}
-                    </div>
-                    {card.alternatives?.length>0 && (
-                      <div className="text-xs text-text-sub bg-secondary/5 border border-border rounded-md py-2 px-3">
-                        <span className="font-mono-ui uppercase tracking-wider text-[10px]">{t("also")} </span>
-                        {card.alternatives.join(" · ")}
-                      </div>
-                    )}
-                    {card.mode==="conjugation" && <ConjugationTable card={card}/>}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </Card>
-          </motion.div>
-        </AnimatePresence>
-        </div>
       </div>
-    </div>
 
-    {/* ── Layer 2: Input bar — separate fixed container ── */}
-    <div
-      className="fixed left-0 right-0 flex justify-center"
-      style={{bottom:"var(--keyboard-h,0px)",zIndex:20}}
-    >
-      <div className="w-full max-w-[480px]">
-          {/* Article picker chips — above the bar */}
-          {card.mode==="palavras" && result===null && (()=>{
-            const first=card.answer.split('/')[0].trim().toLowerCase();
-            const isPlural=first.startsWith('os ')||first.startsWith('as ');
-            const isSingular=first.startsWith('o ')||first.startsWith('a ');
-            if(!isPlural&&!isSingular)return null;
-            const arts=isPlural?['Os','As']:['O','A'];
-            const pick=(art)=>{
-              const rest=input.trim().replace(/^(os|as|o|a)\s+/i,'');
-              setInput(art+' '+rest);
-              setTimeout(()=>inputRef.current?.focus({preventScroll:true}),0);
-            };
-            return(
-              <div className="flex gap-2 px-4 pb-2">
-                {arts.map(art=>(
-                  <button key={art} onMouseDown={e=>{e.preventDefault();pick(art);}}
-                    className="h-8 px-4 rounded-full border border-border bg-surface/90 backdrop-blur text-sm font-mono-ui text-text-sub hover:text-text transition-colors shadow-sm"
-                  >{art}</button>
-                ))}
-              </div>
-            );
-          })()}
+      {/* Stacked card area */}
+      <div className="flex-1 overflow-hidden px-6 pb-6">
+        <div className="max-w-[480px] mx-auto h-full">
+          {/* Stack wrapper — ghost cards peek 12px above the front card */}
+          <div className="relative h-full pt-3">
+            {/* Ghost card — back */}
+            <div
+              className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[calc(100%-48px)] bg-surface border border-border rounded-lg pointer-events-none"
+              style={{zIndex:1,boxShadow:"0 5px 13px 0 hsl(var(--shadow)/0.2)"}}
+            />
+            {/* Ghost card — middle */}
+            <div
+              className="absolute top-1 bottom-0 left-1/2 -translate-x-1/2 w-[calc(100%-24px)] bg-surface border border-border rounded-lg pointer-events-none"
+              style={{zIndex:2,boxShadow:"0 5px 13px 0 hsl(var(--shadow)/0.2)"}}
+            />
 
-          {/* Main bar */}
-          <AnimatePresence mode="wait">
-            {result===null ? (
-              /* Input state */
+            {/* Active card */}
+            <AnimatePresence mode="popLayout">
               <motion.div
-                key="input-bar"
-                initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:8}}
-                transition={{duration:0.18}}
-                className="flex items-center gap-3 px-4 py-3 bg-surface/95 backdrop-blur border-t border-border"
-                style={{paddingBottom:"max(12px,env(safe-area-inset-bottom))"}}
+                key={idx}
+                className="relative h-full"
+                style={{zIndex:3}}
+                initial={{opacity:0,x:120,rotate:4}}
+                animate={{
+                  opacity:1,
+                  rotate:0,
+                  x: result==="wrong" ? [0,8,-8,6,-6,0] : 0,
+                }}
+                exit={{opacity:0,x:-120,rotate:-4}}
+                transition={{
+                  opacity:{duration:0.3,ease:"easeOut"},
+                  rotate:{duration:0.4,ease:[0.25,0.1,0.25,1]},
+                  x: result==="wrong"
+                    ? {duration:0.4,ease:"easeOut"}
+                    : {duration:0.4,ease:[0.25,0.1,0.25,1]},
+                }}
               >
-                {/* Mic */}
-                <button
-                  onMouseDown={e=>e.preventDefault()}
-                  onClick={toggleMic}
-                  className={cn(
-                    "h-11 w-11 shrink-0 rounded-full border flex items-center justify-center transition-colors",
-                    isListening
-                      ? "bg-danger/10 border-danger/40 text-danger"
-                      : "bg-secondary/5 border-border text-text-sub hover:text-text"
-                  )}
-                >
-                  <motion.div animate={isListening?{scale:[1,1.15,1]}:{scale:1}} transition={isListening?{repeat:Infinity,duration:0.8}:{}}>
-                    <Mic size={18}/>
-                  </motion.div>
-                </button>
-
-                {/* Visual input pill — tapping focuses hidden input */}
                 <div
-                  onClick={()=>inputRef.current?.focus({preventScroll:true})}
-                  className={cn(
-                    "flex-1 relative flex items-center h-11 rounded-2xl border bg-secondary/5 px-4 transition-colors cursor-text",
-                    isListening&&!input ? "border-danger/40"
-                      : inputFocused ? "border-primary"
-                      : "border-border"
-                  )}
+                  className="h-full bg-surface border border-border rounded-lg flex flex-col overflow-hidden"
+                  style={{boxShadow:"0 5px 13px 0 hsl(var(--shadow)/0.2)"}}
                 >
-                  {isListening && !input ? (
-                    /* Waveform bars */
-                    <div className="flex items-center gap-[3px] flex-1 h-full py-3">
-                      {[0.7,1,0.7].map((amp,i)=>(
-                        <motion.div
-                          key={i}
-                          className="w-[3px] rounded-full bg-danger/60 origin-center"
-                          animate={isSpeaking
-                            ? {scaleY:[amp*0.4,amp,amp*0.3,amp*0.9,amp*0.4]}
-                            : {scaleY:0.15}
-                          }
-                          transition={isSpeaking
-                            ? {duration:0.7+i*0.07,repeat:Infinity,ease:"easeInOut",delay:i*0.08}
-                            : {duration:0.3}
-                          }
-                          style={{height:"100%"}}
-                        />
-                      ))}
-                    </div>
-                  ) : input ? (
-                    <span className={cn("flex-1 text-base font-mono-ui text-text truncate", inputFocused && "cursor-blink-end")}>{input}</span>
-                  ) : (
-                    <span className={cn("flex-1 text-base font-mono-ui text-text-sub", inputFocused && "cursor-blink")}>{isTextCard?t("placeholder_translation"):t("placeholder_conjugation")}</span>
-                  )}
-                  {input.length>0 && (
-                    <button onMouseDown={e=>e.preventDefault()} onClick={(e)=>{e.stopPropagation();setInput("");inputRef.current?.focus({preventScroll:true});}}
-                      className="ml-2 text-text-sub hover:text-text transition-colors shrink-0"
-                    ><X size={15}/></button>
-                  )}
-                </div>
+                  {/* ── Scrollable card content ── */}
+                  <div className="flex flex-col gap-5 items-center flex-1 overflow-y-auto px-6 pt-6 pb-4">
 
-                {/* Submit */}
-                <button
-                  onClick={check}
-                  disabled={!input.trim()}
-                  className={cn(
-                    "h-11 w-11 shrink-0 rounded-full flex items-center justify-center transition-all",
-                    input.trim()
-                      ? "bg-primary text-white hover:brightness-90 active:scale-95"
-                      : "bg-secondary/10 text-text-sub cursor-not-allowed"
-                  )}
-                >
-                  <ArrowUp size={18} strokeWidth={2.5}/>
-                </button>
+                    {/* Header: badge + counter */}
+                    <div className="flex items-center justify-between w-full">
+                      <Badge variant={tenseVariant}>{tenseLabel}</Badge>
+                      <span className="font-mono-ui text-xs tabular-nums">
+                        <span className={result==="wrong" ? "text-danger" : "text-text"}>{idx+1}</span>
+                        <span className="text-text-sub"> / {cards.length}</span>
+                      </span>
+                    </div>
+
+                    {/* Word / prompt */}
+                    <div className="text-center py-2">
+                      <div className="font-display text-[44px] leading-[1] tracking-tightest text-text">
+                        {isTextCard ? card.en : card.transl}
+                      </div>
+                    </div>
+
+                    {/* Pronoun — conjugation only */}
+                    {!isTextCard && (
+                      <span className="text-xl font-mono-ui text-primary italic">{card.pronoun}</span>
+                    )}
+
+                    {/* Underline input */}
+                    <div
+                      className={cn(
+                        "w-full h-12 flex items-center gap-2 border-b transition-colors shrink-0",
+                        result===null
+                          ? isListening && !input ? "border-danger/60"
+                            : inputFocused ? "border-primary"
+                            : "border-border"
+                          : result==="correct" ? "border-accent"
+                          : "border-danger"
+                      )}
+                    >
+                      {isListening && !input ? (
+                        <div className="flex items-center gap-[3px] flex-1 h-full py-3">
+                          {[0.7,1,0.7].map((amp,i)=>(
+                            <motion.div
+                              key={i}
+                              className="w-[3px] rounded-full bg-danger/60 origin-center"
+                              animate={isSpeaking?{scaleY:[amp*0.4,amp,amp*0.3,amp*0.9,amp*0.4]}:{scaleY:0.15}}
+                              transition={isSpeaking?{duration:0.7+i*0.07,repeat:Infinity,ease:"easeInOut",delay:i*0.08}:{duration:0.3}}
+                              style={{height:"100%"}}
+                            />
+                          ))}
+                        </div>
+                      ) : result!==null ? (
+                        <span className="flex-1 text-base font-mono-ui text-text truncate">{input}</span>
+                      ) : (
+                        <input
+                          ref={inputRef}
+                          value={input}
+                          onChange={e=>setInput(e.target.value)}
+                          onFocus={()=>setInputFocused(true)}
+                          onBlur={()=>setInputFocused(false)}
+                          onKeyDown={e=>{if(e.key==="Enter")e.preventDefault();}}
+                          enterKeyHint="go"
+                          lang="pt"
+                          autoComplete="off"
+                          autoCorrect="off"
+                          autoCapitalize="off"
+                          spellCheck={false}
+                          placeholder="Type or speak…"
+                          className="flex-1 bg-transparent outline-none font-mono-ui text-base text-text placeholder:text-text-sub h-full"
+                          style={{fontSize:"16px"}}
+                        />
+                      )}
+                      {input.length>0 && result===null && !isListening && (
+                        <button
+                          onMouseDown={e=>e.preventDefault()}
+                          onClick={e=>{e.stopPropagation();setInput("");inputRef.current?.focus({preventScroll:true});}}
+                          className="text-text-sub hover:text-text transition-colors shrink-0"
+                        ><X size={15}/></button>
+                      )}
+                    </div>
+
+                    {/* Inline feedback */}
+                    <AnimatePresence>
+                      {result==="correct" && (
+                        <motion.div
+                          initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{duration:0.2}}
+                          className="flex flex-col gap-3 w-full"
+                        >
+                          <div className="flex items-center gap-2 text-accent">
+                            <span className="font-bold text-base">✓</span>
+                            <span className="font-mono-ui text-sm">{card.answer}</span>
+                            {card.mode!=="conjugation" && <AudioBtn text={card.answer}/>}
+                          </div>
+                          {accentNote && (
+                            <div className="text-xs text-warn bg-warn/10 border border-warn/30 rounded-md py-2 px-3">
+                              {accentNote.type==="accent"?t("accent_warn"):t("near_warn")} <strong className="font-mono-ui">{accentNote.form}</strong>
+                            </div>
+                          )}
+                          {card.alternatives?.length>0 && (
+                            <div className="text-xs text-text-sub bg-secondary/5 border border-border rounded-md py-2 px-3">
+                              <span className="font-mono-ui uppercase tracking-wider text-[10px]">{t("also")} </span>
+                              {card.alternatives.join(" · ")}
+                            </div>
+                          )}
+                          {card.mode==="conjugation" && <ConjugationTable card={card}/>}
+                        </motion.div>
+                      )}
+                      {result==="wrong" && (
+                        <motion.div
+                          initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{duration:0.2}}
+                          className="flex flex-col gap-3 w-full"
+                        >
+                          <div className="flex items-center gap-2 text-danger">
+                            <span className="font-bold text-base">✕</span>
+                            <span className="font-mono-ui text-sm">{card.answer}</span>
+                            {card.mode!=="conjugation" && <AudioBtn text={card.answer}/>}
+                          </div>
+                          {card.alternatives?.length>0 && (
+                            <div className="text-xs text-text-sub bg-secondary/5 border border-border rounded-md py-2 px-3">
+                              <span className="font-mono-ui uppercase tracking-wider text-[10px]">{t("also")} </span>
+                              {card.alternatives.join(" · ")}
+                            </div>
+                          )}
+                          {card.mode==="conjugation" && <ConjugationTable card={card}/>}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* ── Button row — fixed at bottom of card ── */}
+                  <div
+                    className="flex items-center justify-between shrink-0 px-6"
+                    style={{paddingBottom:"max(24px,env(safe-area-inset-bottom))",paddingTop:"16px"}}
+                  >
+                    {/* Left — spacer (reserved, matches Figma) */}
+                    <div className="w-12 h-12 opacity-0 pointer-events-none" />
+
+                    {/* Centre — Mic */}
+                    <motion.button
+                      onMouseDown={e=>e.preventDefault()}
+                      onClick={e=>{e.stopPropagation();if(result===null)toggleMic();}}
+                      animate={result!==null?{opacity:0,pointerEvents:"none"}:{opacity:1,pointerEvents:"auto"}}
+                      transition={{duration:0.15}}
+                      className={cn(
+                        "w-[68px] h-[68px] rounded-full border flex items-center justify-center transition-colors shrink-0",
+                        isListening
+                          ? "bg-danger/10 border-danger/40 text-danger"
+                          : "bg-bg border-border text-text"
+                      )}
+                    >
+                      <motion.div animate={isListening?{scale:[1,1.15,1]}:{scale:1}} transition={isListening?{repeat:Infinity,duration:0.8}:{}}>
+                        <Mic size={20}/>
+                      </motion.div>
+                    </motion.button>
+
+                    {/* Right — Check / Next */}
+                    <button
+                      onMouseDown={e=>e.preventDefault()}
+                      onClick={e=>{e.stopPropagation();result===null?check():next();}}
+                      className="w-12 h-12 rounded-full flex items-center justify-center transition-all shrink-0 bg-primary text-white hover:brightness-90 active:scale-95"
+                    >
+                      {result!==null ? <ArrowRight size={18} strokeWidth={2.5}/> : <CircleCheck size={20} strokeWidth={2}/>}
+                    </button>
+                  </div>
+                </div>
               </motion.div>
-            ) : (
-              /* Next state */
-              <motion.div
-                key="next-bar"
-                initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:8}}
-                transition={{duration:0.18}}
-                className="flex items-center gap-3 px-4 py-3 bg-surface/95 backdrop-blur border-t border-border"
-                style={{paddingBottom:"max(12px,env(safe-area-inset-bottom))"}}
-              >
-                <Button onClick={next} size="lg" className="w-full">
-                  {t("next")} <ArrowRight size={16}/>
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+            </AnimatePresence>
+          </div>
+        </div>
       </div>
     </div>
     </>

@@ -3,7 +3,7 @@ import { cn } from '../../lib/utils';
 
 const variants = {
   primary:
-    'bg-primary text-white hover:brightness-90 active:brightness-75 shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_4px_20px_-4px_hsl(var(--primary)/0.5)]',
+    'bg-primary text-white hover:brightness-90 active:brightness-75',
   ghost:
     'bg-transparent border border-border text-text hover:bg-surface hover:border-muted',
   outline:
@@ -11,7 +11,7 @@ const variants = {
   danger:
     'bg-transparent border border-danger text-danger hover:bg-danger/10',
   accent:
-    'bg-accent text-bg hover:brightness-95 active:brightness-90 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.5)]',
+    'bg-accent text-bg hover:brightness-95 active:brightness-90',
 };
 
 const sizes = {

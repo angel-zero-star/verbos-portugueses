@@ -2,7 +2,7 @@ import React from 'react';
 import { cn } from '../../lib/utils';
 
 const variants = {
-  presente: 'bg-secondary/10 text-text border-secondary/25',
+  presente: 'bg-secondary/10 text-muted border-border',
   passado: 'bg-warn/15 text-warn border-warn/30',
   accent: 'bg-accent/15 text-accent border-accent/30',
   neutral: 'bg-surface text-text-sub border-border',
