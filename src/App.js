@@ -1390,9 +1390,9 @@ export default function App(){
 
     return (
       <div className="fixed inset-0 overflow-hidden bg-bg text-text">
-        {/* ── Hero layer (behind scroll) ── */}
+        {/* ── Hero layer (above scroll, pointer-events pass through except buttons) ── */}
         <div
-          className="absolute inset-x-0 top-0 z-[1] pointer-events-none"
+          className="absolute inset-x-0 top-0 z-[2] pointer-events-none"
           style={{transform:`translateY(${heroY}px) scale(${heroScale})`,opacity:heroOpacity,transformOrigin:'50% 30%'}}
         >
           <div className="pointer-events-auto max-w-[480px] mx-auto px-4 pt-3 pb-4 relative">
@@ -1474,14 +1474,14 @@ export default function App(){
         {/* ── Scroll container ── */}
         <div
           ref={homeScrollRef}
-          className="absolute inset-0 overflow-y-auto z-[2] pointer-events-none"
+          className="absolute inset-0 overflow-y-auto z-[1]"
           style={{scrollbarWidth:'none'}}
           onScroll={e=>setHomeScrollY(e.currentTarget.scrollTop)}
         >
           <div className="max-w-[480px] mx-auto">
             <div style={{height:HERO_H}}/>
             <div
-              className="relative bg-bg rounded-t-[22px] pb-12 pointer-events-auto"
+              className="relative bg-bg rounded-t-[22px] pb-12"
               style={{
                 minHeight:`calc(100vh - ${HERO_H}px)`,
                 boxShadow:homeScrollY>8
