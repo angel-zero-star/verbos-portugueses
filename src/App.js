@@ -979,7 +979,9 @@ export default function App(){
   const [nameEditVal,setNameEditVal]=useState(""); // for inline edit in settings
   const [nameEditing,setNameEditing]=useState(false);
   const [homeScrollY,setHomeScrollY]=useState(0);
+  const [heroH,setHeroH]=useState(200);
   const homeScrollRef=useRef(null);
+  const heroRef=useRef(null);
 
   // useMemo from here requires the `useMemo` import to be hoisted
   // Aggregate home-screen stats from history
@@ -1018,6 +1020,12 @@ export default function App(){
   useEffect(()=>{sSet(SK_LANG,uiLang);},[uiLang]);
   useEffect(()=>{if(username!==null)sSet(SK_USER,username);},[username]);
   useEffect(()=>{if(screen==="menu"){setHomeScrollY(0);if(homeScrollRef.current)homeScrollRef.current.scrollTop=0;}},[screen]);
+  useEffect(()=>{
+    if(!heroRef.current)return;
+    const ro=new ResizeObserver(entries=>setHeroH(entries[0].borderBoxSize[0].blockSize));
+    ro.observe(heroRef.current);
+    return()=>ro.disconnect();
+  },[]);
 
   useEffect(()=>{
     const t=setTimeout(()=>setShowSplash(false),1300);
@@ -1380,8 +1388,7 @@ export default function App(){
 
   // ─────────────────────── MENU ───────────────────────
   if(screen==="menu"){
-    const HERO_H=200;
-    const tScroll=Math.min(1,homeScrollY/HERO_H);
+    const tScroll=Math.min(1,homeScrollY/heroH);
     const heroScale=1-tScroll*0.1;
     const heroOpacity=1-tScroll*0.5;
     const heroY=-tScroll*16;
@@ -1392,10 +1399,11 @@ export default function App(){
       <div className="fixed inset-0 overflow-hidden bg-bg text-text">
         {/* ── Hero layer (above scroll, pointer-events pass through except buttons) ── */}
         <div
-          className="absolute inset-x-0 top-0 z-[2] pointer-events-none"
+          ref={heroRef}
+          className="absolute inset-x-0 top-0 z-[1] pointer-events-none bg-bg"
           style={{transform:`translateY(${heroY}px) scale(${heroScale})`,opacity:heroOpacity,transformOrigin:'50% 30%'}}
         >
-          <div className="pointer-events-auto max-w-[480px] mx-auto px-4 pt-3 pb-4 relative">
+          <div className="pointer-events-auto max-w-[480px] mx-auto px-4 pb-4 relative" style={{paddingTop:'max(12px, env(safe-area-inset-top))'}}>
             {/* Top row: identity (left) + flag + settings button (right) */}
             <div className="flex items-center gap-3">
               {/* Identity */}
@@ -1474,16 +1482,16 @@ export default function App(){
         {/* ── Scroll container ── */}
         <div
           ref={homeScrollRef}
-          className="absolute inset-0 overflow-y-auto z-[1]"
+          className="absolute inset-0 overflow-y-auto z-[2]"
           style={{scrollbarWidth:'none'}}
           onScroll={e=>setHomeScrollY(e.currentTarget.scrollTop)}
         >
           <div className="max-w-[480px] mx-auto">
-            <div style={{height:HERO_H}}/>
+            <div style={{height:heroH}}/>
             <div
               className="relative bg-bg rounded-t-[22px] pb-12"
               style={{
-                minHeight:`calc(100vh - ${HERO_H}px)`,
+                minHeight:`calc(100vh - ${heroH}px)`,
                 boxShadow:homeScrollY>8
                   ?'0 -14px 32px rgba(0,0,0,0.12),0 -1px 0 rgba(0,0,0,0.06)'
                   :'0 -8px 20px rgba(0,0,0,0.07),0 -1px 0 rgba(0,0,0,0.04)',
