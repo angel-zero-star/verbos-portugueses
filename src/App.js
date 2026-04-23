@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine, Cell } from "recharts";
-import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search, User, Mic, ArrowUp, Globe, Star, CircleCheck } from "lucide-react";
+import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search, User, Mic, ArrowUp, Globe, Star, CircleCheck, LayoutGrid, Zap, Leaf, Navigation, Hand, Heart, Users, Coffee, Home, Scissors, Tag, Quote, MessageSquare, ChevronRight } from "lucide-react";
 import packageInfo from "../package.json";
 import { cn } from "./lib/utils";
 import { useTheme } from "./lib/useTheme";
@@ -531,6 +531,16 @@ function ProgressRing({pct,mastered,size=40}){
   );
 }
 
+// Red→amber→green color scale for module progress rings
+function pctColorRing(p){
+  if(p===null||p===undefined)return null;
+  const t=Math.max(0,Math.min(100,p))/100;
+  let hue;
+  if(t<0.5)hue=25+(75-25)*(t/0.5);
+  else hue=75+(145-75)*((t-0.5)/0.5);
+  return `oklch(0.62 0.17 ${hue})`;
+}
+
 // Portuguese flag (simple SVG)
 function FlagPT({className}){
   // Quina: small blue shield with 5 white dots
@@ -601,27 +611,27 @@ function Screen({children,className}){
 // ── Home screen subcategory structure ──
 const MENU_SECTIONS=[
   {mode:"conjugation",tk:"conjugations",icon:Layers,subcats:[
-    {key:"all",      tk:"all_verbs"},
-    {key:"modal",    tk:"modal"},
-    {key:"state",    tk:"state"},
-    {key:"movement", tk:"movement"},
-    {key:"action",   tk:"action"},
+    {key:"all",      tk:"all_verbs",    icon:LayoutGrid},
+    {key:"modal",    tk:"modal",        icon:Zap},
+    {key:"state",    tk:"state",        icon:Leaf},
+    {key:"movement", tk:"movement",     icon:Navigation},
+    {key:"action",   tk:"action",       icon:Hand},
   ]},
   {mode:"palavras",tk:"palavras_label",icon:BookOpen,subcats:[
-    {key:"corpo",    tk:"body_health"},
-    {key:"people",   tk:"people_jobs"},
-    {key:"food",     tk:"food_drink"},
-    {key:"home",     tk:"home_objects"},
-    {key:"nature",   tk:"nature_world"},
+    {key:"corpo",    tk:"body_health",  icon:Heart},
+    {key:"people",   tk:"people_jobs",  icon:Users},
+    {key:"food",     tk:"food_drink",   icon:Coffee},
+    {key:"home",     tk:"home_objects", icon:Home},
+    {key:"nature",   tk:"nature_world", icon:Globe},
   ]},
   {mode:"adjetivos",tk:"adjetivos_label",icon:User,subcats:[
-    {key:"adj-hair",        tk:"adj_hair"},
-    {key:"adj-personality", tk:"adj_personality"},
-    {key:"adj-general",     tk:"adj_general"},
+    {key:"adj-hair",        tk:"adj_hair",        icon:Scissors},
+    {key:"adj-personality", tk:"adj_personality", icon:Sparkles},
+    {key:"adj-general",     tk:"adj_general",     icon:Tag},
   ]},
   {mode:"frases",tk:"frases_label",icon:MessageCircle,subcats:[
-    {key:"expressoes",tk:"expressions"},
-    {key:"frases",    tk:"verb_sentences"},
+    {key:"expressoes",tk:"expressions",    icon:Quote},
+    {key:"frases",    tk:"verb_sentences", icon:MessageSquare},
   ]},
 ];
 
@@ -968,6 +978,22 @@ export default function App(){
   const [username,setUsername]=useState(null); // null=not yet asked, ""=skipped, string=name
   const [nameEditVal,setNameEditVal]=useState(""); // for inline edit in settings
   const [nameEditing,setNameEditing]=useState(false);
+  const [homeScrollY,setHomeScrollY]=useState(0);
+  const homeScrollRef=useRef(null);
+
+  // useMemo from here requires the `useMemo` import to be hoisted
+  // Aggregate home-screen stats from history
+  const homeOverall=useMemo(()=>{
+    const allModules=MENU_SECTIONS.flatMap(sec=>sec.subcats.map(sc=>{
+      const s=modeStats(history,sec.mode,sc.key);
+      return{...sc,mode:sec.mode,catTk:sec.tk,stats:s};
+    }));
+    const done=allModules.filter(m=>m.stats.count>0);
+    const avg=done.length?Math.round(done.reduce((s,m)=>s+m.stats.avgPct,0)/done.length):null;
+    const sessions=history.length;
+    const stars=history.reduce((s,h)=>s+h.correct,0);
+    return{avg,done:done.length,total:allModules.length,sessions,stars,allModules};
+  },[history]);
 
   useEffect(()=>{
     window.speechSynthesis?.getVoices();
@@ -991,6 +1017,7 @@ export default function App(){
   useEffect(()=>{sSet(SK_FILTER_FRA,fraFilter);},[fraFilter]);
   useEffect(()=>{sSet(SK_LANG,uiLang);},[uiLang]);
   useEffect(()=>{if(username!==null)sSet(SK_USER,username);},[username]);
+  useEffect(()=>{if(screen==="menu"){setHomeScrollY(0);if(homeScrollRef.current)homeScrollRef.current.scrollTop=0;}},[screen]);
 
   useEffect(()=>{
     const t=setTimeout(()=>setShowSplash(false),1300);
@@ -1353,75 +1380,222 @@ export default function App(){
 
   // ─────────────────────── MENU ───────────────────────
   if(screen==="menu"){
+    const HERO_H=200;
+    const tScroll=Math.min(1,homeScrollY/HERO_H);
+    const heroScale=1-tScroll*0.1;
+    const heroOpacity=1-tScroll*0.5;
+    const heroY=-tScroll*16;
+    const avgColor=pctColorRing(homeOverall.avg);
+    const flagC=2*Math.PI*32;
+
     return (
-      <div className="min-h-screen bg-bg text-text">
-        <TopBar/>
-        <AnimatePresence mode="wait">
-          <Screen key="menu">
-            <div className="flex flex-col items-center gap-4 py-4 text-center">
-              <FlagPT className="h-16 w-16"/>
-              <div>
-                <h1 className="font-display text-[28px] tracking-tighter text-text">{t("home_title")}</h1>
-                <p className="text-sm text-text-sub mt-1">{username?`Hey, ${username}!`:t("home_sub")}</p>
+      <div className="fixed inset-0 overflow-hidden bg-bg text-text">
+        {/* ── Hero layer (behind scroll) ── */}
+        <div
+          className="absolute inset-x-0 top-0 z-[1] pointer-events-none"
+          style={{transform:`translateY(${heroY}px) scale(${heroScale})`,opacity:heroOpacity,transformOrigin:'50% 30%'}}
+        >
+          <div className="pointer-events-auto max-w-[480px] mx-auto px-4 pt-3 pb-4 relative">
+            {/* Top row: identity (left) + flag + settings button (right) */}
+            <div className="flex items-center gap-3">
+              {/* Identity */}
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] font-mono-ui text-muted tracking-[0.14em] mb-1">
+                  OLÁ{username?`, ${username.toUpperCase()}`:''}
+                </div>
+                <h1 className="font-display text-[28px] leading-[1.05] tracking-tight text-text m-0">
+                  Flashcards
+                </h1>
+              </div>
+              {/* Portugal flag + overall progress ring */}
+              <div className="relative w-20 h-20 flex-shrink-0" style={{filter:'drop-shadow(0 4px 12px rgba(0,0,0,0.18))'}}>
+                <svg width="80" height="80" viewBox="0 0 80 80" className="absolute inset-0">
+                  <circle cx="40" cy="40" r="32" fill="none" stroke="hsl(var(--border))" strokeWidth="3.5"/>
+                  {homeOverall.avg!==null&&(
+                    <circle cx="40" cy="40" r="32" fill="none"
+                      stroke={avgColor} strokeWidth="3.5" strokeLinecap="round"
+                      strokeDasharray={`${(homeOverall.avg/100)*flagC} ${flagC-(homeOverall.avg/100)*flagC}`}
+                      transform="rotate(-90 40 40)"
+                      style={{transition:'stroke-dasharray 0.7s cubic-bezier(0.2,0.7,0.2,1)'}}
+                    />
+                  )}
+                </svg>
+                <div className="absolute inset-3">
+                  <FlagPT className="w-full h-full"/>
+                </div>
+                {homeOverall.avg!==null&&(
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2 text-[10px] font-mono-ui font-bold px-2 py-1 rounded-full bg-surface border border-border leading-none whitespace-nowrap"
+                    style={{bottom:'-8px',color:avgColor}}
+                  >
+                    {homeOverall.avg}%
+                  </div>
+                )}
+              </div>
+              {/* Settings button */}
+              <button
+                onClick={()=>setScreen("settings")}
+                className="w-8 h-8 rounded-[10px] bg-secondary/5 border border-border flex items-center justify-center text-muted hover:text-text hover:bg-secondary/10 transition-colors flex-shrink-0 self-start mt-1"
+                aria-label="Definições"
+              >
+                <SettingsIcon size={14} strokeWidth={2}/>
+              </button>
+            </div>
+
+            {/* Stats row — tappable → score page */}
+            <button
+              onClick={()=>setScreen("history")}
+              className="flex items-center gap-3 w-full rounded-xl px-3 py-2 mt-4 text-left hover:bg-secondary/5 transition-colors border border-transparent hover:border-border"
+            >
+              <div className="flex flex-col gap-1 flex-shrink-0">
+                <div className="text-[18px] font-bold tracking-tight text-text leading-none">{homeOverall.sessions}</div>
+                <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Sessões</div>
+              </div>
+              <div className="w-px self-stretch bg-border my-1"/>
+              <div className="flex flex-col gap-1 flex-shrink-0">
+                <div className="text-[18px] font-bold tracking-tight text-text leading-none">
+                  {homeOverall.done}<span className="text-muted font-medium text-sm">/{homeOverall.total}</span>
+                </div>
+                <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Módulos</div>
+              </div>
+              <div className="w-px self-stretch bg-border my-1"/>
+              <div className="flex flex-col gap-1 flex-shrink-0">
+                <div className="text-[18px] font-bold tracking-tight text-text leading-none flex items-center gap-1">
+                  <Star size={14} className="text-warn flex-shrink-0" fill="currentColor" strokeWidth={0}/>
+                  {homeOverall.stars}
+                </div>
+                <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Estrelas</div>
+              </div>
+              <ChevronRight size={14} className="text-muted ml-auto flex-shrink-0 opacity-60"/>
+            </button>
+          </div>
+        </div>
+
+        {/* ── Scroll container ── */}
+        <div
+          ref={homeScrollRef}
+          className="absolute inset-0 overflow-y-auto z-[2] pointer-events-none"
+          style={{scrollbarWidth:'none'}}
+          onScroll={e=>setHomeScrollY(e.currentTarget.scrollTop)}
+        >
+          <div className="max-w-[480px] mx-auto">
+            <div style={{height:HERO_H}}/>
+            <div
+              className="relative bg-bg rounded-t-[22px] pb-12 pointer-events-auto"
+              style={{
+                minHeight:`calc(100vh - ${HERO_H}px)`,
+                boxShadow:homeScrollY>8
+                  ?'0 -14px 32px rgba(0,0,0,0.12),0 -1px 0 rgba(0,0,0,0.06)'
+                  :'0 -8px 20px rgba(0,0,0,0.07),0 -1px 0 rgba(0,0,0,0.04)',
+                transition:'box-shadow 160ms ease',
+              }}
+            >
+              <div className="w-10 h-1 bg-secondary/20 rounded-full mx-auto mt-3 mb-4"/>
+
+              {/* Category sections */}
+              <div className="flex flex-col gap-6">
+                {MENU_SECTIONS.map((sec,si)=>{
+                  const SecIcon=sec.icon;
+                  const secItems=sec.subcats.map(sc=>({...sc,stats:modeStats(history,sec.mode,sc.key)}));
+                  const doneItems=secItems.filter(it=>it.stats.count>0);
+                  const secAvg=doneItems.length?Math.round(doneItems.reduce((s,it)=>s+it.stats.avgPct,0)/doneItems.length):null;
+                  const secColor=pctColorRing(secAvg);
+                  const sorted=[...secItems].sort((a,b)=>{
+                    const av=a.stats.count===0?101:a.stats.avgPct;
+                    const bv=b.stats.count===0?101:b.stats.avgPct;
+                    return av-bv;
+                  });
+                  return (
+                    <motion.div key={sec.mode}
+                      initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}
+                      transition={{duration:0.22,ease:'easeOut',delay:si*0.06}}
+                    >
+                      {/* Section header */}
+                      <div className="flex items-center justify-between px-4 pb-2">
+                        <div className="flex items-center gap-2">
+                          <SecIcon size={20} strokeWidth={2} className="text-text"/>
+                          <span className="font-display text-lg tracking-tight text-text">{t(sec.tk)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {secAvg!==null&&(
+                            <>
+                              <div className="w-2 h-2 rounded-full" style={{background:secColor}}/>
+                              <span className="text-[10px] font-mono-ui font-semibold" style={{color:secColor}}>{secAvg}%</span>
+                            </>
+                          )}
+                          <span className="text-[10px] font-mono-ui text-muted">{doneItems.length}/{secItems.length}</span>
+                          <button
+                            onClick={()=>{setLibraryMode(sec.mode);setScreen("library");}}
+                            className="w-8 h-8 rounded-[10px] bg-secondary/5 border border-border flex items-center justify-center text-muted hover:text-text hover:bg-secondary/10 transition-colors"
+                            aria-label="Abrir biblioteca"
+                          >
+                            <BookOpen size={14} strokeWidth={2}/>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Module rows */}
+                      <div className="px-4 flex flex-col gap-2">
+                        {sorted.map(it=>{
+                          const untouched=it.stats.count===0;
+                          const pct=untouched?null:it.stats.avgPct;
+                          const ringColor=pctColorRing(pct);
+                          const R=17,C=2*Math.PI*R;
+                          const dash=pct!==null?(pct/100)*C:0;
+                          const ItemIcon=it.icon;
+                          return (
+                            <button key={it.key}
+                              onClick={()=>startGame(sec.mode,it.key)}
+                              className="flex items-center gap-3 w-full bg-surface border border-border rounded-xl px-4 py-3 text-left hover:bg-secondary/5 transition-colors active:scale-[0.99]"
+                            >
+                              {/* Mini progress ring */}
+                              <div className="relative w-12 h-12 flex-shrink-0">
+                                <svg width="48" height="48" viewBox="0 0 48 48" className="absolute inset-0" style={{transform:'rotate(-90deg)'}}>
+                                  <circle cx="24" cy="24" r={R} fill="none" stroke="hsl(var(--border))" strokeWidth="2.5"/>
+                                  {pct!==null&&(
+                                    <circle cx="24" cy="24" r={R} fill="none" stroke={ringColor} strokeWidth="2.5"
+                                      strokeLinecap="round" strokeDasharray={`${dash} ${C-dash}`}
+                                      style={{transition:'stroke-dasharray 0.7s cubic-bezier(0.2,0.7,0.2,1)'}}
+                                    />
+                                  )}
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center"
+                                     style={{color:untouched?'hsl(var(--muted))':ringColor}}>
+                                  <ItemIcon size={18} strokeWidth={1.9}/>
+                                </div>
+                              </div>
+                              {/* Name */}
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-semibold text-text truncate">{t(it.tk)}</div>
+                              </div>
+                              {/* Stats */}
+                              <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                {untouched?(
+                                  <span className="text-[10px] font-mono-ui text-muted tracking-[0.08em]">NOVO</span>
+                                ):(
+                                  <>
+                                    <span className="text-sm font-bold font-mono-ui leading-none" style={{color:ringColor}}>{pct}%</span>
+                                    <span className="text-[10px] font-mono-ui text-muted leading-none">{it.stats.count} sess.</span>
+                                  </>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Footer */}
+              <div className="pt-8 text-center text-[10px] font-mono-ui text-muted uppercase tracking-[0.15em]">
+                verbos · v{packageInfo.version}
               </div>
             </div>
+          </div>
+        </div>
 
-            {MENU_SECTIONS.map((section,si)=>{
-              const Icon=section.icon;
-              return (
-                <motion.div
-                  key={section.mode}
-                  initial={{opacity:0,y:8}}
-                  animate={{opacity:1,y:0}}
-                  transition={{duration:0.22,ease:"easeOut",delay:si*0.06}}
-                  className="flex flex-col gap-2"
-                >
-                  {/* Section header */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-md bg-secondary/10 border border-secondary/25 flex items-center justify-center text-text">
-                        <Icon size={14} strokeWidth={2.25}/>
-                      </div>
-                      <span className="font-display text-base text-text tracking-tight">{t(section.tk)}</span>
-                    </div>
-                    <button
-                      onClick={()=>{setLibraryMode(section.mode);setScreen("library");}}
-                      title="Browse library"
-                      className="h-8 w-8 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center"
-                    ><BookOpen size={14} strokeWidth={2.25}/></button>
-                  </div>
-
-                  {/* Subcategory rows */}
-                  <Card className="overflow-hidden divide-y divide-border">
-                    {section.subcats.map(sc=>{
-                      const stats=modeStats(history,section.mode,sc.key);
-                      return (
-                        <div key={sc.key} className="flex items-center justify-between px-4 py-3 hover:bg-secondary/5 transition-colors">
-                          <div>
-                            <span className="text-sm font-medium text-text">{t(sc.tk)}</span>
-                            {stats.count>0&&(
-                              <div className="text-[10px] font-mono-ui text-text-sub">
-                                {stats.count} {t("sessions")} · {stats.avgPct}%{stats.mastered?" ✓":""}
-                              </div>
-                            )}
-                          </div>
-                          <Button size="sm" onClick={()=>startGame(section.mode,sc.key)}>
-                            <Play size={12} className="mr-1"/>{t("nav_play")}
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </Card>
-                </motion.div>
-              );
-            })}
-
-            <div className="mt-auto pt-8 text-center text-[10px] font-mono-ui text-text-sub uppercase tracking-[0.15em]">
-              verbos · v{packageInfo.version}
-            </div>
-          </Screen>
-        </AnimatePresence>
-        <NavBar/>
       </div>
     );
   }
@@ -1441,11 +1615,18 @@ export default function App(){
     return (
       <div className="min-h-screen bg-bg text-text">
         <TopBar/>
+        <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-xl border-b border-border">
+          <div className="max-w-[480px] mx-auto px-4 py-3 flex items-center gap-3">
+            <button onClick={()=>setScreen("menu")} className="h-9 w-9 shrink-0 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center">
+              <ArrowLeft size={16} strokeWidth={2.25}/>
+            </button>
+            <span className="font-display text-lg tracking-tight text-text">{t("settings_title")}</span>
+          </div>
+        </div>
         <AnimatePresence mode="wait">
           <Screen key="settings">
             <div>
-              <h1 className="font-display text-[28px] tracking-tighter text-text">{t("settings_title")}</h1>
-              <p className="text-sm text-text-sub mt-1">{t("settings_sub")}</p>
+              <p className="text-sm text-text-sub">{t("settings_sub")}</p>
             </div>
 
             {/* Name — top of list */}
@@ -1546,7 +1727,6 @@ export default function App(){
             </div>
           </Screen>
         </AnimatePresence>
-        <NavBar/>
       </div>
     );
   }
@@ -1556,10 +1736,17 @@ export default function App(){
     return (
       <div className="min-h-screen bg-bg text-text">
         <TopBar/>
+        <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-xl border-b border-border">
+          <div className="max-w-[480px] mx-auto px-4 py-3 flex items-center gap-3">
+            <button onClick={()=>setScreen("menu")} className="h-9 w-9 shrink-0 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center">
+              <ArrowLeft size={16} strokeWidth={2.25}/>
+            </button>
+            <span className="font-display text-lg tracking-tight text-text">Score</span>
+          </div>
+        </div>
         <AnimatePresence mode="wait">
           <Screen key="history">
             <div>
-              <h1 className="font-display text-[28px] tracking-tighter text-text">Score</h1>
               <p className="text-sm text-text-sub mt-1">
                 {history.length===0
                   ? t("history_empty")
@@ -1619,7 +1806,6 @@ export default function App(){
             )}
           </Screen>
         </AnimatePresence>
-        <NavBar/>
       </div>
     );
   }
@@ -1782,17 +1968,25 @@ export default function App(){
       <div className="flex-1 overflow-hidden px-6 pb-6">
         <div className="max-w-[480px] mx-auto h-full">
           {/* Stack wrapper — ghost cards peek 12px above the front card */}
+          {(()=>{
+            const remaining = cards.length - idx - 1;
+            const ghosts = Math.min(2, remaining);
+            return (
           <div className="relative h-full pt-3">
-            {/* Ghost card — back */}
-            <div
-              className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[calc(100%-48px)] bg-surface border border-border rounded-lg pointer-events-none"
-              style={{zIndex:1,boxShadow:"0 5px 13px 0 hsl(var(--shadow)/0.2)"}}
-            />
-            {/* Ghost card — middle */}
-            <div
-              className="absolute top-1 bottom-0 left-1/2 -translate-x-1/2 w-[calc(100%-24px)] bg-surface border border-border rounded-lg pointer-events-none"
-              style={{zIndex:2,boxShadow:"0 5px 13px 0 hsl(var(--shadow)/0.2)"}}
-            />
+            {/* Ghost — back (2 cards left) */}
+            {ghosts >= 2 && (
+              <div
+                className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[calc(100%-48px)] bg-surface border border-border rounded-lg pointer-events-none"
+                style={{zIndex:1,boxShadow:"0 5px 13px 0 hsl(var(--shadow)/0.2)"}}
+              />
+            )}
+            {/* Ghost — middle (1 card left) */}
+            {ghosts >= 1 && (
+              <div
+                className="absolute top-1 bottom-0 left-1/2 -translate-x-1/2 w-[calc(100%-24px)] bg-surface border border-border rounded-lg pointer-events-none"
+                style={{zIndex:2,boxShadow:"0 5px 13px 0 hsl(var(--shadow)/0.2)"}}
+              />
+            )}
 
             {/* Active card */}
             <AnimatePresence mode="popLayout">
@@ -1800,19 +1994,30 @@ export default function App(){
                 key={idx}
                 className="relative h-full"
                 style={{zIndex:3}}
-                initial={{opacity:0,x:120,rotate:4}}
+                initial={{opacity:0.8, scale:0.93, y:10}}
                 animate={{
                   opacity:1,
+                  scale:1,
+                  y:0,
                   rotate:0,
                   x: result==="wrong" ? [0,8,-8,6,-6,0] : 0,
                 }}
-                exit={{opacity:0,x:-120,rotate:-4}}
+                exit={{
+                  x:-420,
+                  rotate:-8,
+                  opacity:0,
+                  transition:{duration:0.32,ease:[0.32,0,0.67,0]},
+                }}
                 transition={{
-                  opacity:{duration:0.3,ease:"easeOut"},
-                  rotate:{duration:0.4,ease:[0.25,0.1,0.25,1]},
+                  opacity:{duration:0.2},
+                  scale:{type:"spring",stiffness:320,damping:28},
+                  y:{type:"spring",stiffness:320,damping:28},
+                  rotate: result==="wrong"
+                    ? {duration:0.4}
+                    : {type:"spring",stiffness:320,damping:28},
                   x: result==="wrong"
                     ? {duration:0.4,ease:"easeOut"}
-                    : {duration:0.4,ease:[0.25,0.1,0.25,1]},
+                    : {type:"spring",stiffness:320,damping:28},
                 }}
               >
                 <div
@@ -1984,6 +2189,7 @@ export default function App(){
               </motion.div>
             </AnimatePresence>
           </div>
+          ); })()}
         </div>
       </div>
     </div>
