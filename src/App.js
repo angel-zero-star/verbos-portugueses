@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine, Cell } from "recharts";
 import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search, User, Mic, ArrowUp, Globe, Star, CircleCheck, LayoutGrid, Zap, Leaf, Navigation, Hand, Heart, Users, Coffee, Home, Scissors, Tag, Quote, MessageSquare, ChevronRight } from "lucide-react";
@@ -236,7 +236,7 @@ const STRINGS={
     language:"UI Language",
     tense:"Tense", verb_type:"Verb Type",
     nav_play:"Play", nav_score:"Score", nav_settings:"Settings",
-    check:"Check", next:"Next", placeholder_translation:"Type translation...", placeholder_conjugation:"Type conjugation...",
+    check:"Check", next:"Next", dont_know:"I don't know", placeholder_translation:"Type translation...", placeholder_conjugation:"Type conjugation...",
     correct_label:"Correto!", accent_warn:"Watch the accent:", near_warn:"Small typo — correct form:", also:"Also:",
     conjugations:"Conjugations",
     all_verbs:"All Verbs", modal:"Modal", state:"State", movement:"Movement", action:"Action",
@@ -261,7 +261,7 @@ const STRINGS={
     language:"Idioma UI",
     tense:"Tempo", verb_type:"Tipo de Verbo",
     nav_play:"Jogar", nav_score:"Pontuação", nav_settings:"Definições",
-    check:"Verificar", next:"Seguinte", placeholder_translation:"Escreve a tradução...", placeholder_conjugation:"Escreve a conjugação...",
+    check:"Verificar", next:"Seguinte", dont_know:"Não sei", placeholder_translation:"Escreve a tradução...", placeholder_conjugation:"Escreve a conjugação...",
     correct_label:"Correto!", accent_warn:"Atenção ao acento:", near_warn:"Pequeno erro — forma correta:", also:"Também:",
     conjugations:"Conjugações",
     all_verbs:"Todos", modal:"Modal", state:"Estado", movement:"Movimento", action:"Ação",
@@ -943,6 +943,38 @@ function LibraryScreen({mode,onBack,conjFilter,t=k=>k}){
   );
 }
 
+function CardDragWrapper({direction, onSwipeLeft, onSwipeRight, canSwipeRight, shakeSignal, children}){
+  const cardX = useMotionValue(0);
+  const rotate = useTransform(cardX, [-440, 0, 440], [-8, 0, 8]);
+  const opacity = useTransform(cardX, [-440, -80, 80, 440], [0, 1, 1, 0]);
+  useEffect(()=>{
+    if(shakeSignal>0) animate(cardX,[0,8,-8,6,-6,0],{duration:0.4,ease:"easeOut"});
+  },[shakeSignal,cardX]);
+  return (
+    <motion.div
+      className="relative h-full"
+      style={{x:cardX, rotate, opacity, zIndex:3}}
+      initial={direction==="back" ? {x:-440} : {x:0}}
+      animate={{x:0, transition: direction==="back" ? {type:"spring",stiffness:380,damping:34} : {duration:0}}}
+      exit={direction==="back"
+        ? {x:440, zIndex:10, transition:{duration:0.32,ease:[0.32,0,0.67,0]}}
+        : {x:-440, zIndex:10, transition:{duration:0.32,ease:[0.32,0,0.67,0]}}
+      }
+      drag="x"
+      dragDirectionLock
+      dragConstraints={{left:0,right:0}}
+      dragElastic={{left:1, right: canSwipeRight ? 1 : 0}}
+      dragMomentum={false}
+      onDragEnd={(e,info)=>{
+        if(info.offset.x<-120 || info.velocity.x<-500) onSwipeLeft();
+        else if(canSwipeRight && (info.offset.x>120 || info.velocity.x>500)) onSwipeRight();
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 export default function App(){
   const {theme,toggle:toggleTheme}=useTheme();
   const [screen,setScreen]=useState("menu");
@@ -951,6 +983,9 @@ export default function App(){
   const [input,setInput]=useState("");
   const [result,setResult]=useState(null);
   const [accentNote,setAccentNote]=useState(null);
+  const [cardDir,setCardDir]=useState("forward");
+  const [shakeSignal,setShakeSignal]=useState(0);
+  useEffect(()=>{if(result==="wrong")setShakeSignal(s=>s+1);},[result]);
   const [isListening,setIsListening]=useState(false);
   const [isSpeaking,setIsSpeaking]=useState(false);
   const [inputFocused,setInputFocused]=useState(false);
@@ -1019,7 +1054,7 @@ export default function App(){
   useEffect(()=>{sSet(SK_FILTER_FRA,fraFilter);},[fraFilter]);
   useEffect(()=>{sSet(SK_LANG,uiLang);},[uiLang]);
   useEffect(()=>{if(username!==null)sSet(SK_USER,username);},[username]);
-  useEffect(()=>{if(screen==="menu"){setHomeScrollY(0);if(homeScrollRef.current)homeScrollRef.current.scrollTop=0;}},[screen]);
+  useLayoutEffect(()=>{if(screen==="menu"){setHomeScrollY(0);if(homeScrollRef.current)homeScrollRef.current.scrollTop=0;}},[screen]);
   useEffect(()=>{
     if(!heroRef.current)return;
     const ro=new ResizeObserver(entries=>setHeroH(entries[0].borderBoxSize[0].blockSize));
@@ -1173,7 +1208,10 @@ export default function App(){
     else{setResult("wrong");setAccentNote(null);setScore(s=>({...s,wrong:s.wrong+1}));setWrongOnes(w=>[...w,c]);}
   };
 
-  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),mode:gameMode,subcat:subcatRef.current||"all",correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setIdx(i=>i+1);setInput("");if(inputRef.current)inputRef.current.value="";setResult(null);setAccentNote(null);inputRef.current?.focus({preventScroll:true});}};
+  const next=()=>{if(idx+1>=cards.length){const sess={date:new Date().toISOString(),mode:gameMode,subcat:subcatRef.current||"all",correct:score.correct,wrong:score.wrong,accentMisses:score.accentMisses,total:cards.length,pct:Math.round((score.correct/cards.length)*100)};const nh=[...history,sess];setHistory(nh);sSet(SK_HIST,nh);setScreen("results");}else{setCardDir("forward");setIdx(i=>i+1);setInput("");if(inputRef.current)inputRef.current.value="";setResult(null);setAccentNote(null);inputRef.current?.focus({preventScroll:true});}};
+
+  const skip=()=>{if(idx+1>=cards.length)return;setCardDir("forward");setIdx(i=>i+1);setInput("");if(inputRef.current)inputRef.current.value="";setResult(null);setAccentNote(null);};
+  const goBack=()=>{if(idx<=0)return;setCardDir("back");setIdx(i=>i-1);setInput("");if(inputRef.current)inputRef.current.value="";setResult(null);setAccentNote(null);};
 
   // Single Enter handler — debounced to avoid double-fire (key repeat / fast double-press)
   useEffect(()=>{
@@ -1388,117 +1426,25 @@ export default function App(){
 
   // ─────────────────────── MENU ───────────────────────
   if(screen==="menu"){
-    const tScroll=Math.min(1,homeScrollY/heroH);
-    const heroScale=1-tScroll*0.1;
-    const heroOpacity=1-tScroll*0.5;
-    const heroY=-tScroll*16;
     const avgColor=pctColorRing(homeOverall.avg);
     const flagC=2*Math.PI*32;
+    const heroScrollRatio=Math.min(1,homeScrollY/Math.max(1,heroH*0.6));
+    const heroScale=1-heroScrollRatio*0.05;
+    const heroOpacity=1-heroScrollRatio*0.3;
 
     return (
-      <div className="fixed inset-0 overflow-hidden bg-bg text-text">
-        {/* ── Hero layer (above scroll, pointer-events pass through except buttons) ── */}
-        <div
-          ref={heroRef}
-          className="absolute inset-x-0 top-0 z-[1] pointer-events-none bg-bg"
-          style={{transform:`translateY(${heroY}px) scale(${heroScale})`,opacity:heroOpacity,transformOrigin:'50% 30%'}}
-        >
-          <div className="pointer-events-auto max-w-[480px] mx-auto px-4 pb-4 relative" style={{paddingTop:'max(12px, env(safe-area-inset-top))'}}>
-            {/* Top row: identity (left) + flag + settings button (right) */}
-            <div className="flex items-center gap-3">
-              {/* Identity */}
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-mono-ui text-muted tracking-[0.14em] mb-1">
-                  OLÁ{username?`, ${username.toUpperCase()}`:''}
-                </div>
-                <h1 className="font-display text-[28px] leading-[1.05] tracking-tight text-text m-0">
-                  Flashcards
-                </h1>
-              </div>
-              {/* Portugal flag + overall progress ring */}
-              <div className="relative w-20 h-20 flex-shrink-0" style={{filter:'drop-shadow(0 4px 12px rgba(0,0,0,0.18))'}}>
-                <svg width="80" height="80" viewBox="0 0 80 80" className="absolute inset-0">
-                  <circle cx="40" cy="40" r="32" fill="none" stroke="hsl(var(--border))" strokeWidth="3.5"/>
-                  {homeOverall.avg!==null&&(
-                    <circle cx="40" cy="40" r="32" fill="none"
-                      stroke={avgColor} strokeWidth="3.5" strokeLinecap="round"
-                      strokeDasharray={`${(homeOverall.avg/100)*flagC} ${flagC-(homeOverall.avg/100)*flagC}`}
-                      transform="rotate(-90 40 40)"
-                      style={{transition:'stroke-dasharray 0.7s cubic-bezier(0.2,0.7,0.2,1)'}}
-                    />
-                  )}
-                </svg>
-                <div className="absolute inset-3">
-                  <FlagPT className="w-full h-full"/>
-                </div>
-                {homeOverall.avg!==null&&(
-                  <div
-                    className="absolute left-1/2 -translate-x-1/2 text-[10px] font-mono-ui font-bold px-2 py-1 rounded-full bg-surface border border-border leading-none whitespace-nowrap"
-                    style={{bottom:'-8px',color:avgColor}}
-                  >
-                    {homeOverall.avg}%
-                  </div>
-                )}
-              </div>
-              {/* Settings button */}
-              <button
-                onClick={()=>setScreen("settings")}
-                className="w-8 h-8 rounded-[10px] bg-secondary/5 border border-border flex items-center justify-center text-muted hover:text-text hover:bg-secondary/10 transition-colors flex-shrink-0 self-start mt-1"
-                aria-label="Definições"
-              >
-                <SettingsIcon size={14} strokeWidth={2}/>
-              </button>
-            </div>
-
-            {/* Stats row — tappable → score page */}
-            <button
-              onClick={()=>setScreen("history")}
-              className="flex items-center gap-3 w-full rounded-xl px-3 py-2 mt-4 text-left hover:bg-secondary/5 transition-colors border border-transparent hover:border-border"
-            >
-              <div className="flex flex-col gap-1 flex-shrink-0">
-                <div className="text-[18px] font-bold tracking-tight text-text leading-none">{homeOverall.sessions}</div>
-                <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Sessões</div>
-              </div>
-              <div className="w-px self-stretch bg-border my-1"/>
-              <div className="flex flex-col gap-1 flex-shrink-0">
-                <div className="text-[18px] font-bold tracking-tight text-text leading-none">
-                  {homeOverall.done}<span className="text-muted font-medium text-sm">/{homeOverall.total}</span>
-                </div>
-                <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Módulos</div>
-              </div>
-              <div className="w-px self-stretch bg-border my-1"/>
-              <div className="flex flex-col gap-1 flex-shrink-0">
-                <div className="text-[18px] font-bold tracking-tight text-text leading-none flex items-center gap-1">
-                  <Star size={14} className="text-warn flex-shrink-0" fill="currentColor" strokeWidth={0}/>
-                  {homeOverall.stars}
-                </div>
-                <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Estrelas</div>
-              </div>
-              <ChevronRight size={14} className="text-muted ml-auto flex-shrink-0 opacity-60"/>
-            </button>
-          </div>
-        </div>
-
-        {/* ── Scroll container ── */}
+      <div className="fixed inset-0 overflow-hidden bg-surface text-text">
+        {/* ── Scroll container (sheet slides OVER fixed header background) ── */}
         <div
           ref={homeScrollRef}
-          className="absolute inset-0 overflow-y-auto z-[2]"
+          className="absolute inset-0 overflow-y-auto z-[2] pointer-events-none"
           style={{scrollbarWidth:'none'}}
           onScroll={e=>setHomeScrollY(e.currentTarget.scrollTop)}
         >
           <div className="max-w-[480px] mx-auto">
-            <div style={{height:heroH}}/>
-            <div
-              className="relative bg-bg rounded-t-[22px] pb-12"
-              style={{
-                minHeight:`calc(100vh - ${heroH}px)`,
-                boxShadow:homeScrollY>8
-                  ?'0 -14px 32px rgba(0,0,0,0.12),0 -1px 0 rgba(0,0,0,0.06)'
-                  :'0 -8px 20px rgba(0,0,0,0.07),0 -1px 0 rgba(0,0,0,0.04)',
-                transition:'box-shadow 160ms ease',
-              }}
-            >
-              <div className="w-10 h-1 bg-secondary/20 rounded-full mx-auto mt-3 mb-4"/>
+            <div style={{height:heroH-20}}/>
+            <div className="relative bg-bg rounded-t-[22px] pb-12 pointer-events-auto" style={{minHeight:`calc(100vh - ${heroH-20}px)`,boxShadow:'0 -5px 13px 0 hsl(var(--shadow)/0.2)'}}>
+              <div className="w-10 h-1 bg-secondary/20 rounded-full mx-auto mt-4 mb-4"/>
 
               {/* Category sections */}
               <div className="flex flex-col gap-6">
@@ -1604,6 +1550,80 @@ export default function App(){
           </div>
         </div>
 
+        {/* ── Fixed header (background layer — sheet scrolls over it) ── */}
+        <div ref={heroRef} className="absolute inset-x-0 top-0 z-[1] bg-surface">
+          <div className="max-w-[480px] mx-auto px-4 pb-4" style={{paddingTop:'max(12px, env(safe-area-inset-top))',transform:`scale(${heroScale})`,opacity:heroOpacity,transformOrigin:'top center',transition:'transform 0.08s linear, opacity 0.08s linear'}}>
+            <div className="flex items-center gap-3">
+              <div className="relative w-20 h-20 flex-shrink-0" style={{filter:'drop-shadow(0 4px 12px rgba(0,0,0,0.18))'}}>
+                <svg width="80" height="80" viewBox="0 0 80 80" className="absolute inset-0">
+                  <circle cx="40" cy="40" r="32" fill="none" stroke="hsl(var(--border))" strokeWidth="3.5"/>
+                  {homeOverall.avg!==null&&(
+                    <circle cx="40" cy="40" r="32" fill="none"
+                      stroke={avgColor} strokeWidth="3.5" strokeLinecap="round"
+                      strokeDasharray={`${(homeOverall.avg/100)*flagC} ${flagC-(homeOverall.avg/100)*flagC}`}
+                      transform="rotate(-90 40 40)"
+                      style={{transition:'stroke-dasharray 0.7s cubic-bezier(0.2,0.7,0.2,1)'}}
+                    />
+                  )}
+                </svg>
+                <div className="absolute inset-3">
+                  <FlagPT className="w-full h-full"/>
+                </div>
+                {homeOverall.avg!==null&&(
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2 text-[10px] font-mono-ui font-bold px-2 py-1 rounded-full bg-surface border border-border leading-none whitespace-nowrap"
+                    style={{bottom:'-8px',color:avgColor}}
+                  >
+                    {homeOverall.avg}%
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] font-mono-ui text-muted tracking-[0.14em] mb-1">
+                  OLÁ{username?`, ${username.toUpperCase()}`:''}
+                </div>
+                <h1 className="font-display text-[28px] leading-[1.05] tracking-tight text-text m-0">
+                  Flashcards
+                </h1>
+              </div>
+              <button
+                onClick={()=>setScreen("history")}
+                className="w-8 h-8 rounded-[10px] bg-secondary/5 border border-border flex items-center justify-center text-muted hover:text-text hover:bg-secondary/10 transition-colors flex-shrink-0 self-start mt-1"
+                aria-label="Pontuação"
+              >
+                <Trophy size={14} strokeWidth={2}/>
+              </button>
+              <button
+                onClick={()=>setScreen("settings")}
+                className="w-8 h-8 rounded-[10px] bg-secondary/5 border border-border flex items-center justify-center text-muted hover:text-text hover:bg-secondary/10 transition-colors flex-shrink-0 self-start mt-1"
+                aria-label="Definições"
+              >
+                <SettingsIcon size={14} strokeWidth={2}/>
+              </button>
+            </div>
+            <div className="flex items-center gap-3 w-full px-3 py-2 mt-4">
+              <div className="flex flex-col gap-1 flex-shrink-0">
+                <div className="text-[18px] font-bold tracking-tight text-text leading-none">{homeOverall.sessions}</div>
+                <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Sessões</div>
+              </div>
+              <div className="w-px self-stretch bg-border my-1"/>
+              <div className="flex flex-col gap-1 flex-shrink-0">
+                <div className="text-[18px] font-bold tracking-tight text-text leading-none">
+                  {homeOverall.done}<span className="text-muted font-medium text-sm">/{homeOverall.total}</span>
+                </div>
+                <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Módulos</div>
+              </div>
+              <div className="w-px self-stretch bg-border my-1"/>
+              <div className="flex flex-col gap-1 flex-shrink-0">
+                <div className="text-[18px] font-bold tracking-tight text-text leading-none flex items-center gap-1">
+                  <Star size={14} className="text-warn flex-shrink-0" fill="currentColor" strokeWidth={0}/>
+                  {homeOverall.stars}
+                </div>
+                <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Estrelas</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -1939,6 +1959,20 @@ export default function App(){
       className="fixed top-0 left-0 right-0 bg-bg text-text flex flex-col overflow-hidden"
       style={{height:"var(--vvh,100vh)",zIndex:10}}
     >
+      {/* Left-edge swipe-back detector */}
+      {idx>0 && (
+        <motion.div
+          className="absolute top-0 left-0 h-full w-5 z-[100]"
+          drag="x"
+          dragDirectionLock
+          dragConstraints={{left:0,right:0}}
+          dragElastic={{left:0,right:0.6}}
+          dragMomentum={false}
+          onDragEnd={(e,info)=>{
+            if(info.offset.x>60 || info.velocity.x>400) goBack();
+          }}
+        />
+      )}
       {/* Progress bar */}
       <div className="shrink-0 px-6 pt-6 pb-4">
         <div className="max-w-[480px] mx-auto flex flex-col gap-3">
@@ -1997,36 +2031,14 @@ export default function App(){
             )}
 
             {/* Active card */}
-            <AnimatePresence mode="popLayout">
-              <motion.div
+            <AnimatePresence mode="popLayout" initial={false}>
+              <CardDragWrapper
                 key={idx}
-                className="relative h-full"
-                style={{zIndex:3}}
-                initial={{opacity:0.8, scale:0.93, y:10}}
-                animate={{
-                  opacity:1,
-                  scale:1,
-                  y:0,
-                  rotate:0,
-                  x: result==="wrong" ? [0,8,-8,6,-6,0] : 0,
-                }}
-                exit={{
-                  x:-420,
-                  rotate:-8,
-                  opacity:0,
-                  transition:{duration:0.32,ease:[0.32,0,0.67,0]},
-                }}
-                transition={{
-                  opacity:{duration:0.2},
-                  scale:{type:"spring",stiffness:320,damping:28},
-                  y:{type:"spring",stiffness:320,damping:28},
-                  rotate: result==="wrong"
-                    ? {duration:0.4}
-                    : {type:"spring",stiffness:320,damping:28},
-                  x: result==="wrong"
-                    ? {duration:0.4,ease:"easeOut"}
-                    : {type:"spring",stiffness:320,damping:28},
-                }}
+                direction={cardDir}
+                onSwipeLeft={()=>{ result!==null ? next() : skip(); }}
+                onSwipeRight={()=>{}}
+                canSwipeRight={false}
+                shakeSignal={shakeSignal}
               >
                 <div
                   className="h-full bg-surface border border-border rounded-lg flex flex-col overflow-hidden"
@@ -2158,43 +2170,55 @@ export default function App(){
                     </AnimatePresence>
                   </div>
 
-                  {/* ── Button row — fixed at bottom of card ── */}
+                  {/* ── Button stack — fixed at bottom of card ── */}
                   <div
-                    className="flex items-center justify-between shrink-0 px-6"
+                    className="shrink-0 px-6 flex flex-col items-center gap-5"
                     style={{paddingBottom:"max(24px,env(safe-area-inset-bottom))",paddingTop:"16px"}}
                   >
-                    {/* Left — spacer (reserved, matches Figma) */}
-                    <div className="w-12 h-12 opacity-0 pointer-events-none" />
+                    {result===null ? (
+                      <>
+                        {/* Mic */}
+                        <motion.button
+                          onMouseDown={e=>e.preventDefault()}
+                          onClick={e=>{e.stopPropagation();toggleMic();}}
+                          className={cn(
+                            "w-[68px] h-[68px] rounded-full border flex items-center justify-center transition-colors shrink-0",
+                            isListening
+                              ? "bg-danger/10 border-danger/40 text-danger"
+                              : "bg-bg border-border text-text"
+                          )}
+                        >
+                          <motion.div animate={isListening?{scale:[1,1.15,1]}:{scale:1}} transition={isListening?{repeat:Infinity,duration:0.8}:{}}>
+                            <Mic size={20}/>
+                          </motion.div>
+                        </motion.button>
 
-                    {/* Centre — Mic */}
-                    <motion.button
-                      onMouseDown={e=>e.preventDefault()}
-                      onClick={e=>{e.stopPropagation();if(result===null)toggleMic();}}
-                      animate={result!==null?{opacity:0,pointerEvents:"none"}:{opacity:1,pointerEvents:"auto"}}
-                      transition={{duration:0.15}}
-                      className={cn(
-                        "w-[68px] h-[68px] rounded-full border flex items-center justify-center transition-colors shrink-0",
-                        isListening
-                          ? "bg-danger/10 border-danger/40 text-danger"
-                          : "bg-bg border-border text-text"
-                      )}
-                    >
-                      <motion.div animate={isListening?{scale:[1,1.15,1]}:{scale:1}} transition={isListening?{repeat:Infinity,duration:0.8}:{}}>
-                        <Mic size={20}/>
-                      </motion.div>
-                    </motion.button>
-
-                    {/* Right — Check / Next */}
-                    <button
-                      onMouseDown={e=>e.preventDefault()}
-                      onClick={e=>{e.stopPropagation();result===null?check():next();}}
-                      className="w-12 h-12 rounded-full flex items-center justify-center transition-all shrink-0 bg-primary text-white hover:brightness-90 active:scale-95"
-                    >
-                      {result!==null ? <ArrowRight size={18} strokeWidth={2.5}/> : <CircleCheck size={20} strokeWidth={2}/>}
-                    </button>
+                        {/* I don't know / Check pill */}
+                        <button
+                          onMouseDown={e=>e.preventDefault()}
+                          onClick={e=>{e.stopPropagation();check();}}
+                          className={cn(
+                            "w-full h-12 rounded-full flex items-center justify-center font-medium text-sm transition-all active:scale-[0.98]",
+                            input.length>0
+                              ? "bg-primary text-white hover:brightness-90"
+                              : "bg-bg border border-border text-text"
+                          )}
+                        >
+                          {input.length>0 ? <ArrowRight size={18} strokeWidth={2.5}/> : t("dont_know")}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onMouseDown={e=>e.preventDefault()}
+                        onClick={e=>{e.stopPropagation();next();}}
+                        className="w-full h-12 rounded-full flex items-center justify-center transition-all bg-primary text-white hover:brightness-90 active:scale-[0.98]"
+                      >
+                        <ArrowRight size={20} strokeWidth={2.5}/>
+                      </button>
+                    )}
                   </div>
                 </div>
-              </motion.div>
+              </CardDragWrapper>
             </AnimatePresence>
           </div>
           ); })()}
