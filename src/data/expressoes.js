@@ -46,4 +46,5 @@ export const EXPRESSOES = [
   { en:"At midnight",                   pt:"À meia-noite" },
   { en:"Since 2 years",                 pt:"Faz dois anos" },
   { en:"I'm not sure",                  pt:"Não tenho a certeza" },
+  { en:"It's up to me",                 pt:"Cabe a mim" },
 ];
