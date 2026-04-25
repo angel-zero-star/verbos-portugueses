@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine, Cell } from "recharts";
 import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search, User, Mic, ArrowUp, Globe, Star, CircleCheck, LayoutGrid, Zap, Leaf, Navigation, Hand, Heart, Users, Coffee, Home, Scissors, Tag, Quote, MessageSquare, ChevronRight } from "lucide-react";
@@ -1246,10 +1246,21 @@ export default function App(){
   },[]);
 
 
+  const stopMic=useCallback(()=>{
+    if(recRef.current){
+      try{recRef.current.abort();}catch{}
+      try{recRef.current.stop();}catch{}
+      recRef.current=null;
+    }
+    setIsListening(false);
+    setIsSpeaking(false);
+    clearTimeout(speakTimeoutRef.current);
+  },[]);
+
   const toggleMic=()=>{
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!SR)return;
-    if(isListening){recRef.current?.stop();setIsListening(false);setIsSpeaking(false);clearTimeout(speakTimeoutRef.current);return;}
+    if(isListening){stopMic();return;}
     const rec=new SR();
     rec.lang="pt-PT";rec.continuous=false;rec.interimResults=true;
     rec.onresult=(e)=>{
@@ -1257,13 +1268,17 @@ export default function App(){
       setInput(t);
       setIsSpeaking(true);
       clearTimeout(speakTimeoutRef.current);
-      if(e.results[e.results.length-1].isFinal){setIsListening(false);setIsSpeaking(false);}
+      if(e.results[e.results.length-1].isFinal){stopMic();}
       else{speakTimeoutRef.current=setTimeout(()=>setIsSpeaking(false),300);}
     };
-    rec.onerror=()=>{setIsListening(false);setIsSpeaking(false);clearTimeout(speakTimeoutRef.current);};
-    rec.onend=()=>{setIsListening(false);setIsSpeaking(false);clearTimeout(speakTimeoutRef.current);};
+    rec.onerror=()=>{stopMic();};
+    rec.onend=()=>{stopMic();};
     recRef.current=rec;rec.start();setIsListening(true);
   };
+
+  // Always stop the mic the moment an answer is checked or we leave the play screen.
+  useEffect(()=>{ if(result!==null) stopMic(); },[result,stopMic]);
+  useEffect(()=>{ if(screen!=="play") stopMic(); },[screen,stopMic]);
 
   // Auto-speak the correct answer after every verification
   useEffect(()=>{
