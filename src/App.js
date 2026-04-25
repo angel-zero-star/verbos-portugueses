@@ -237,7 +237,7 @@ const STRINGS={
     tense:"Tense", verb_type:"Verb Type",
     nav_play:"Play", nav_score:"Score", nav_settings:"Settings",
     check:"Check", next:"Next", dont_know:"I don't know", placeholder_translation:"Type translation...", placeholder_conjugation:"Type conjugation...",
-    correct_label:"Correto!", accent_warn:"Watch the accent:", near_warn:"Small typo — correct form:", also:"Also:",
+    correct_label:"Correto!", accent_warn:"Watch the accent:", near_warn:"Small typo — correct form:", article_warn:"Wrong article — correct form:", also:"Also:",
     conjugations:"Conjugations",
     all_verbs:"All Verbs", modal:"Modal", state:"State", movement:"Movement", action:"Action",
     body_health:"Body & Health",
@@ -262,7 +262,7 @@ const STRINGS={
     tense:"Tempo", verb_type:"Tipo de Verbo",
     nav_play:"Jogar", nav_score:"Pontuação", nav_settings:"Definições",
     check:"Verificar", next:"Seguinte", dont_know:"Não sei", placeholder_translation:"Escreve a tradução...", placeholder_conjugation:"Escreve a conjugação...",
-    correct_label:"Correto!", accent_warn:"Atenção ao acento:", near_warn:"Pequeno erro — forma correta:", also:"Também:",
+    correct_label:"Correto!", accent_warn:"Atenção ao acento:", near_warn:"Pequeno erro — forma correta:", article_warn:"Artigo errado — forma correta:", also:"Também:",
     conjugations:"Conjugações",
     all_verbs:"Todos", modal:"Modal", state:"Estado", movement:"Movimento", action:"Ação",
     body_health:"Corpo e Saúde",
@@ -290,23 +290,29 @@ function cmpAns(i,c){
   const sia=stripAccents(ni),sca=stripAccents(nc);
   if(sia===sca)return"accent";
   // Article tolerance: strip leading article from both sides then compare
+  const inArt=(sia.match(ARTICLE_RE)?.[0]||"").trim();
+  const ansArt=(sca.match(ARTICLE_RE)?.[0]||"").trim();
   const nia=stripArticle(sia),nca=stripArticle(sca);
-  if(nia===nca)return"accent";
+  if(nia===nca){
+    // Stems match: distinguish wrong-article (gender error) from missing article.
+    if(inArt&&ansArt&&inArt!==ansArt)return"article";
+    return"accent";
+  }
   // Small typo tolerance: 1 edit for words up to 8 chars, 2 for longer — but NOT an accent issue
   const maxDist=Math.max(...nca.split(" ").map(w=>w.length))>8?2:1;
   if(levenshtein(sia,sca)<=maxDist||levenshtein(nia,nca)<=maxDist)return"near";
   return"wrong";
 }
 // For Palavras/Frases: split answer on "/" (e.g. "casado / casada") and accept either form.
-// Returns "exact" | "accent" | "wrong".
+// Returns "exact" | "accent" | "article" | "near" | "wrong".
 function cmpMulti(input, answer){
   const parts = answer.split("/").map(s=>s.trim()).filter(Boolean);
+  const rank={wrong:0,near:1,article:2,accent:3,exact:4};
   let best="wrong";
   for(const p of parts){
     const r=cmpAns(input,p);
     if(r==="exact")return"exact";
-    if(r==="accent")best="accent"; // accent beats near
-    if(r==="near"&&best==="wrong")best="near";
+    if(rank[r]>rank[best])best=r;
   }
   return best;
 }
@@ -1166,9 +1172,11 @@ export default function App(){
     if(c.mode==="palavras" || c.mode==="adjetivos" || (c.mode==="frases" && c.subMode==="expressao")){
       const allAns=[c.answer,...(c.alternatives||[])];
       let r="wrong";
-      for(const ans of allAns){const cr=cmpMulti(input,ans);if(cr==="exact"){r="exact";break;}if(cr==="accent")r="accent";else if(cr==="near"&&r==="wrong")r="near";}
+      const rank={wrong:0,near:1,article:2,accent:3,exact:4};
+      for(const ans of allAns){const cr=cmpMulti(input,ans);if(cr==="exact"){r="exact";break;}if(rank[cr]>rank[r])r=cr;}
       if(r==="exact"){setResult("correct");setAccentNote(null);setScore(s=>({...s,correct:s.correct+1}));setStarWinSignal(n=>n+1);}
       else if(r==="accent"){setResult("correct");setAccentNote({form:c.answer,type:"accent"});setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+1}));}
+      else if(r==="article"){setResult("correct");setAccentNote({form:c.answer,type:"article"});setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+1}));}
       else if(r==="near"){setResult("correct");setAccentNote({form:c.answer,type:"near"});setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+1}));}
       else{setResult("wrong");setAccentNote(null);setScore(s=>({...s,wrong:s.wrong+1}));setWrongOnes(w=>[...w,{...c,userAnswer:input}]);}
       return;
@@ -1192,6 +1200,7 @@ export default function App(){
     const r=cmpAns(input,c.answer);
     if(r==="exact"){setResult("correct");setAccentNote(null);setScore(s=>({...s,correct:s.correct+1}));setStarWinSignal(n=>n+1);}
     else if(r==="accent"){setResult("correct");setAccentNote({form:c.answer,type:"accent"});setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+1}));}
+    else if(r==="article"){setResult("correct");setAccentNote({form:c.answer,type:"article"});setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+1}));}
     else if(r==="near"){setResult("correct");setAccentNote({form:c.answer,type:"near"});setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+1}));}
     else{setResult("wrong");setAccentNote(null);setScore(s=>({...s,wrong:s.wrong+1}));setWrongOnes(w=>[...w,c]);}
   };
@@ -2161,7 +2170,7 @@ export default function App(){
                           </div>
                           {accentNote && (
                             <div className="text-xs text-warn bg-warn/10 border border-warn/30 rounded-md py-2 px-3">
-                              {accentNote.type==="accent"?t("accent_warn"):t("near_warn")} <strong className="font-mono-ui">{accentNote.form}</strong>
+                              {accentNote.type==="accent"?t("accent_warn"):accentNote.type==="article"?t("article_warn"):t("near_warn")} <strong className="font-mono-ui">{accentNote.form}</strong>
                             </div>
                           )}
                           {card.alternatives?.length>0 && (
