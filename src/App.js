@@ -1438,12 +1438,12 @@ export default function App(){
         <div
           ref={homeScrollRef}
           className="absolute inset-0 overflow-y-auto z-[2] pointer-events-none"
-          style={{scrollbarWidth:'none'}}
+          style={{scrollbarWidth:'none',WebkitOverflowScrolling:'touch',touchAction:'pan-y'}}
           onScroll={e=>setHomeScrollY(e.currentTarget.scrollTop)}
         >
           <div className="max-w-[480px] mx-auto">
             <div style={{height:heroH-20}}/>
-            <div className="relative bg-bg rounded-t-[22px] pb-12 pointer-events-auto" style={{minHeight:`calc(100vh - ${heroH-20}px)`,boxShadow:'0 -5px 13px 0 hsl(var(--shadow)/0.2)'}}>
+            <div className="relative bg-bg rounded-t-[22px] pb-12 pointer-events-auto" style={{minHeight:`calc(100vh - ${heroH-20}px)`,boxShadow:'0 -5px 13px 0 hsl(var(--shadow)/0.2)',touchAction:'pan-y'}}>
               <div className="w-10 h-1 bg-secondary/20 rounded-full mx-auto mt-4 mb-4"/>
 
               {/* Category sections */}
