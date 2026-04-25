@@ -972,6 +972,7 @@ export default function App(){
   const [accentNote,setAccentNote]=useState(null);
   const [shakeSignal,setShakeSignal]=useState(0);
   useEffect(()=>{if(result==="wrong")setShakeSignal(s=>s+1);},[result]);
+  const [starWinSignal,setStarWinSignal]=useState(0);
   const [isListening,setIsListening]=useState(false);
   const [isSpeaking,setIsSpeaking]=useState(false);
   const [inputFocused,setInputFocused]=useState(false);
@@ -1166,7 +1167,7 @@ export default function App(){
       const allAns=[c.answer,...(c.alternatives||[])];
       let r="wrong";
       for(const ans of allAns){const cr=cmpMulti(input,ans);if(cr==="exact"){r="exact";break;}if(cr==="accent")r="accent";else if(cr==="near"&&r==="wrong")r="near";}
-      if(r==="exact"){setResult("correct");setAccentNote(null);setScore(s=>({...s,correct:s.correct+1}));}
+      if(r==="exact"){setResult("correct");setAccentNote(null);setScore(s=>({...s,correct:s.correct+1}));setStarWinSignal(n=>n+1);}
       else if(r==="accent"){setResult("correct");setAccentNote({form:c.answer,type:"accent"});setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+1}));}
       else if(r==="near"){setResult("correct");setAccentNote({form:c.answer,type:"near"});setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+1}));}
       else{setResult("wrong");setAccentNote(null);setScore(s=>({...s,wrong:s.wrong+1}));setWrongOnes(w=>[...w,{...c,userAnswer:input}]);}
@@ -1177,6 +1178,7 @@ export default function App(){
       if(er==="correct"){
         setResult("correct");setAccentNote(note?{form:c.answer,type:"accent"}:null);
         setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+(note?1:0)}));
+        if(!note)setStarWinSignal(n=>n+1);
       }else if(er==="close"){
         setResult("correct");setAccentNote({form:c.answer,type:"near"});
         setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+1}));
@@ -1188,7 +1190,7 @@ export default function App(){
       return;
     }
     const r=cmpAns(input,c.answer);
-    if(r==="exact"){setResult("correct");setAccentNote(null);setScore(s=>({...s,correct:s.correct+1}));}
+    if(r==="exact"){setResult("correct");setAccentNote(null);setScore(s=>({...s,correct:s.correct+1}));setStarWinSignal(n=>n+1);}
     else if(r==="accent"){setResult("correct");setAccentNote({form:c.answer,type:"accent"});setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+1}));}
     else if(r==="near"){setResult("correct");setAccentNote({form:c.answer,type:"near"});setScore(s=>({...s,correct:s.correct+1,accentMisses:s.accentMisses+1}));}
     else{setResult("wrong");setAccentNote(null);setScore(s=>({...s,wrong:s.wrong+1}));setWrongOnes(w=>[...w,c]);}
@@ -1972,16 +1974,52 @@ export default function App(){
         <div className="max-w-[480px] mx-auto flex flex-col gap-3">
           <div className="flex items-center justify-between">
             {/* Star + score */}
-            <motion.div
-              key={score.correct}
-              className="relative flex items-center justify-center w-8 h-8"
-              initial={{scale: score.correct > 0 ? 1.5 : 1}}
-              animate={{scale: 1}}
-              transition={{type:"spring",stiffness:500,damping:14}}
-            >
-              <Star size={30} className="text-warn" fill="currentColor" strokeWidth={0}/>
-              <span className="absolute font-mono-ui font-medium text-[12px] text-text leading-none">{score.correct}</span>
-            </motion.div>
+            <div className="relative flex items-center justify-center w-8 h-8">
+              <motion.div
+                key={`star-pulse-${starWinSignal}`}
+                className="relative flex items-center justify-center"
+                initial={starWinSignal>0?{scale:1}:false}
+                animate={starWinSignal>0?{scale:[1,1.55,0.92,1.12,1]}:{scale:1}}
+                transition={{duration:0.7,times:[0,0.25,0.55,0.78,1],ease:"easeOut"}}
+              >
+                <Star size={30} className="text-warn" fill="currentColor" strokeWidth={0}/>
+                <span className="absolute font-mono-ui font-medium text-[12px] text-text leading-none">{score.correct}</span>
+              </motion.div>
+              <AnimatePresence>
+                {starWinSignal>0 && (
+                  <motion.div
+                    key={`star-burst-${starWinSignal}`}
+                    className="absolute inset-0 pointer-events-none"
+                    initial={{opacity:1}}
+                    animate={{opacity:1}}
+                    exit={{opacity:0}}
+                  >
+                    {/* Glow halo */}
+                    <motion.div
+                      className="absolute inset-0 rounded-full"
+                      style={{background:"radial-gradient(circle, hsl(var(--warn)/0.55) 0%, hsl(var(--warn)/0) 70%)"}}
+                      initial={{scale:0.6,opacity:0.9}}
+                      animate={{scale:2.6,opacity:0}}
+                      transition={{duration:0.65,ease:"easeOut"}}
+                    />
+                    {/* Sparkle particles */}
+                    {[0,60,120,180,240,300].map((angle,i)=>{
+                      const dist=22+(i%2)*6;
+                      const rad=(angle*Math.PI)/180;
+                      return (
+                        <motion.div
+                          key={angle}
+                          className="absolute top-1/2 left-1/2 w-[5px] h-[5px] -ml-[2.5px] -mt-[2.5px] rounded-full bg-warn"
+                          initial={{x:0,y:0,opacity:1,scale:1}}
+                          animate={{x:Math.cos(rad)*dist,y:Math.sin(rad)*dist,opacity:0,scale:0.4}}
+                          transition={{duration:0.55,ease:[0.22,1,0.36,1],delay:i*0.015}}
+                        />
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             <button
               onClick={()=>setScreen("menu")}
               className="h-6 w-6 text-text-sub hover:text-danger transition-colors flex items-center justify-center"
