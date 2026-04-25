@@ -1434,16 +1434,16 @@ export default function App(){
 
     return (
       <div className="fixed inset-0 overflow-hidden bg-surface text-text">
-        {/* ── Scroll container (sheet slides OVER fixed header background) ── */}
+        {/* ── Scroll container (behind hero; normal pointer events so iOS Safari scrolls) ── */}
         <div
           ref={homeScrollRef}
-          className="absolute inset-0 overflow-y-auto z-[2] pointer-events-none"
-          style={{scrollbarWidth:'none',WebkitOverflowScrolling:'touch',touchAction:'pan-y'}}
+          className="absolute inset-0 overflow-y-auto z-[1]"
+          style={{scrollbarWidth:'none',WebkitOverflowScrolling:'touch'}}
           onScroll={e=>setHomeScrollY(e.currentTarget.scrollTop)}
         >
           <div className="max-w-[480px] mx-auto">
             <div style={{height:heroH-20}}/>
-            <div className="relative bg-bg rounded-t-[22px] pb-12 pointer-events-auto" style={{minHeight:`calc(100vh - ${heroH-20}px)`,boxShadow:'0 -5px 13px 0 hsl(var(--shadow)/0.2)',touchAction:'pan-y'}}>
+            <div className="relative bg-bg rounded-t-[22px] pb-12" style={{minHeight:`calc(100vh - ${heroH-20}px)`,boxShadow:'0 -5px 13px 0 hsl(var(--shadow)/0.2)'}}>
               <div className="w-10 h-1 bg-secondary/20 rounded-full mx-auto mt-4 mb-4"/>
 
               {/* Category sections */}
@@ -1550,9 +1550,9 @@ export default function App(){
           </div>
         </div>
 
-        {/* ── Fixed header (background layer — sheet scrolls over it) ── */}
-        <div ref={heroRef} className="absolute inset-x-0 top-0 z-[1] bg-surface">
-          <div className="max-w-[480px] mx-auto px-4 pb-4" style={{paddingTop:'max(12px, env(safe-area-inset-top))',transform:`scale(${heroScale})`,opacity:heroOpacity,transformOrigin:'top center',transition:'transform 0.08s linear, opacity 0.08s linear'}}>
+        {/* ── Fixed header (on top; outer is pointer-transparent so scroll works on mobile) ── */}
+        <div ref={heroRef} className="absolute inset-x-0 top-0 z-[2] bg-surface pointer-events-none">
+          <div className="pointer-events-auto max-w-[480px] mx-auto px-4 pb-4" style={{paddingTop:'max(12px, env(safe-area-inset-top))',transform:`scale(${heroScale})`,opacity:heroOpacity,transformOrigin:'top center',transition:'transform 0.08s linear, opacity 0.08s linear'}}>
             <div className="flex items-center gap-3">
               <div className="relative w-20 h-20 flex-shrink-0" style={{filter:'drop-shadow(0 4px 12px rgba(0,0,0,0.18))'}}>
                 <svg width="80" height="80" viewBox="0 0 80 80" className="absolute inset-0">
