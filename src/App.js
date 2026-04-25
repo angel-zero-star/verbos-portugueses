@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
-import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, animate, useDragControls } from "framer-motion";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine, Cell } from "recharts";
 import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search, User, Mic, ArrowUp, Globe, Star, CircleCheck, LayoutGrid, Zap, Leaf, Navigation, Hand, Heart, Users, Coffee, Home, Scissors, Tag, Quote, MessageSquare, ChevronRight } from "lucide-react";
 import packageInfo from "../package.json";
@@ -943,17 +943,18 @@ function LibraryScreen({mode,onBack,conjFilter,t=k=>k}){
   );
 }
 
-function CardDragWrapper({direction, onSwipeLeft, onSwipeRight, canSwipeRight, shakeSignal, children}){
+function CardDragWrapper({direction, onSwipeLeft, shakeSignal, children}){
   const cardX = useMotionValue(0);
   const rotate = useTransform(cardX, [-440, 0, 440], [-8, 0, 8]);
   const opacity = useTransform(cardX, [-440, -80, 80, 440], [0, 1, 1, 0]);
+  const dragControls = useDragControls();
   useEffect(()=>{
     if(shakeSignal>0) animate(cardX,[0,8,-8,6,-6,0],{duration:0.4,ease:"easeOut"});
   },[shakeSignal,cardX]);
   return (
     <motion.div
       className="relative h-full"
-      style={{x:cardX, rotate, opacity, zIndex:3}}
+      style={{x:cardX, rotate, opacity, zIndex:3, touchAction:"pan-y"}}
       initial={direction==="back" ? {x:-440} : {x:0}}
       animate={{x:0, transition: direction==="back" ? {type:"spring",stiffness:380,damping:34} : {duration:0}}}
       exit={direction==="back"
@@ -962,12 +963,18 @@ function CardDragWrapper({direction, onSwipeLeft, onSwipeRight, canSwipeRight, s
       }
       drag="x"
       dragDirectionLock
+      dragControls={dragControls}
+      dragListener={false}
       dragConstraints={{left:0,right:0}}
-      dragElastic={{left:1, right: canSwipeRight ? 1 : 0}}
+      dragElastic={{left:1, right:0}}
       dragMomentum={false}
+      onPointerDown={(e)=>{
+        const t=e.target;
+        if(t && t.closest && t.closest('input, textarea, button, select, a, [contenteditable], [role="button"]')) return;
+        dragControls.start(e);
+      }}
       onDragEnd={(e,info)=>{
         if(info.offset.x<-120 || info.velocity.x<-500) onSwipeLeft();
-        else if(canSwipeRight && (info.offset.x>120 || info.velocity.x>500)) onSwipeRight();
       }}
     >
       {children}
@@ -1214,15 +1221,25 @@ export default function App(){
   const goBack=()=>{if(idx<=0)return;setCardDir("back");setIdx(i=>i-1);setInput("");if(inputRef.current)inputRef.current.value="";setResult(null);setAccentNote(null);};
 
   // Single Enter handler — debounced to avoid double-fire (key repeat / fast double-press)
+  // Also auto-focuses the input on any printable keystroke so desktop users can
+  // just start typing without clicking the field first.
   useEffect(()=>{
     if(screen!=="play")return;
     const handler=(e)=>{
-      if(e.key!=="Enter"||e.repeat)return;
-      const now=Date.now();
-      if(now-lastEnterRef.current<350)return;
-      lastEnterRef.current=now;
-      e.preventDefault();
-      if(result===null)check();else next();
+      if(e.key==="Enter"&&!e.repeat){
+        const now=Date.now();
+        if(now-lastEnterRef.current<350)return;
+        lastEnterRef.current=now;
+        e.preventDefault();
+        if(result===null)check();else next();
+        return;
+      }
+      // Auto-focus input on printable keystrokes (desktop convenience)
+      if(result!==null)return;
+      if(e.metaKey||e.ctrlKey||e.altKey)return;
+      if(e.key.length!==1)return;
+      const el=inputRef.current;
+      if(el&&document.activeElement!==el)el.focus({preventScroll:true});
     };
     window.addEventListener("keydown",handler);
     return()=>window.removeEventListener("keydown",handler);
@@ -2036,8 +2053,6 @@ export default function App(){
                 key={idx}
                 direction={cardDir}
                 onSwipeLeft={()=>{ result!==null ? next() : skip(); }}
-                onSwipeRight={()=>{}}
-                canSwipeRight={false}
                 shakeSignal={shakeSignal}
               >
                 <div
