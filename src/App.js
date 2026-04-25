@@ -1433,17 +1433,92 @@ export default function App(){
     const heroOpacity=1-heroScrollRatio*0.3;
 
     return (
-      <div className="fixed inset-0 overflow-hidden bg-surface text-text">
-        {/* ── Scroll container (behind hero; normal pointer events so iOS Safari scrolls) ── */}
+      <div className="fixed inset-0 overflow-hidden bg-bg text-text">
+        {/* ── Single scroll container; hero is sticky inside it so the sheet scrolls over it ── */}
         <div
           ref={homeScrollRef}
-          className="absolute inset-0 overflow-y-auto z-[1]"
+          className="absolute inset-0 overflow-y-auto"
           style={{scrollbarWidth:'none',WebkitOverflowScrolling:'touch'}}
           onScroll={e=>setHomeScrollY(e.currentTarget.scrollTop)}
         >
-          <div className="max-w-[480px] mx-auto">
-            <div style={{height:heroH-20}}/>
-            <div className="relative bg-bg rounded-t-[22px] pb-12" style={{minHeight:`calc(100vh - ${heroH-20}px)`,boxShadow:'0 -5px 13px 0 hsl(var(--shadow)/0.2)'}}>
+          <div className="max-w-[480px] mx-auto relative">
+            {/* Hero — sticky behind the sheet */}
+            <div ref={heroRef} className="sticky top-0 z-[1] bg-bg">
+              <div className="px-4 pb-4" style={{paddingTop:'max(12px, env(safe-area-inset-top))',transform:`scale(${heroScale})`,opacity:heroOpacity,transformOrigin:'top center',transition:'transform 0.08s linear, opacity 0.08s linear'}}>
+                <div className="flex items-center gap-3">
+                  <div className="relative w-20 h-20 flex-shrink-0" style={{filter:'drop-shadow(0 4px 12px rgba(0,0,0,0.18))'}}>
+                    <svg width="80" height="80" viewBox="0 0 80 80" className="absolute inset-0">
+                      <circle cx="40" cy="40" r="32" fill="none" stroke="hsl(var(--border))" strokeWidth="3.5"/>
+                      {homeOverall.avg!==null&&(
+                        <circle cx="40" cy="40" r="32" fill="none"
+                          stroke={avgColor} strokeWidth="3.5" strokeLinecap="round"
+                          strokeDasharray={`${(homeOverall.avg/100)*flagC} ${flagC-(homeOverall.avg/100)*flagC}`}
+                          transform="rotate(-90 40 40)"
+                          style={{transition:'stroke-dasharray 0.7s cubic-bezier(0.2,0.7,0.2,1)'}}
+                        />
+                      )}
+                    </svg>
+                    <div className="absolute inset-3">
+                      <FlagPT className="w-full h-full"/>
+                    </div>
+                    {homeOverall.avg!==null&&(
+                      <div
+                        className="absolute left-1/2 -translate-x-1/2 text-[10px] font-mono-ui font-bold px-2 py-1 rounded-full bg-surface border border-border leading-none whitespace-nowrap"
+                        style={{bottom:'-8px',color:avgColor}}
+                      >
+                        {homeOverall.avg}%
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[10px] font-mono-ui text-muted tracking-[0.14em] mb-1">
+                      OLÁ{username?`, ${username.toUpperCase()}`:''}
+                    </div>
+                    <h1 className="font-display text-[28px] leading-[1.05] tracking-tight text-text m-0">
+                      Flashcards
+                    </h1>
+                  </div>
+                  <button
+                    onClick={()=>setScreen("history")}
+                    className="w-8 h-8 rounded-[10px] bg-secondary/5 border border-border flex items-center justify-center text-muted hover:text-text hover:bg-secondary/10 transition-colors flex-shrink-0 self-start mt-1"
+                    aria-label="Pontuação"
+                  >
+                    <Trophy size={14} strokeWidth={2}/>
+                  </button>
+                  <button
+                    onClick={()=>setScreen("settings")}
+                    className="w-8 h-8 rounded-[10px] bg-secondary/5 border border-border flex items-center justify-center text-muted hover:text-text hover:bg-secondary/10 transition-colors flex-shrink-0 self-start mt-1"
+                    aria-label="Definições"
+                  >
+                    <SettingsIcon size={14} strokeWidth={2}/>
+                  </button>
+                </div>
+                <div className="flex items-center gap-3 w-full px-3 py-2 mt-4">
+                  <div className="flex flex-col gap-1 flex-shrink-0">
+                    <div className="text-[18px] font-bold tracking-tight text-text leading-none">{homeOverall.sessions}</div>
+                    <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Sessões</div>
+                  </div>
+                  <div className="w-px self-stretch bg-border my-1"/>
+                  <div className="flex flex-col gap-1 flex-shrink-0">
+                    <div className="text-[18px] font-bold tracking-tight text-text leading-none">
+                      {homeOverall.done}<span className="text-muted font-medium text-sm">/{homeOverall.total}</span>
+                    </div>
+                    <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Módulos</div>
+                  </div>
+                  <div className="w-px self-stretch bg-border my-1"/>
+                  <div className="flex flex-col gap-1 flex-shrink-0">
+                    <div className="text-[18px] font-bold tracking-tight text-text leading-none flex items-center gap-1">
+                      <Star size={14} className="text-warn flex-shrink-0" fill="currentColor" strokeWidth={0}/>
+                      {homeOverall.stars}
+                    </div>
+                    <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Estrelas</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Sheet — slides over the sticky hero */}
+            <div className="relative z-[2] bg-bg rounded-t-[22px] pb-12" style={{marginTop:'-20px',minHeight:'calc(100vh - 80px)',boxShadow:'0 -5px 13px 0 hsl(var(--shadow)/0.2)'}}>
               <div className="w-10 h-1 bg-secondary/20 rounded-full mx-auto mt-4 mb-4"/>
 
               {/* Category sections */}
@@ -1545,81 +1620,6 @@ export default function App(){
               {/* Footer */}
               <div className="pt-8 text-center text-[10px] font-mono-ui text-muted uppercase tracking-[0.15em]">
                 verbos · v{packageInfo.version}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Fixed header (on top; outer is pointer-transparent so scroll works on mobile) ── */}
-        <div ref={heroRef} className="absolute inset-x-0 top-0 z-[2] bg-surface pointer-events-none">
-          <div className="pointer-events-auto max-w-[480px] mx-auto px-4 pb-4" style={{paddingTop:'max(12px, env(safe-area-inset-top))',transform:`scale(${heroScale})`,opacity:heroOpacity,transformOrigin:'top center',transition:'transform 0.08s linear, opacity 0.08s linear'}}>
-            <div className="flex items-center gap-3">
-              <div className="relative w-20 h-20 flex-shrink-0" style={{filter:'drop-shadow(0 4px 12px rgba(0,0,0,0.18))'}}>
-                <svg width="80" height="80" viewBox="0 0 80 80" className="absolute inset-0">
-                  <circle cx="40" cy="40" r="32" fill="none" stroke="hsl(var(--border))" strokeWidth="3.5"/>
-                  {homeOverall.avg!==null&&(
-                    <circle cx="40" cy="40" r="32" fill="none"
-                      stroke={avgColor} strokeWidth="3.5" strokeLinecap="round"
-                      strokeDasharray={`${(homeOverall.avg/100)*flagC} ${flagC-(homeOverall.avg/100)*flagC}`}
-                      transform="rotate(-90 40 40)"
-                      style={{transition:'stroke-dasharray 0.7s cubic-bezier(0.2,0.7,0.2,1)'}}
-                    />
-                  )}
-                </svg>
-                <div className="absolute inset-3">
-                  <FlagPT className="w-full h-full"/>
-                </div>
-                {homeOverall.avg!==null&&(
-                  <div
-                    className="absolute left-1/2 -translate-x-1/2 text-[10px] font-mono-ui font-bold px-2 py-1 rounded-full bg-surface border border-border leading-none whitespace-nowrap"
-                    style={{bottom:'-8px',color:avgColor}}
-                  >
-                    {homeOverall.avg}%
-                  </div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-mono-ui text-muted tracking-[0.14em] mb-1">
-                  OLÁ{username?`, ${username.toUpperCase()}`:''}
-                </div>
-                <h1 className="font-display text-[28px] leading-[1.05] tracking-tight text-text m-0">
-                  Flashcards
-                </h1>
-              </div>
-              <button
-                onClick={()=>setScreen("history")}
-                className="w-8 h-8 rounded-[10px] bg-secondary/5 border border-border flex items-center justify-center text-muted hover:text-text hover:bg-secondary/10 transition-colors flex-shrink-0 self-start mt-1"
-                aria-label="Pontuação"
-              >
-                <Trophy size={14} strokeWidth={2}/>
-              </button>
-              <button
-                onClick={()=>setScreen("settings")}
-                className="w-8 h-8 rounded-[10px] bg-secondary/5 border border-border flex items-center justify-center text-muted hover:text-text hover:bg-secondary/10 transition-colors flex-shrink-0 self-start mt-1"
-                aria-label="Definições"
-              >
-                <SettingsIcon size={14} strokeWidth={2}/>
-              </button>
-            </div>
-            <div className="flex items-center gap-3 w-full px-3 py-2 mt-4">
-              <div className="flex flex-col gap-1 flex-shrink-0">
-                <div className="text-[18px] font-bold tracking-tight text-text leading-none">{homeOverall.sessions}</div>
-                <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Sessões</div>
-              </div>
-              <div className="w-px self-stretch bg-border my-1"/>
-              <div className="flex flex-col gap-1 flex-shrink-0">
-                <div className="text-[18px] font-bold tracking-tight text-text leading-none">
-                  {homeOverall.done}<span className="text-muted font-medium text-sm">/{homeOverall.total}</span>
-                </div>
-                <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Módulos</div>
-              </div>
-              <div className="w-px self-stretch bg-border my-1"/>
-              <div className="flex flex-col gap-1 flex-shrink-0">
-                <div className="text-[18px] font-bold tracking-tight text-text leading-none flex items-center gap-1">
-                  <Star size={14} className="text-warn flex-shrink-0" fill="currentColor" strokeWidth={0}/>
-                  {homeOverall.stars}
-                </div>
-                <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Estrelas</div>
               </div>
             </div>
           </div>
