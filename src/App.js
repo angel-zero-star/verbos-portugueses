@@ -945,13 +945,14 @@ function LibraryScreen({mode,onBack,conjFilter,t=k=>k}){
 
 function AnimatedCard({shakeSignal, children}){
   const cardX = useMotionValue(0);
+  const rotate = useTransform(cardX, [-440, 0, 440], [-8, 0, 8]);
   useEffect(()=>{
     if(shakeSignal>0) animate(cardX,[0,8,-8,6,-6,0],{duration:0.4,ease:"easeOut"});
   },[shakeSignal,cardX]);
   return (
     <motion.div
       className="relative h-full"
-      style={{x:cardX, zIndex:3}}
+      style={{x:cardX, rotate, zIndex:3}}
       initial={{x:0}}
       animate={{x:0}}
       exit={{x:-440, zIndex:10, transition:{duration:0.32,ease:[0.32,0,0.67,0]}}}
@@ -1949,7 +1950,7 @@ export default function App(){
     {/* ── Play screen ── */}
     <div
       className="fixed top-0 left-0 right-0 bg-bg text-text flex flex-col overflow-hidden"
-      style={{height:"var(--vvh,100vh)",zIndex:10}}
+      style={{height:"100vh",zIndex:10}}
     >
       {/* Progress bar */}
       <div className="shrink-0 px-6 pt-6 pb-4">
@@ -2015,7 +2016,7 @@ export default function App(){
                   className="h-full bg-surface border border-border rounded-lg flex flex-col overflow-hidden"
                   style={{boxShadow:"0 5px 13px 0 hsl(var(--shadow)/0.2)"}}
                 >
-                  {/* ── Scrollable card content (header + word + feedback) ── */}
+                  {/* ── Scrollable card content ── */}
                   <div className="flex flex-col gap-5 items-center flex-1 overflow-y-auto px-6 pt-6 pb-4" style={{WebkitOverflowScrolling:'touch'}}>
 
                     {/* Header: badge + counter */}
@@ -2039,59 +2040,6 @@ export default function App(){
                       <span className="text-xl font-mono-ui text-primary italic">{card.pronoun}</span>
                     )}
 
-                    {/* Inline feedback */}
-                    <AnimatePresence>
-                      {result==="correct" && (
-                        <motion.div
-                          initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{duration:0.2}}
-                          className="flex flex-col gap-3 w-full"
-                        >
-                          <div className="flex items-center gap-2 text-accent">
-                            <span className="font-bold text-base">✓</span>
-                            <span className="font-mono-ui text-sm">{card.answer}</span>
-                            {card.mode!=="conjugation" && <AudioBtn text={card.answer}/>}
-                          </div>
-                          {accentNote && (
-                            <div className="text-xs text-warn bg-warn/10 border border-warn/30 rounded-md py-2 px-3">
-                              {accentNote.type==="accent"?t("accent_warn"):t("near_warn")} <strong className="font-mono-ui">{accentNote.form}</strong>
-                            </div>
-                          )}
-                          {card.alternatives?.length>0 && (
-                            <div className="text-xs text-text-sub bg-secondary/5 border border-border rounded-md py-2 px-3">
-                              <span className="font-mono-ui uppercase tracking-wider text-[10px]">{t("also")} </span>
-                              {card.alternatives.join(" · ")}
-                            </div>
-                          )}
-                          {card.mode==="conjugation" && <ConjugationTable card={card}/>}
-                        </motion.div>
-                      )}
-                      {result==="wrong" && (
-                        <motion.div
-                          initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{duration:0.2}}
-                          className="flex flex-col gap-3 w-full"
-                        >
-                          <div className="flex items-center gap-2 text-danger">
-                            <span className="font-bold text-base">✕</span>
-                            <span className="font-mono-ui text-sm">{card.answer}</span>
-                            {card.mode!=="conjugation" && <AudioBtn text={card.answer}/>}
-                          </div>
-                          {card.alternatives?.length>0 && (
-                            <div className="text-xs text-text-sub bg-secondary/5 border border-border rounded-md py-2 px-3">
-                              <span className="font-mono-ui uppercase tracking-wider text-[10px]">{t("also")} </span>
-                              {card.alternatives.join(" · ")}
-                            </div>
-                          )}
-                          {card.mode==="conjugation" && <ConjugationTable card={card}/>}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-
-                  {/* ── Sticky bottom: input + buttons (always visible) ── */}
-                  <div
-                    className="shrink-0 px-6 flex flex-col items-center gap-5"
-                    style={{paddingBottom:"max(24px,env(safe-area-inset-bottom))",paddingTop:"16px"}}
-                  >
                     {/* Underline input */}
                     <div
                       className={cn(
@@ -2146,6 +2094,59 @@ export default function App(){
                       )}
                     </div>
 
+                    {/* Inline feedback */}
+                    <AnimatePresence>
+                      {result==="correct" && (
+                        <motion.div
+                          initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{duration:0.2}}
+                          className="flex flex-col gap-3 w-full"
+                        >
+                          <div className="flex items-center gap-2 text-accent">
+                            <span className="font-bold text-base">✓</span>
+                            <span className="font-mono-ui text-sm">{card.answer}</span>
+                            {card.mode!=="conjugation" && <AudioBtn text={card.answer}/>}
+                          </div>
+                          {accentNote && (
+                            <div className="text-xs text-warn bg-warn/10 border border-warn/30 rounded-md py-2 px-3">
+                              {accentNote.type==="accent"?t("accent_warn"):t("near_warn")} <strong className="font-mono-ui">{accentNote.form}</strong>
+                            </div>
+                          )}
+                          {card.alternatives?.length>0 && (
+                            <div className="text-xs text-text-sub bg-secondary/5 border border-border rounded-md py-2 px-3">
+                              <span className="font-mono-ui uppercase tracking-wider text-[10px]">{t("also")} </span>
+                              {card.alternatives.join(" · ")}
+                            </div>
+                          )}
+                          {card.mode==="conjugation" && <ConjugationTable card={card}/>}
+                        </motion.div>
+                      )}
+                      {result==="wrong" && (
+                        <motion.div
+                          initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{duration:0.2}}
+                          className="flex flex-col gap-3 w-full"
+                        >
+                          <div className="flex items-center gap-2 text-danger">
+                            <span className="font-bold text-base">✕</span>
+                            <span className="font-mono-ui text-sm">{card.answer}</span>
+                            {card.mode!=="conjugation" && <AudioBtn text={card.answer}/>}
+                          </div>
+                          {card.alternatives?.length>0 && (
+                            <div className="text-xs text-text-sub bg-secondary/5 border border-border rounded-md py-2 px-3">
+                              <span className="font-mono-ui uppercase tracking-wider text-[10px]">{t("also")} </span>
+                              {card.alternatives.join(" · ")}
+                            </div>
+                          )}
+                          {card.mode==="conjugation" && <ConjugationTable card={card}/>}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* ── Button stack — fixed at bottom of card ── */}
+                  <div
+                    className="shrink-0 px-6 flex flex-col items-center gap-5"
+                    style={{paddingBottom:"max(24px,env(safe-area-inset-bottom))",paddingTop:"16px"}}
+                  >
                     {result===null ? (
                       <>
                         {/* Mic */}
