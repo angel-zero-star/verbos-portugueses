@@ -1,9 +1,11 @@
 {
   "name": "verbos-portugueses",
-  "version": "1.86",
+  "version": "1.87",
   "private": true,
   "description": "European Portuguese verb conjugation flashcard game",
   "dependencies": {
+    "@capacitor/core": "^8.3.1",
+    "@capacitor/ios": "^8.3.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.7.0",
@@ -22,7 +24,10 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "prepare": "husky"
+    "prepare": "husky",
+    "cap:sync:ios": "npm run build && npx cap sync ios",
+    "cap:open:ios": "npx cap open ios",
+    "cap:build:ios": "npm run build && npx cap sync ios && npx cap copy ios"
   },
   "browserslist": {
     "production": [
@@ -36,8 +41,9 @@
       "last 1 safari version"
     ]
   },
-  "homepage": "/",
+  "homepage": ".",
   "devDependencies": {
+    "@capacitor/cli": "^8.3.1",
     "autoprefixer": "^10.4.27",
     "husky": "^9.1.7",
     "postcss": "^8.5.8",

@@ -2,3 +2,12 @@ node_modules/
 build/
 .env
 .DS_Store
+
+# Capacitor / Xcode build artifacts
+ios/App/Pods/
+ios/App/build/
+ios/App/App/public/
+ios/DerivedData/
+ios/App/output/
+xcuserdata/
+*.xcuserstate
