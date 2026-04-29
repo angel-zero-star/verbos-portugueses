@@ -227,7 +227,7 @@ const SK_USER="verbos-username"; // "" = skipped, any string = name
 
 const STRINGS={
   en:{
-    home_title:"Flashcards", home_sub:"Choose a topic to practice.",
+    home_title:"Memeo", home_sub:"Choose a topic to practice.",
     onboarding_title:"What's your name?", onboarding_sub:"We'll use it to greet you. You can skip this.",
     onboarding_placeholder:"Your name", onboarding_continue:"Continue", onboarding_skip:"Skip",
     name_label:"Name", name_placeholder:"Your name", name_save:"Save",
@@ -252,7 +252,7 @@ const STRINGS={
     history_empty:"No sessions yet. Play a round first.",
   },
   pt:{
-    home_title:"Flashcards", home_sub:"Escolhe um tópico para praticar.",
+    home_title:"Memeo", home_sub:"Escolhe um tópico para praticar.",
     onboarding_title:"Qual é o teu nome?", onboarding_sub:"Vamos usá-lo para te cumprimentar. Podes saltar este passo.",
     onboarding_placeholder:"O teu nome", onboarding_continue:"Continuar", onboarding_skip:"Saltar",
     name_label:"Nome", name_placeholder:"O teu nome", name_save:"Guardar",
@@ -1402,7 +1402,7 @@ export default function App(){
           className="font-display text-[72px] leading-[1] tracking-tightest text-text"
           transition={{type:"spring",stiffness:260,damping:30}}
         >
-          Flashcards
+          Memeo
         </motion.h1>
       </div>
     );
@@ -1494,7 +1494,7 @@ export default function App(){
                       OLÁ{username?`, ${username.toUpperCase()}`:''}
                     </div>
                     <h1 className="font-display text-[28px] leading-[1.05] tracking-tight text-text m-0">
-                      Flashcards
+                      Memeo
                     </h1>
                   </div>
                   <button
