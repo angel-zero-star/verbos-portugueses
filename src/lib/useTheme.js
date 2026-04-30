@@ -4,12 +4,12 @@ const KEY = 'verbos-theme';
 
 export function useTheme() {
   const [theme, setTheme] = useState(() => {
-    if (typeof window === 'undefined') return 'dark';
+    if (typeof window === 'undefined') return 'light';
     try {
       const stored = localStorage.getItem(KEY);
       if (stored === 'light' || stored === 'dark') return stored;
     } catch {}
-    return 'dark';
+    return 'light';
   });
 
   useEffect(() => {

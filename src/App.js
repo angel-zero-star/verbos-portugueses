@@ -1662,7 +1662,7 @@ export default function App(){
     return (
       <div className="min-h-screen bg-bg text-text">
         <TopBar/>
-        <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-xl border-b border-border">
+        <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-xl border-b border-border" style={{paddingTop:'env(safe-area-inset-top, 0px)'}}>
           <div className="max-w-[480px] mx-auto px-4 py-3 flex items-center gap-3">
             <button onClick={()=>setScreen("menu")} className="h-9 w-9 shrink-0 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center">
               <ArrowLeft size={16} strokeWidth={2.25}/>
@@ -1783,7 +1783,7 @@ export default function App(){
     return (
       <div className="min-h-screen bg-bg text-text">
         <TopBar/>
-        <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-xl border-b border-border">
+        <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-xl border-b border-border" style={{paddingTop:'env(safe-area-inset-top, 0px)'}}>
           <div className="max-w-[480px] mx-auto px-4 py-3 flex items-center gap-3">
             <button onClick={()=>setScreen("menu")} className="h-9 w-9 shrink-0 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center">
               <ArrowLeft size={16} strokeWidth={2.25}/>
@@ -1979,7 +1979,7 @@ export default function App(){
       style={{height:"100vh",zIndex:10}}
     >
       {/* Progress bar */}
-      <div className="shrink-0 px-6 pt-6 pb-4">
+      <div className="shrink-0 px-6 pb-4" style={{paddingTop:'max(24px, env(safe-area-inset-top))'}}>
         <div className="max-w-[480px] mx-auto flex flex-col gap-3">
           <div className="flex items-center justify-between">
             {/* Star + score */}
