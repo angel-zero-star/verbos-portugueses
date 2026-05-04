@@ -47,5 +47,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Memeo uses your microphone so you can speak your answer instead of typing.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Memeo uses speech recognition to check your spoken Portuguese answers.</string>
 </dict>
 </plist>

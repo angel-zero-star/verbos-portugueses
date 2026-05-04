@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, ReferenceLine, Cell } from "recharts";
-import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search, User, Mic, ArrowUp, Globe, Star, CircleCheck, LayoutGrid, Zap, Leaf, Navigation, Hand, Heart, Users, Coffee, Home, Scissors, Tag, Quote, MessageSquare, ChevronRight } from "lucide-react";
+import { Play, Trophy, Settings as SettingsIcon, X, Volume2, Sun, Moon, ArrowLeft, ArrowRight, Check, Sparkles, RotateCcw, Layers, MessageCircle, BookOpen, SlidersHorizontal, Search, User, Mic, ArrowUp, Globe, Star, CircleCheck, LayoutGrid, Zap, Leaf, Navigation, Hand, Heart, Users, Coffee, Home, Scissors, Tag, Quote, MessageSquare, ChevronRight, Smile, Power, Compass } from "lucide-react";
 import packageInfo from "../package.json";
 import { cn } from "./lib/utils";
 import { useTheme } from "./lib/useTheme";
@@ -183,6 +183,30 @@ const ALL_VERBS = [
   { id:"abraçar", verb:"abraçar", transl:"to hug", prep:"—", type:"regular-ar", presente:{eu:"abraço",tu:"abraças","ele/ela":"abraça",nós:"abraçamos","eles(as)/vocês":"abraçam"}, passado:{eu:"abracei",tu:"abraçaste","ele/ela":"abraçou",nós:"abraçámos","eles(as)/vocês":"abraçaram"}},
   { id:"acrescentar", verb:"acrescentar", transl:"to add", prep:"—", type:"regular-ar", presente:{eu:"acrescento",tu:"acrescentas","ele/ela":"acrescenta",nós:"acrescentamos","eles(as)/vocês":"acrescentam"}, passado:{eu:"acrescentei",tu:"acrescentaste","ele/ela":"acrescentou",nós:"acrescentámos","eles(as)/vocês":"acrescentaram"}},
   { id:"acabar", verb:"acabar", transl:"to finish", prep:"—", type:"regular-ar", presente:{eu:"acabo",tu:"acabas","ele/ela":"acaba",nós:"acabamos","eles(as)/vocês":"acabam"}, passado:{eu:"acabei",tu:"acabaste","ele/ela":"acabou",nós:"acabámos","eles(as)/vocês":"acabaram"}},
+  { id:"adorar", verb:"adorar", transl:"to love / adore", prep:"—", type:"regular-ar", presente:{eu:"adoro",tu:"adoras","ele/ela":"adora",nós:"adoramos","eles(as)/vocês":"adoram"}, passado:{eu:"adorei",tu:"adoraste","ele/ela":"adorou",nós:"adorámos","eles(as)/vocês":"adoraram"}},
+  { id:"detestar", verb:"detestar", transl:"to hate / detest", prep:"—", type:"regular-ar", presente:{eu:"detesto",tu:"detestas","ele/ela":"detesta",nós:"detestamos","eles(as)/vocês":"detestam"}, passado:{eu:"detestei",tu:"detestaste","ele/ela":"detestou",nós:"detestámos","eles(as)/vocês":"detestaram"}},
+  { id:"ganhar", verb:"ganhar", transl:"to win / earn", prep:"—", type:"regular-ar", presente:{eu:"ganho",tu:"ganhas","ele/ela":"ganha",nós:"ganhamos","eles(as)/vocês":"ganham"}, passado:{eu:"ganhei",tu:"ganhaste","ele/ela":"ganhou",nós:"ganhámos","eles(as)/vocês":"ganharam"}},
+  { id:"cortar", verb:"cortar", transl:"to cut", prep:"—", type:"regular-ar", presente:{eu:"corto",tu:"cortas","ele/ela":"corta",nós:"cortamos","eles(as)/vocês":"cortam"}, passado:{eu:"cortei",tu:"cortaste","ele/ela":"cortou",nós:"cortámos","eles(as)/vocês":"cortaram"}},
+  { id:"desligar", verb:"desligar", transl:"to hang up / turn off", prep:"—", type:"regular-ar", presente:{eu:"desligo",tu:"desligas","ele/ela":"desliga",nós:"desligamos","eles(as)/vocês":"desligam"}, passado:{eu:"desliguei",tu:"desligaste","ele/ela":"desligou",nós:"desligámos","eles(as)/vocês":"desligaram"}},
+  { id:"mandar", verb:"mandar", transl:"to send / order", prep:"—", type:"regular-ar", presente:{eu:"mando",tu:"mandas","ele/ela":"manda",nós:"mandamos","eles(as)/vocês":"mandam"}, passado:{eu:"mandei",tu:"mandaste","ele/ela":"mandou",nós:"mandámos","eles(as)/vocês":"mandaram"}},
+  { id:"nadar", verb:"nadar", transl:"to swim", prep:"—", type:"regular-ar", presente:{eu:"nado",tu:"nadas","ele/ela":"nada",nós:"nadamos","eles(as)/vocês":"nadam"}, passado:{eu:"nadei",tu:"nadaste","ele/ela":"nadou",nós:"nadámos","eles(as)/vocês":"nadaram"}},
+  { id:"preparar", verb:"preparar", transl:"to prepare", prep:"—", type:"regular-ar", presente:{eu:"preparo",tu:"preparas","ele/ela":"prepara",nós:"preparamos","eles(as)/vocês":"preparam"}, passado:{eu:"preparei",tu:"preparaste","ele/ela":"preparou",nós:"preparámos","eles(as)/vocês":"prepararam"}},
+  { id:"custar", verb:"custar", transl:"to cost", prep:"—", type:"regular-ar", presente:{eu:"custo",tu:"custas","ele/ela":"custa",nós:"custamos","eles(as)/vocês":"custam"}, passado:{eu:"custei",tu:"custaste","ele/ela":"custou",nós:"custámos","eles(as)/vocês":"custaram"}},
+  { id:"começar", verb:"começar", transl:"to start / begin", prep:"a, por", type:"regular-ar", presente:{eu:"começo",tu:"começas","ele/ela":"começa",nós:"começamos","eles(as)/vocês":"começam"}, passado:{eu:"comecei",tu:"começaste","ele/ela":"começou",nós:"começámos","eles(as)/vocês":"começaram"}},
+  { id:"atender", verb:"atender", transl:"to answer (a call) / attend to", prep:"—", type:"regular-er", presente:{eu:"atendo",tu:"atendes","ele/ela":"atende",nós:"atendemos","eles(as)/vocês":"atendem"}, passado:{eu:"atendi",tu:"atendeste","ele/ela":"atendeu",nós:"atendemos","eles(as)/vocês":"atenderam"}},
+  { id:"correr", verb:"correr", transl:"to run", prep:"—", type:"regular-er", presente:{eu:"corro",tu:"corres","ele/ela":"corre",nós:"corremos","eles(as)/vocês":"correm"}, passado:{eu:"corri",tu:"correste","ele/ela":"correu",nós:"corremos","eles(as)/vocês":"correram"}},
+  { id:"sujar", verb:"sujar", transl:"to make dirty", prep:"—", type:"regular-ar", presente:{eu:"sujo",tu:"sujas","ele/ela":"suja",nós:"sujamos","eles(as)/vocês":"sujam"}, passado:{eu:"sujei",tu:"sujaste","ele/ela":"sujou",nós:"sujámos","eles(as)/vocês":"sujaram"}},
+  { id:"acender", verb:"acender", transl:"to light / turn on", prep:"—", type:"regular-er", presente:{eu:"acendo",tu:"acendes","ele/ela":"acende",nós:"acendemos","eles(as)/vocês":"acendem"}, passado:{eu:"acendi",tu:"acendeste","ele/ela":"acendeu",nós:"acendemos","eles(as)/vocês":"acenderam"}},
+  { id:"apagar", verb:"apagar", transl:"to turn off / delete", prep:"—", type:"regular-ar", presente:{eu:"apago",tu:"apagas","ele/ela":"apaga",nós:"apagamos","eles(as)/vocês":"apagam"}, passado:{eu:"apaguei",tu:"apagaste","ele/ela":"apagou",nós:"apagámos","eles(as)/vocês":"apagaram"}},
+  { id:"arrumar", verb:"arrumar", transl:"to tidy up", prep:"—", type:"regular-ar", presente:{eu:"arrumo",tu:"arrumas","ele/ela":"arruma",nós:"arrumamos","eles(as)/vocês":"arrumam"}, passado:{eu:"arrumei",tu:"arrumaste","ele/ela":"arrumou",nós:"arrumámos","eles(as)/vocês":"arrumaram"}},
+  { id:"desarrumar", verb:"desarrumar", transl:"to make messy", prep:"—", type:"regular-ar", presente:{eu:"desarrumo",tu:"desarrumas","ele/ela":"desarruma",nós:"desarrumamos","eles(as)/vocês":"desarrumam"}, passado:{eu:"desarrumei",tu:"desarrumaste","ele/ela":"desarrumou",nós:"desarrumámos","eles(as)/vocês":"desarrumaram"}},
+  { id:"pendurar", verb:"pendurar", transl:"to hang (up)", prep:"—", type:"regular-ar", presente:{eu:"penduro",tu:"penduras","ele/ela":"pendura",nós:"penduramos","eles(as)/vocês":"penduram"}, passado:{eu:"pendurei",tu:"penduraste","ele/ela":"pendurou",nós:"pendurámos","eles(as)/vocês":"penduraram"}},
+  { id:"acordar", verb:"acordar", transl:"to wake up", prep:"—", type:"regular-ar", presente:{eu:"acordo",tu:"acordas","ele/ela":"acorda",nós:"acordamos","eles(as)/vocês":"acordam"}, passado:{eu:"acordei",tu:"acordaste","ele/ela":"acordou",nós:"acordámos","eles(as)/vocês":"acordaram"}},
+  { id:"encher", verb:"encher", transl:"to fill up", prep:"—", type:"regular-er", presente:{eu:"encho",tu:"enches","ele/ela":"enche",nós:"enchemos","eles(as)/vocês":"enchem"}, passado:{eu:"enchi",tu:"encheste","ele/ela":"encheu",nós:"enchemos","eles(as)/vocês":"encheram"}},
+  { id:"esvaziar", verb:"esvaziar", transl:"to empty", prep:"—", type:"regular-ar", presente:{eu:"esvazio",tu:"esvazias","ele/ela":"esvazia",nós:"esvaziamos","eles(as)/vocês":"esvaziam"}, passado:{eu:"esvaziei",tu:"esvaziaste","ele/ela":"esvaziou",nós:"esvaziámos","eles(as)/vocês":"esvaziaram"}},
+  { id:"aquecer", verb:"aquecer", transl:"to heat up", prep:"—", type:"regular-er", presente:{eu:"aqueço",tu:"aqueces","ele/ela":"aquece",nós:"aquecemos","eles(as)/vocês":"aquecem"}, passado:{eu:"aqueci",tu:"aqueceste","ele/ela":"aqueceu",nós:"aquecemos","eles(as)/vocês":"aqueceram"}},
+  { id:"arrefecer", verb:"arrefecer", transl:"to cool down", prep:"—", type:"regular-er", presente:{eu:"arrefeço",tu:"arrefeces","ele/ela":"arrefece",nós:"arrefecemos","eles(as)/vocês":"arrefecem"}, passado:{eu:"arrefeci",tu:"arrefeceste","ele/ela":"arrefeceu",nós:"arrefecemos","eles(as)/vocês":"arrefeceram"}},
+  { id:"soprar", verb:"soprar", transl:"to blow", prep:"—", type:"regular-ar", presente:{eu:"sopro",tu:"sopras","ele/ela":"sopra",nós:"sopramos","eles(as)/vocês":"sopram"}, passado:{eu:"soprei",tu:"sopraste","ele/ela":"soprou",nós:"soprámos","eles(as)/vocês":"sopraram"}},
 ];
 
 // Category tagging — applied to every verb in ALL_VERBS.
@@ -243,7 +267,8 @@ const STRINGS={
     body_health:"Body & Health",
     people_jobs:"People & Jobs", food_drink:"Food & Drink",
     home_objects:"Home & Objects", nature_world:"Nature & World",
-    adjetivos_label:"Adjectives", adj_hair:"Hair", adj_personality:"Personality", adj_general:"General",
+    adjetivos_label:"Adjectives", adj_hair:"Hair", adj_personality:"Personality", adj_general:"General", adj_state:"States", adj_feelings:"Feelings",
+    positions:"Positions",
     expressions:"Expressions", verb_sentences:"Verb Sentences",
     sessions:"sessions", avg:"avg",
     verbs_label:"Verbs", palavras_label:"Palavras", frases_label:"Frases",
@@ -268,7 +293,8 @@ const STRINGS={
     body_health:"Corpo e Saúde",
     people_jobs:"Pessoas e Profissões", food_drink:"Comida e Bebida",
     home_objects:"Casa e Objetos", nature_world:"Natureza e Mundo",
-    adjetivos_label:"Adjetivos", adj_hair:"Cabelo", adj_personality:"Personalidade", adj_general:"Geral",
+    adjetivos_label:"Adjetivos", adj_hair:"Cabelo", adj_personality:"Personalidade", adj_general:"Geral", adj_state:"Estados", adj_feelings:"Sentimentos",
+    positions:"Posições",
     expressions:"Expressões", verb_sentences:"Frases com Verbos",
     sessions:"sessões", avg:"méd",
     verbs_label:"Verbos", palavras_label:"Palavras", frases_label:"Frases",
@@ -317,7 +343,15 @@ function cmpMulti(input, answer){
   return best;
 }
 
-function speak(text){if(!window.speechSynthesis)return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="pt-PT";u.rate=0.85;const v=window.speechSynthesis.getVoices();const pt=v.find(x=>x.lang==="pt-PT")||v.find(x=>x.lang.startsWith("pt"));if(pt)u.voice=pt;window.speechSynthesis.speak(u);}
+function speak(text){
+  if(!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  setTimeout(()=>{
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang="pt-PT";u.rate=0.85;
+    try{window.speechSynthesis.speak(u);}catch{}
+  },50);
+}
 
 function AudioBtn({text,className,size=14}){
   return (
@@ -629,10 +663,13 @@ const MENU_SECTIONS=[
     {key:"food",     tk:"food_drink",   icon:Coffee},
     {key:"home",     tk:"home_objects", icon:Home},
     {key:"nature",   tk:"nature_world", icon:Globe},
+    {key:"posicoes", tk:"positions",    icon:Compass},
   ]},
   {mode:"adjetivos",tk:"adjetivos_label",icon:User,subcats:[
     {key:"adj-hair",        tk:"adj_hair",        icon:Scissors},
     {key:"adj-personality", tk:"adj_personality", icon:Sparkles},
+    {key:"adj-state",       tk:"adj_state",       icon:Power},
+    {key:"adj-feelings",    tk:"adj_feelings",    icon:Smile},
     {key:"adj-general",     tk:"adj_general",     icon:Tag},
   ]},
   {mode:"frases",tk:"frases_label",icon:MessageCircle,subcats:[
@@ -648,10 +685,13 @@ const PAL_GROUPS=[
   {key:"food",     tk:"food_drink"},
   {key:"home",     tk:"home_objects"},
   {key:"nature",   tk:"nature_world"},
+  {key:"posicoes", tk:"positions"},
 ];
 const ADJ_GROUPS=[
   {key:"adj-hair",        tk:"adj_hair"},
   {key:"adj-personality", tk:"adj_personality"},
+  {key:"adj-state",       tk:"adj_state"},
+  {key:"adj-feelings",    tk:"adj_feelings"},
   {key:"adj-general",     tk:"adj_general"},
 ];
 
@@ -729,9 +769,9 @@ function LibraryScreen({mode,onBack,conjFilter,t=k=>k}){
   const closeSearch=()=>{setSearchOpen(false);setSearch("");};
 
   return(
-    <div className="min-h-screen bg-bg text-text flex flex-col">
+    <div className="min-h-[100dvh] bg-bg text-text flex flex-col" style={{paddingTop:'env(safe-area-inset-top, 0px)'}}>
       {/* Sticky header */}
-      <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-xl border-b border-border">
+      <div className="sticky z-20 bg-bg/95 backdrop-blur-xl border-b border-border" style={{top:'env(safe-area-inset-top, 0px)'}}>
         <div className="max-w-[480px] mx-auto px-4 py-3 flex items-center gap-3">
           <button onClick={onBack} className="h-9 w-9 shrink-0 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center">
             <ArrowLeft size={16} strokeWidth={2.25}/>
@@ -743,7 +783,7 @@ function LibraryScreen({mode,onBack,conjFilter,t=k=>k}){
                 value={search}
                 onChange={e=>setSearch(e.target.value)}
                 placeholder={`Search ${modeLabel.toLowerCase()}…`}
-                className="flex-1 h-9 px-3 rounded-md bg-secondary/5 border border-border text-sm text-text placeholder:text-text-sub outline-none focus:border-secondary/40"
+                className="flex-1 h-9 px-3 rounded-md bg-secondary/5 border border-border text-[16px] text-text placeholder:text-text-sub outline-none focus:border-secondary/40"
               />
               <button onClick={closeSearch} className="h-9 w-9 shrink-0 rounded-md bg-secondary/05 border border-border text-text-sub hover:text-text flex items-center justify-center">
                 <X size={15} strokeWidth={2.25}/>
@@ -1010,6 +1050,8 @@ export default function App(){
   const [heroH,setHeroH]=useState(200);
   const homeScrollRef=useRef(null);
   const heroRef=useRef(null);
+  const heroContentRef=useRef(null);
+  const heroHRef=useRef(200);
 
   // useMemo from here requires the `useMemo` import to be hoisted
   // Aggregate home-screen stats from history
@@ -1047,10 +1089,10 @@ export default function App(){
   useEffect(()=>{sSet(SK_FILTER_FRA,fraFilter);},[fraFilter]);
   useEffect(()=>{sSet(SK_LANG,uiLang);},[uiLang]);
   useEffect(()=>{if(username!==null)sSet(SK_USER,username);},[username]);
-  useLayoutEffect(()=>{if(screen==="menu"){setHomeScrollY(0);if(homeScrollRef.current)homeScrollRef.current.scrollTop=0;}},[screen]);
+  useLayoutEffect(()=>{if(screen==="menu"){setHomeScrollY(0);if(homeScrollRef.current)homeScrollRef.current.scrollTop=0;if(heroContentRef.current){heroContentRef.current.style.transform='scale(1)';heroContentRef.current.style.opacity='1';}}},[screen]);
   useEffect(()=>{
     if(!heroRef.current)return;
-    const ro=new ResizeObserver(entries=>setHeroH(entries[0].borderBoxSize[0].blockSize));
+    const ro=new ResizeObserver(entries=>{const h=entries[0].borderBoxSize[0].blockSize;setHeroH(h);heroHRef.current=h;});
     ro.observe(heroRef.current);
     return()=>ro.disconnect();
   },[]);
@@ -1390,20 +1432,16 @@ export default function App(){
   // ─────────────────────── SPLASH ───────────────────────
   if(showSplash){
     return (
-      <div className="fixed inset-0 bg-bg text-text flex flex-col items-center justify-center gap-5">
+      <div className="fixed inset-0 bg-bg flex items-center justify-center">
         <motion.div
-          layoutId="brand-flag"
-          transition={{type:"spring",stiffness:260,damping:30}}
+          initial={{opacity:0,y:8}}
+          animate={{opacity:1,y:0}}
+          transition={{duration:0.4,ease:"easeOut"}}
+          className="flex items-baseline"
         >
-          <FlagPT className="w-24 h-24"/>
+          <span style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:'96px',lineHeight:1,color:'hsl(var(--text))',fontVariationSettings:"'SOFT' 0,'WONK' 1"}}>Memeo</span>
+          <span style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:'96px',lineHeight:1,color:'#c5532e',fontVariationSettings:"'SOFT' 0,'WONK' 1"}}>.</span>
         </motion.div>
-        <motion.h1
-          layoutId="brand-title"
-          className="font-display text-[72px] leading-[1] tracking-tightest text-text"
-          transition={{type:"spring",stiffness:260,damping:30}}
-        >
-          Memeo
-        </motion.h1>
       </div>
     );
   }
@@ -1456,89 +1494,92 @@ export default function App(){
         {/* ── Single scroll container; hero is sticky inside it so the sheet scrolls over it ── */}
         <div
           ref={homeScrollRef}
-          className="absolute inset-0 overflow-y-auto"
+          className="absolute inset-0 overflow-y-auto overflow-x-hidden"
           style={{scrollbarWidth:'none',WebkitOverflowScrolling:'touch'}}
-          onScroll={e=>setHomeScrollY(e.currentTarget.scrollTop)}
+          onScroll={e=>{
+            const sy=e.currentTarget.scrollTop;
+            if(heroContentRef.current){
+              const ratio=Math.min(1,sy/Math.max(1,heroHRef.current*0.6));
+              heroContentRef.current.style.transform=`scale(${1-ratio*0.05})`;
+              heroContentRef.current.style.opacity=String(1-ratio*0.3);
+            }
+          }}
         >
           <div className="max-w-[480px] mx-auto relative">
             {/* Hero — sticky behind the sheet */}
             <div ref={heroRef} className="sticky top-0 z-[1] bg-bg">
-              <div className="px-4 pb-4" style={{paddingTop:'max(12px, env(safe-area-inset-top))',transform:`scale(${heroScale})`,opacity:heroOpacity,transformOrigin:'top center',transition:'transform 0.08s linear, opacity 0.08s linear'}}>
-                <div className="flex items-center gap-3">
-                  <div className="relative w-20 h-20 flex-shrink-0" style={{filter:'drop-shadow(0 4px 12px rgba(0,0,0,0.18))'}}>
-                    <svg width="80" height="80" viewBox="0 0 80 80" className="absolute inset-0">
-                      <circle cx="40" cy="40" r="32" fill="none" stroke="hsl(var(--border))" strokeWidth="3.5"/>
+              <div ref={heroContentRef} className="px-4 pb-6 flex flex-col gap-4" style={{paddingTop:'max(12px, env(safe-area-inset-top))',transformOrigin:'top center'}}>
+                {/* Top row: greeting + buttons */}
+                <div className="flex items-center justify-between">
+                  <span className="text-[16px] font-mono-ui text-muted tracking-[0.14em]">
+                    OLÁ{username?`, ${username.toUpperCase()}`:''}
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={()=>setScreen("history")}
+                      className="w-8 h-8 rounded-[10px] bg-secondary/5 border border-border flex items-center justify-center text-muted hover:text-text hover:bg-secondary/10 transition-colors"
+                      aria-label="Pontuação"
+                    >
+                      <Trophy size={14} strokeWidth={2}/>
+                    </button>
+                    <button
+                      onClick={()=>setScreen("settings")}
+                      className="w-8 h-8 rounded-[10px] bg-secondary/5 border border-border flex items-center justify-center text-muted hover:text-text hover:bg-secondary/10 transition-colors"
+                      aria-label="Definições"
+                    >
+                      <SettingsIcon size={14} strokeWidth={2}/>
+                    </button>
+                  </div>
+                </div>
+                {/* Flag centered */}
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative flex-shrink-0" style={{width:98,height:98,filter:'drop-shadow(0 6px 17px rgba(0,0,0,0.18))'}}>
+                    <svg width="98" height="98" viewBox="0 0 98 98" className="absolute inset-0">
+                      <circle cx="49" cy="49" r="44" fill="none" stroke="hsl(var(--border))" strokeWidth="3"/>
                       {homeOverall.avg!==null&&(
-                        <circle cx="40" cy="40" r="32" fill="none"
-                          stroke={avgColor} strokeWidth="3.5" strokeLinecap="round"
-                          strokeDasharray={`${(homeOverall.avg/100)*flagC} ${flagC-(homeOverall.avg/100)*flagC}`}
-                          transform="rotate(-90 40 40)"
+                        <circle cx="49" cy="49" r="44" fill="none"
+                          stroke={avgColor} strokeWidth="3" strokeLinecap="round"
+                          strokeDasharray={`${(homeOverall.avg/100)*(2*Math.PI*44)} ${(1-homeOverall.avg/100)*(2*Math.PI*44)}`}
+                          transform="rotate(-90 49 49)"
                           style={{transition:'stroke-dasharray 0.7s cubic-bezier(0.2,0.7,0.2,1)'}}
                         />
                       )}
                     </svg>
-                    <div className="absolute inset-3">
+                    <div className="absolute" style={{inset:9}}>
                       <FlagPT className="w-full h-full"/>
                     </div>
-                    {homeOverall.avg!==null&&(
-                      <div
-                        className="absolute left-1/2 -translate-x-1/2 text-[10px] font-mono-ui font-bold px-2 py-1 rounded-full bg-surface border border-border leading-none whitespace-nowrap"
-                        style={{bottom:'-8px',color:avgColor}}
-                      >
-                        {homeOverall.avg}%
+                  </div>
+                  {/* Stats centered */}
+                  <div className="flex items-center justify-center gap-8 w-full pr-3 py-2">
+                    <div className="flex flex-col items-start gap-1">
+                      <div className="text-[24px] font-bold tracking-tight text-text leading-none">{homeOverall.sessions}</div>
+                      <div className="text-[10px] font-mono-ui text-muted tracking-[0.14em] uppercase">Sessões</div>
+                    </div>
+                    <div className="w-px self-stretch bg-border"/>
+                    <div className="flex flex-col items-start gap-1">
+                      <div className="text-[24px] font-bold tracking-tight text-text leading-none">
+                        {homeOverall.done}<span className="text-muted font-medium text-[18px]">/{homeOverall.total}</span>
                       </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[10px] font-mono-ui text-muted tracking-[0.14em] mb-1">
-                      OLÁ{username?`, ${username.toUpperCase()}`:''}
+                      <div className="text-[10px] font-mono-ui text-muted tracking-[0.14em] uppercase">Módulos</div>
                     </div>
-                    <h1 className="font-display text-[28px] leading-[1.05] tracking-tight text-text m-0">
-                      Memeo
-                    </h1>
-                  </div>
-                  <button
-                    onClick={()=>setScreen("history")}
-                    className="w-8 h-8 rounded-[10px] bg-secondary/5 border border-border flex items-center justify-center text-muted hover:text-text hover:bg-secondary/10 transition-colors flex-shrink-0 self-start mt-1"
-                    aria-label="Pontuação"
-                  >
-                    <Trophy size={14} strokeWidth={2}/>
-                  </button>
-                  <button
-                    onClick={()=>setScreen("settings")}
-                    className="w-8 h-8 rounded-[10px] bg-secondary/5 border border-border flex items-center justify-center text-muted hover:text-text hover:bg-secondary/10 transition-colors flex-shrink-0 self-start mt-1"
-                    aria-label="Definições"
-                  >
-                    <SettingsIcon size={14} strokeWidth={2}/>
-                  </button>
-                </div>
-                <div className="flex items-center gap-3 w-full px-3 py-2 mt-4">
-                  <div className="flex flex-col gap-1 flex-shrink-0">
-                    <div className="text-[18px] font-bold tracking-tight text-text leading-none">{homeOverall.sessions}</div>
-                    <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Sessões</div>
-                  </div>
-                  <div className="w-px self-stretch bg-border my-1"/>
-                  <div className="flex flex-col gap-1 flex-shrink-0">
-                    <div className="text-[18px] font-bold tracking-tight text-text leading-none">
-                      {homeOverall.done}<span className="text-muted font-medium text-sm">/{homeOverall.total}</span>
+                    <div className="w-px self-stretch bg-border"/>
+                    <div className="flex flex-col items-start gap-1">
+                      <div className="text-[24px] font-bold tracking-tight text-text leading-none flex items-center gap-1">
+                        <Star size={18} className="text-warn flex-shrink-0" fill="currentColor" strokeWidth={0}/>
+                        {homeOverall.stars}
+                      </div>
+                      <div className="text-[10px] font-mono-ui text-muted tracking-[0.14em] uppercase">Estrelas</div>
                     </div>
-                    <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Módulos</div>
-                  </div>
-                  <div className="w-px self-stretch bg-border my-1"/>
-                  <div className="flex flex-col gap-1 flex-shrink-0">
-                    <div className="text-[18px] font-bold tracking-tight text-text leading-none flex items-center gap-1">
-                      <Star size={14} className="text-warn flex-shrink-0" fill="currentColor" strokeWidth={0}/>
-                      {homeOverall.stars}
-                    </div>
-                    <div className="text-[8px] font-mono-ui text-muted tracking-[0.14em] uppercase">Estrelas</div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Sheet — slides over the sticky hero */}
-            <div className="relative z-[2] bg-bg rounded-t-[22px] pb-12" style={{marginTop:'-20px',minHeight:'calc(100vh - 80px)',boxShadow:'0 -5px 13px 0 hsl(var(--shadow)/0.2)'}}>
-              <div className="w-10 h-1 bg-secondary/20 rounded-full mx-auto mt-4 mb-4"/>
+            <div className="relative z-[2] bg-bg rounded-t-[22px] pb-12" style={{marginTop:'-12px',minHeight:'calc(100vh - 80px)',boxShadow:'0 -5px 13px 0 hsl(var(--shadow)/0.2)'}}>
+              <div className="flex items-center justify-center py-4">
+                <div className="w-10 h-1 bg-secondary/20 rounded-full"/>
+              </div>
 
               {/* Category sections */}
               <div className="flex flex-col gap-6">
@@ -1861,7 +1902,7 @@ export default function App(){
   if(screen==="results"){
     const rating=score.correct===10?{stars:3,label:"Alegria!",confetti:true}:score.correct===9?{stars:2,label:"Óptimo!"}:score.correct===8?{stars:1,label:"Fixe!"}:null;
     return (
-      <div className="min-h-[100dvh] bg-bg text-text relative">
+      <div className="min-h-[100dvh] bg-bg text-text relative" style={{paddingTop:'env(safe-area-inset-top, 0px)'}}>
         <TopBar/>
         {rating?.confetti && <Confetti/>}
         <AnimatePresence mode="wait">
