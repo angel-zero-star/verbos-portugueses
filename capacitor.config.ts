@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'eu.angelowellens.portuguesflashcards',
-  appName: 'Memeo',
+  appId: 'pt.romeo.app',
+  appName: 'Romeo',
   webDir: 'build'
 };
 

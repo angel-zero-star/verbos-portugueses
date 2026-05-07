@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>Memeo</string>
+        <string>Romeo</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -48,8 +48,8 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Memeo uses your microphone so you can speak your answer instead of typing.</string>
+	<string>Romeo uses your microphone so you can speak your answer instead of typing.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Memeo uses speech recognition to check your spoken Portuguese answers.</string>
+	<string>Romeo uses speech recognition to check your spoken Portuguese answers.</string>
 </dict>
 </plist>

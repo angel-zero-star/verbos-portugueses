@@ -13,6 +13,9 @@ import { SENTENCES } from "./data/sentences";
 import { PALAVRAS } from "./data/palavras";
 import { EXPRESSOES } from "./data/expressoes";
 import { evaluateSentence } from "./lib/evaluateSentence";
+import { Capacitor } from "@capacitor/core";
+import { SpeechRecognition } from "@capacitor-community/speech-recognition";
+import { TextToSpeech } from "@capacitor-community/text-to-speech";
 
 const ALL_VERBS = [
   // ── IRREGULAR ──
@@ -251,7 +254,7 @@ const SK_USER="verbos-username"; // "" = skipped, any string = name
 
 const STRINGS={
   en:{
-    home_title:"Memeo", home_sub:"Choose a topic to practice.",
+    home_title:"Romeo", home_sub:"Choose a topic to practice.",
     onboarding_title:"What's your name?", onboarding_sub:"We'll use it to greet you. You can skip this.",
     onboarding_placeholder:"Your name", onboarding_continue:"Continue", onboarding_skip:"Skip",
     name_label:"Name", name_placeholder:"Your name", name_save:"Save",
@@ -277,7 +280,7 @@ const STRINGS={
     history_empty:"No sessions yet. Play a round first.",
   },
   pt:{
-    home_title:"Memeo", home_sub:"Escolhe um tópico para praticar.",
+    home_title:"Romeo", home_sub:"Escolhe um tópico para praticar.",
     onboarding_title:"Qual é o teu nome?", onboarding_sub:"Vamos usá-lo para te cumprimentar. Podes saltar este passo.",
     onboarding_placeholder:"O teu nome", onboarding_continue:"Continuar", onboarding_skip:"Saltar",
     name_label:"Nome", name_placeholder:"O teu nome", name_save:"Guardar",
@@ -343,14 +346,21 @@ function cmpMulti(input, answer){
   return best;
 }
 
-function speak(text){
-  if(!window.speechSynthesis)return;
-  window.speechSynthesis.cancel();
-  setTimeout(()=>{
-    const u=new SpeechSynthesisUtterance(text);
-    u.lang="pt-PT";u.rate=0.85;
-    try{window.speechSynthesis.speak(u);}catch{}
-  },50);
+async function speak(text){
+  if(Capacitor.isNativePlatform()){
+    try{
+      await TextToSpeech.stop();
+      await TextToSpeech.speak({text,lang:"pt-PT",rate:0.85,volume:1.0,category:"ambient"});
+    }catch{}
+  } else {
+    if(!window.speechSynthesis)return;
+    window.speechSynthesis.cancel();
+    setTimeout(()=>{
+      const u=new SpeechSynthesisUtterance(text);
+      u.lang="pt-PT";u.rate=0.85;
+      try{window.speechSynthesis.speak(u);}catch{}
+    },50);
+  }
 }
 
 function AudioBtn({text,className,size=14}){
@@ -1300,6 +1310,10 @@ export default function App(){
 
 
   const stopMic=useCallback(()=>{
+    if(Capacitor.getPlatform()==="android"){
+      try{SpeechRecognition.stop();}catch{}
+      try{SpeechRecognition.removeAllListeners();}catch{}
+    }
     if(recRef.current){
       try{recRef.current.abort();}catch{}
       try{recRef.current.stop();}catch{}
@@ -1310,24 +1324,49 @@ export default function App(){
     clearTimeout(speakTimeoutRef.current);
   },[]);
 
-  const toggleMic=()=>{
-    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(!SR)return;
+  const toggleMic=useCallback(async()=>{
     if(isListening){stopMic();return;}
-    const rec=new SR();
-    rec.lang="pt-PT";rec.continuous=false;rec.interimResults=true;
-    rec.onresult=(e)=>{
-      const t=Array.from(e.results).map(r=>r[0].transcript).join("");
-      setInput(t);
-      setIsSpeaking(true);
-      clearTimeout(speakTimeoutRef.current);
-      if(e.results[e.results.length-1].isFinal){stopMic();}
-      else{speakTimeoutRef.current=setTimeout(()=>setIsSpeaking(false),300);}
-    };
-    rec.onerror=()=>{stopMic();};
-    rec.onend=()=>{stopMic();};
-    recRef.current=rec;rec.start();setIsListening(true);
-  };
+    if(Capacitor.getPlatform()==="android"){
+      try{
+        const perm=await SpeechRecognition.requestPermissions();
+        if(perm.speechRecognition!=="granted"&&perm.microphone!=="granted")return;
+        await SpeechRecognition.available();
+        setIsListening(true);
+        await SpeechRecognition.start({
+          language:"pt-PT",
+          partialResults:true,
+          popup:false,
+        });
+        SpeechRecognition.addListener("partialResults",(data)=>{
+          if(data.matches&&data.matches.length>0){
+            setInput(data.matches[0]);
+            setIsSpeaking(true);
+            clearTimeout(speakTimeoutRef.current);
+            speakTimeoutRef.current=setTimeout(()=>setIsSpeaking(false),300);
+          }
+        });
+        SpeechRecognition.addListener("listeningState",(state)=>{
+          if(state.status==="stopped") stopMic();
+        });
+      }catch{stopMic();}
+    } else {
+      const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+      if(!SR)return;
+      const rec=new SR();
+      rec.lang="pt-PT";rec.continuous=false;rec.interimResults=true;
+      rec.onresult=(e)=>{
+        const t=Array.from(e.results).map(r=>r[0].transcript).join("");
+        setInput(t);
+        setIsSpeaking(true);
+        clearTimeout(speakTimeoutRef.current);
+        if(e.results[e.results.length-1].isFinal){stopMic();}
+        else{speakTimeoutRef.current=setTimeout(()=>setIsSpeaking(false),300);}
+      };
+      rec.onerror=()=>{stopMic();};
+      rec.onend=()=>{stopMic();};
+      recRef.current=rec;rec.start();setIsListening(true);
+    }
+  },[isListening,stopMic]);
 
   // Always stop the mic the moment an answer is checked or we leave the play screen.
   useEffect(()=>{ if(result!==null) stopMic(); },[result,stopMic]);
@@ -1439,7 +1478,7 @@ export default function App(){
           transition={{duration:0.4,ease:"easeOut"}}
           className="flex items-baseline"
         >
-          <span style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:'96px',lineHeight:1,color:'hsl(var(--text))',fontVariationSettings:"'SOFT' 0,'WONK' 1"}}>Memeo</span>
+          <span style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:'96px',lineHeight:1,color:'hsl(var(--text))',fontVariationSettings:"'SOFT' 0,'WONK' 1"}}>Romeo</span>
           <span style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:'96px',lineHeight:1,color:'#c5532e',fontVariationSettings:"'SOFT' 0,'WONK' 1"}}>.</span>
         </motion.div>
       </div>

@@ -11,3 +11,7 @@ ios/DerivedData/
 ios/App/output/
 xcuserdata/
 *.xcuserstate
+
+# Android sensitive files
+android/local.properties
+android/keystore.properties
