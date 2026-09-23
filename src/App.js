@@ -1996,7 +1996,7 @@ export default function App(){
             {wrongOnes.length>0 && (
               <Card className="p-5">
                 <h3 className="text-[10px] font-mono-ui text-text uppercase tracking-[0.15em] mb-3">Review these</h3>
-                <div className="flex flex-col gap-2 max-h-[260px] overflow-y-auto no-scrollbar">
+                <div className="flex flex-col gap-2">
                   {wrongOnes.map((w,i)=>(
                     (w.mode==="frases" || w.mode==="palavras" || w.mode==="adjetivos" || w.mode==="sentences") ? (
                       <div key={i} className="flex flex-col gap-1 px-3 py-3 rounded-md bg-danger/5 border border-danger/20">
