@@ -254,7 +254,7 @@ const SK_USER="verbos-username"; // "" = skipped, any string = name
 
 const STRINGS={
   en:{
-    home_title:"Romeo", home_sub:"Choose a topic to practice.",
+    home_title:"Memeo", home_sub:"Choose a topic to practice.",
     onboarding_title:"What's your name?", onboarding_sub:"We'll use it to greet you. You can skip this.",
     onboarding_placeholder:"Your name", onboarding_continue:"Continue", onboarding_skip:"Skip",
     name_label:"Name", name_placeholder:"Your name", name_save:"Save",
@@ -280,7 +280,7 @@ const STRINGS={
     history_empty:"No sessions yet. Play a round first.",
   },
   pt:{
-    home_title:"Romeo", home_sub:"Escolhe um tópico para praticar.",
+    home_title:"Memeo", home_sub:"Escolhe um tópico para praticar.",
     onboarding_title:"Qual é o teu nome?", onboarding_sub:"Vamos usá-lo para te cumprimentar. Podes saltar este passo.",
     onboarding_placeholder:"O teu nome", onboarding_continue:"Continuar", onboarding_skip:"Saltar",
     name_label:"Nome", name_placeholder:"O teu nome", name_save:"Guardar",
@@ -1478,7 +1478,7 @@ export default function App(){
           transition={{duration:0.4,ease:"easeOut"}}
           className="flex items-baseline"
         >
-          <span style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:'96px',lineHeight:1,color:'hsl(var(--text))',fontVariationSettings:"'SOFT' 0,'WONK' 1"}}>Romeo</span>
+          <span style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:'96px',lineHeight:1,color:'hsl(var(--text))',fontVariationSettings:"'SOFT' 0,'WONK' 1"}}>Memeo</span>
           <span style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:'96px',lineHeight:1,color:'#c5532e',fontVariationSettings:"'SOFT' 0,'WONK' 1"}}>.</span>
         </motion.div>
       </div>
